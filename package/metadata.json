@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "aryansoni57"
+            }
+        ],
+        "Category": "Utilities",
+        "Description": "Smart dock modules: clock, system stats, now playing",
+        "Icon": "preferences-desktop-panel",
+        "Id": "dev.aryan.dock",
+        "License": "GPL-2.0-or-later",
+        "Name": "Dock",
+        "Version": "0.1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
