@@ -173,6 +173,12 @@ PlasmoidItem {
         fahrenheit: root.cfg.fahrenheit
     }
 
+    // Klipper (clipboard history, Meta+V). Loaded from its own file so a missing
+    // private module only fails this Loader, not the dock.
+    Loader {
+        source: "components/ClipboardService.qml"
+    }
+
     // Wi-Fi, Bluetooth, Do Not Disturb, Night Light, Mute. Created only when shown,
     // so the Brightness plugin import is not loaded otherwise.
     Loader {
