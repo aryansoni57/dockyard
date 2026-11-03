@@ -10,6 +10,9 @@ import "../components"
 Tile {
     id: sw
 
+    // Tapping the tile body starts or pauses; its buttons keep their own jobs.
+    onClicked: toggle()
+
     property real baseMs: 0      // elapsed before the current run
     property bool running: false
     property real startedAt: 0   // Date.now() value at the start of the current run
@@ -74,12 +77,21 @@ Tile {
         height: sw.inner
         spacing: sw.inner * 0.22
 
-        PlasmaComponents.Label {
+        Column {
             Layout.alignment: Qt.AlignVCenter
-            text: sw.fmt(sw.elapsedMs)
-            font.pixelSize: sw.inner * 0.5
-            font.weight: Font.Bold
-            font.features: { "tnum": 1 }
+
+            PlasmaComponents.Label {
+                text: i18n("Stopwatch")
+                color: "#FF9F0A"
+                font.pixelSize: sw.inner * 0.22
+                font.weight: Font.DemiBold
+            }
+            PlasmaComponents.Label {
+                text: sw.fmt(sw.elapsedMs)
+                font.pixelSize: sw.inner * 0.46
+                font.weight: Font.Bold
+                font.features: { "tnum": 1 }
+            }
         }
 
         QQC2.AbstractButton {
@@ -123,12 +135,12 @@ Tile {
 
             background: Rectangle {
                 radius: width / 2
-                color: Kirigami.Theme.highlightColor
+                color: "#FF9F0A"
             }
             contentItem: Kirigami.Icon {
                 source: sw.running ? "media-playback-pause" : "media-playback-start"
                 isMask: true
-                color: Kirigami.Theme.highlightedTextColor
+                color: "white"
                 implicitWidth: sw.inner * 0.3
                 implicitHeight: sw.inner * 0.3
             }

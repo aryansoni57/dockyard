@@ -10,6 +10,7 @@ Item {
 
     property real value // 0..100
     property string label
+    property string suffix: ""
     property color accent: Kirigami.Theme.highlightColor
 
     readonly property real thickness: Math.max(2, width * 0.1)
@@ -60,7 +61,7 @@ Item {
 
         PlasmaComponents.Label {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: Math.round(ring.value)
+            text: Math.round(ring.value) + ring.suffix
             font.pixelSize: Math.max(8, ring.height * 0.3)
             font.weight: Font.Bold
             font.features: { "tnum": 1 }

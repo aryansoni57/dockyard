@@ -75,14 +75,21 @@ Tile {
         return false;
     }
 
-    // HH:mm of `now` in `zone`.
-    function timeIn(zone) {
+    // UTC offset of `zone` in minutes at `now`, or null for an unknown zone.
+    function offsetIn(zone) {
         const entry = zoneTable[zone];
         if (entry === undefined)
-            return "--:--";
+            return null;
         const t = wc.now.getTime();
-        const offsetMin = entry[0] + (dstActive(entry[1], entry[0], t) ? 60 : 0);
-        const shifted = new Date(t + offsetMin * 60000);
+        return entry[0] + (dstActive(entry[1], entry[0], t) ? 60 : 0);
+    }
+
+    // HH:mm of `now` in `zone`.
+    function timeIn(zone) {
+        const offsetMin = offsetIn(zone);
+        if (offsetMin === null)
+            return "--:--";
+        const shifted = new Date(wc.now.getTime() + offsetMin * 60000);
         return String(shifted.getUTCHours()).padStart(2, "0") + ":"
              + String(shifted.getUTCMinutes()).padStart(2, "0");
     }

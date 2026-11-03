@@ -17,7 +17,7 @@ Goal: add the no-key, no-account widgets to the dock as new tiles. Visual rules:
 | World Clocks | local | Up to 3 zones from setting `worldZones` (comma-separated IANA names) |
 | Todos | persisted in settings | Setting `todosJson`; add, tick, clear done |
 
-Out of this batch: Apps and Quick Toggles (medium effort), Calendar (needs iCal parsing), anything that needs a key.
+Apps and Quick Toggles are done (see `docs/PLAN-apps-toggles.md`). Out of this batch: Calendar (needs iCal parsing), anything that needs a key.
 
 ## Architecture
 
@@ -25,7 +25,7 @@ Existing rule: data sources live once in `main.qml`; modules stay dumb views. Ex
 
 Each module is one file in `package/contents/ui/modules/<Name>Module.qml`:
 
-- Root is `Tile` (`../components/Tile.qml`). Clock is the only exception.
+- Root is `Tile` (`../components/Tile.qml`). Clock is a Tile now. Apps is the only exception (loose icons, no tile, per STYLE.md).
 - `implicitWidth` is set from content plus `padding * 2`. Height comes from the layout (`Layout.fillHeight: true`).
 - Declares `signal clicked()` only if the tile does something on click. `Tile` already has it.
 - Inputs are plain `property` values. No imports of `org.kde.plasma.plasmoid`.
@@ -60,3 +60,44 @@ Shared files, edited once, not in parallel: `main.qml`, `config/main.xml`, `ui/c
 - Many tiles make a wide dock; all new ones are off by default.
 - Battery sensor ID is device-specific until we auto-detect it.
 - Weather needs coordinates set by hand.
+
+## Reference: demo video analysis
+
+Source: a 140s demo video of a similar dock, analysed from frames sampled every 3s. Items marked (inferred) were not seen directly. Timestamps are approximate.
+
+### Screens
+
+1. **Desktop + dock** — bottom-centre pill that grows as widgets are added; pinned app icons; context menus.
+2. **All Widgets gallery** (3–39s) — modal with search and category sidebar (Clocks, Productivity, System, Apps & Files, Media & Audio, AI, Analytics, Social, Stocks, Finance, Weather, Online & Mail). Header counter "N in bar" goes 3 → 15 as widgets are pinned.
+3. **Wallpapers picker** (45–51s) — tabs Nature, Landscape, Cozy, Dark, Gradient, Cars; thumbnail grid; picking one changes the wallpaper.
+4. **Storage detail** (66s) — used/free and percentage; "Scan now / Not now"; nothing is measured until the scan is started; results cached 5 minutes.
+5. **Temperature detail** (99–102s) — 10-minute line graph with hover tooltip (value + time); sensor list (CPU, Board, Chassis, Battery, Graphics); CPU and memory load.
+6. **Bluetooth card** (108s) — on/off toggle; "No paired devices" state; link to system Bluetooth settings.
+7. **Quick Toggles panel** (114–117s) — switches: Wi-Fi, Bluetooth, Hotspot, Airplane, Microphone, Camera, Keep Awake, Desktop Icons, Display Mode.
+8. **Screen Time detail** (129–132s) — Day/Week tabs; hourly bar chart with hover tooltip; Most Used (Apps / Websites tabs); longest focus; app switches; first use; daily-summary toggle.
+9. **Context menus** — dock menu: Widgets…, Settings, Task Manager, Close, Logout. Dock-item menu: Unpin, Close.
+
+### Widget catalog
+
+- **Clocks:** digital, flip, world clocks, analog (classic, dark, minimal), segment, date, day number, clock + weather, 7-day strip.
+- **Productivity:** Screen Time, Focus/Pomodoro (cycle count, countdown), Timer, Stopwatch, Todos, Notes, Calendar, Currency converter.
+- **System:** CPU/RAM stats, Battery, Tray, Language, Quick Toggles, Brightness slider, Theme toggle, Temperature, Network speed, Month/Day/Year progress, Storage.
+- **Apps & Files:** Apps grid, Recently Opened, Recycle Bin, Search, Commands, Recent Screenshots, Downloads, Screenshot Capture, Folders.
+- **Media:** Now Playing (full, mini, bar) with prev/pause/next; speaker volume slider.
+- **AI usage:** ChatGPT, Gemini, Grok, DeepSeek balance, GLM, OpenCode (session + weekly), Cursor.
+- **Social / analytics:** DataFast chart, X, TikTok, YouTube, GitHub activity and unread, LeetCode, Gmail.
+- **Finance / weather:** stock ticker, chart, watchlist; BTC/USD metric; forecast, hourly, sunrise/sunset.
+- **Other:** Wallpaper Gallery.
+
+### Gestures and interactions
+
+- Click a widget in the gallery to pin it (inferred); scroll the gallery vertically; X closes modals.
+- Tab switching inside modals (wallpaper categories, Screen Time Apps/Websites).
+- Right-click on the dock opens the dock menu; right-click on an item opens Unpin/Close (inferred).
+- Click a widget to open its detail modal (Storage, Temperature, Screen Time); expander arrow opens a card (Bluetooth).
+- Hover a chart for a value/time tooltip.
+- Media: click Next, track changes.
+- Toggle switches (Bluetooth, Quick Toggles); start Focus timer and Stopwatch with Play, then live countdown/count-up.
+- Drag a desktop file onto the dock to pin it (inferred): icon magnifies on approach, filename tooltip shown.
+- Dock scrolls horizontally when it overflows (inferred).
+- Not seen: keyboard shortcuts, swipe gestures.

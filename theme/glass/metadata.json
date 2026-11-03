@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/Theme",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "aryan"
+            }
+        ],
+        "Category": "Plasma Theme",
+        "Description": "Frosted dark glass: popups, notifications, tooltips and panels matching Dockyard",
+        "EnabledByDefault": true,
+        "Id": "glass",
+        "Name": "Glass",
+        "Version": "1.0",
+        "License": "GPL-2.0+"
+    }
+}

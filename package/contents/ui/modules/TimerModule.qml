@@ -11,6 +11,9 @@ import "../components"
 Tile {
     id: tm
 
+    // Tapping the tile body starts or pauses; its buttons keep their own jobs.
+    onClicked: toggle()
+
     readonly property var presets: [1, 5, 10, 25]
     property int presetIndex: 1
     property bool running: false

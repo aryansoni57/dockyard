@@ -4,6 +4,16 @@
       xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0 http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
     <kcfgfile name=""/>
     <group name="General">
+        <!-- Launcher: comma-separated favoriteIds of the pinned apps, in order. -->
+        <entry name="launcherFavorites" type="String">
+            <default>applications:org.kde.dolphin.desktop,preferred://browser,applications:org.kde.konsole.desktop,applications:systemsettings.desktop,applications:org.kde.discover.desktop,applications:org.kde.kate.desktop</default>
+        </entry>
+        <entry name="launcherGridView" type="Bool">
+            <default>true</default>
+        </entry>
+        <entry name="showStart" type="Bool">
+            <default>true</default>
+        </entry>
         <entry name="showClock" type="Bool">
             <default>true</default>
         </entry>
@@ -48,6 +58,24 @@
         <entry name="showTodos" type="Bool">
             <default>false</default>
         </entry>
+        <entry name="showApps" type="Bool">
+            <default>false</default>
+        </entry>
+        <!-- Follow the pinned apps of the Task Manager panel applet. appLaunchers is the fallback. -->
+        <entry name="appsFromTaskManager" type="Bool">
+            <default>true</default>
+        </entry>
+        <!-- Comma-separated launcher IDs, e.g. preferred://browser,applications:org.kde.dolphin.desktop -->
+        <entry name="appLaunchers" type="String">
+            <default>preferred://browser,applications:org.kde.dolphin.desktop,applications:org.kde.konsole.desktop,applications:systemsettings.desktop</default>
+        </entry>
+        <entry name="showToggles" type="Bool">
+            <default>false</default>
+        </entry>
+        <!-- Comma-separated keys: wifi, bluetooth, dnd, nightlight, mute. -->
+        <entry name="toggleItems" type="String">
+            <default>wifi,bluetooth,dnd,nightlight,mute</default>
+        </entry>
 
         <!-- Battery sensors are power/DEVICE/chargePercentage and chargeRate.
              Find DEVICE with: kstatsviewer, then list sensors and look for power. -->
@@ -65,6 +93,70 @@
         </entry>
         <entry name="worldZones" type="String">
             <default>America/New_York,Europe/London,Asia/Tokyo</default>
+        </entry>
+        <entry name="showCalendar" type="Bool">
+            <default>true</default>
+        </entry>
+        <entry name="calendarSource" type="String">
+            <default></default>
+        </entry>
+        <entry name="planeUrl" type="String">
+            <default>https://api.plane.so</default>
+        </entry>
+        <entry name="planeWorkspace" type="String">
+            <default></default>
+        </entry>
+        <entry name="planeApiKey" type="String">
+            <default></default>
+        </entry>
+        <entry name="showMonthProgress" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showDayProgress" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showYearProgress" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showDate" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showClockStyle" type="Bool">
+            <default>false</default>
+        </entry>
+        <!-- Look of the clock-styles tile: digital, flip, worldanalog, classic, classicdark,
+             minimal, week, worldlist, worldtime, today, segment. -->
+        <entry name="clockStyle" type="String">
+            <default>digital</default>
+        </entry>
+        <entry name="showDayNumber" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showNotes" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showVolume" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showRecycleBin" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showScreenshot" type="Bool">
+            <default>false</default>
+        </entry>
+        <!-- "strip" (status glyphs, tap opens the flyout) or "toggles" (pill row). -->
+        <entry name="toggleStyle" type="String">
+            <default>strip</default>
+        </entry>
+        <entry name="showTray" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="notesText" type="String">
+            <default></default>
+        </entry>
+        <!-- Tile order, comma-separated tile keys. Written by dragging tiles. -->
+        <entry name="tileOrder" type="String">
+            <default></default>
         </entry>
         <entry name="todosJson" type="String">
             <default>[]</default>

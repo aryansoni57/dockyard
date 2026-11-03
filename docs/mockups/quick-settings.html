@@ -1,0 +1,1022 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick Settings Mockup</title>
+<style>
+/* Tokens follow docs/STYLE.md. Light first, dark overrides via [data-theme]. */
+:root {
+  --accent: #0A84FF;
+  --accent-rgb: 10,132,255;
+
+  --ink: #1C1C1E;
+  --ink-rgb: 28,28,30;
+
+  --page: #ECECEF;
+  --page-card: #FFFFFF;
+  --page-line: rgba(0,0,0,.08);
+  --code-bg: #F2F2F5;
+
+  --bar: rgba(255,255,255,.76);
+  --bar-rim: rgba(0,0,0,.08);
+  --bar-top: rgba(255,255,255,.6);
+  --tile: rgba(0,0,0,.043);
+  --tile-h: rgba(0,0,0,.083);
+  --tile-b: rgba(0,0,0,.09);
+  --tile-top: transparent;
+  --btn: rgba(0,0,0,.08);
+  --btn-h: rgba(0,0,0,.12);
+  --ghost: rgba(0,0,0,.10);
+  --ghost-2: rgba(0,0,0,.16);
+
+  --pop: #FFFFFF;
+  --pop-2: #F2F2F7;
+  --pop-3: #E5E5EA;
+  --pop-line: rgba(0,0,0,.07);
+  --pop-band: rgba(0,0,0,.03);
+  --pop-shadow: 0 12px 40px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.06);
+  --knob-shadow: 0 1px 3px rgba(0,0,0,.25);
+
+  --wp-sky: #CBD8E3;
+  --wp-orb: #F2E2B4;
+  --wp-far: #A2B5C5;
+  --wp-mid: #829D90;
+  --wp-near: #5E7A6E;
+  --wp-lake: #B3C8D5;
+  --wp-glint: rgba(255,255,255,.35);
+
+  --cap-bg: rgba(255,255,255,.72);
+
+  --t-color: 120ms cubic-bezier(.2,.7,.3,1);
+  --t-press: 80ms ease-out;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --ink: #FFFFFF;
+  --ink-rgb: 255,255,255;
+
+  --page: #0E0F11;
+  --page-card: #17181B;
+  --page-line: rgba(255,255,255,.08);
+  --code-bg: #212226;
+
+  --bar: rgba(24,24,27,.52);
+  --bar-rim: rgba(255,255,255,.10);
+  --bar-top: rgba(255,255,255,.18);
+  --tile: rgba(255,255,255,.055);
+  --tile-h: rgba(255,255,255,.095);
+  --tile-b: rgba(255,255,255,.13);
+  --tile-top: rgba(255,255,255,.08);
+  --btn: rgba(255,255,255,.12);
+  --btn-h: rgba(255,255,255,.17);
+  --ghost: rgba(255,255,255,.10);
+  --ghost-2: rgba(255,255,255,.17);
+
+  --pop: #1C1C1E;
+  --pop-2: #2C2C2E;
+  --pop-3: #3A3A3C;
+  --pop-line: rgba(255,255,255,.07);
+  --pop-band: rgba(0,0,0,.22);
+  --pop-shadow: 0 12px 40px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.07);
+  --knob-shadow: 0 1px 3px rgba(0,0,0,.5);
+
+  --wp-sky: #1B2131;
+  --wp-orb: #E6D8B2;
+  --wp-far: #2C374B;
+  --wp-mid: #24303F;
+  --wp-near: #172029;
+  --wp-lake: #202A3B;
+  --wp-glint: rgba(230,216,178,.18);
+
+  --cap-bg: rgba(20,20,22,.66);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.45 Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Noto Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color var(--t-color), color var(--t-color);
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.ic { width: 100%; height: 100%; display: block; }
+
+.page { max-width: 1120px; margin: 0 auto; padding: 32px 16px 64px; }
+
+/* ---------- header ---------- */
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.top h1 { font-size: 22px; line-height: 1.2; font-weight: 700; margin: 0 0 4px; letter-spacing: -.01em; }
+.top p { margin: 0; color: rgba(var(--ink-rgb), .6); max-width: 62ch; }
+.seg { display: inline-flex; padding: 3px; border-radius: 10px; background: rgba(var(--ink-rgb), .07); gap: 2px; }
+.seg button { height: 28px; padding: 0 12px; border-radius: 7px; font-size: 13px; font-weight: 500; color: rgba(var(--ink-rgb), .6); transition: background-color var(--t-color), color var(--t-color); }
+.seg button[aria-pressed="true"] { background: var(--page-card); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+
+/* ---------- stage ---------- */
+.stage {
+  position: relative; height: 620px; border-radius: 20px; overflow: hidden;
+  border: 1px solid var(--page-line);
+  isolation: isolate;
+}
+.wall { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; }
+.wall * { transition: fill var(--t-color); }
+.stage-hint {
+  position: absolute; top: 14px; left: 16px; font-size: 12px; color: rgba(var(--ink-rgb), .7);
+  background: var(--cap-bg); padding: 4px 10px; border-radius: 999px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+
+/* Dock: bar = tile 48 + 4 px padding top and bottom = 56, radius 25 %. */
+.dock {
+  position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%);
+  height: 56px; padding: 4px; border-radius: 14px;
+  display: flex; align-items: center; gap: 5px;
+  background: var(--bar);
+  backdrop-filter: blur(26px) saturate(1.5); -webkit-backdrop-filter: blur(26px) saturate(1.5);
+  box-shadow: inset 0 0 0 1px var(--bar-rim), inset 0 1px 0 var(--bar-top), 0 4px 16px rgba(0,0,0,.25);
+  transition: background-color var(--t-color);
+  white-space: nowrap;
+}
+
+/* Glass tile: 48 px tall, radius 24 %, padding 14 %. */
+.tile {
+  position: relative; height: 48px; border-radius: 11.5px; padding: 7px;
+  background: var(--tile);
+  box-shadow: inset 0 0 0 1px var(--tile-b);
+  display: flex; align-items: center;
+  transition: background-color var(--t-color), box-shadow var(--t-color), transform var(--t-press);
+}
+.tile::before {
+  content: ""; position: absolute; left: 11.5px; right: 11.5px; top: 1px; height: 1px; background: var(--tile-top); pointer-events: none;
+}
+
+/* Neighbour placeholders, kept grey on purpose. */
+.ghost { gap: 8px; }
+.ghost .bar-a { width: 46px; height: 7px; border-radius: 4px; background: var(--ghost-2); }
+.ghost .bar-b { width: 30px; height: 6px; border-radius: 3px; background: var(--ghost); margin-top: 6px; }
+.ghost .ring { width: 32px; height: 32px; border-radius: 50%; box-shadow: inset 0 0 0 3.5px var(--ghost); }
+.ghost .stack { display: flex; flex-direction: column; }
+.ghost.sq { width: 48px; justify-content: center; }
+.ghost.sq .blk { width: 26px; height: 22px; border-radius: 6px; background: var(--ghost); }
+.appicon { width: 34px; height: 34px; border-radius: 9px; background: var(--ghost); margin: 0 2px; }
+
+/* ---------- variant wrappers ---------- */
+.vwrap { position: relative; }
+.vcap {
+  position: absolute; top: calc(100% + 16px); left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 999px;
+  background: var(--cap-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  font-size: 12px; color: rgba(var(--ink-rgb), .8); white-space: nowrap; pointer-events: none;
+}
+.vcap b { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; }
+.vcap .dim { color: rgba(var(--ink-rgb), .5); }
+
+/* Variant A: status strip. Whole tile is one button. */
+.qa { gap: 11px; padding: 0 13px; cursor: pointer; }
+.qa:hover { background: var(--tile-h); }
+.qa:active { transform: scale(.97); }
+.qa .g { width: 18px; height: 18px; color: rgba(var(--ink-rgb), .42); transition: color var(--t-color); }
+.qa .g.on { color: var(--accent); }
+.qa[aria-expanded="true"] { background: rgba(var(--accent-rgb), .14); box-shadow: inset 0 0 0 1.5px rgba(var(--accent-rgb), .9); }
+
+/* Variant B: direct round toggles + panel button. */
+.qb { gap: 7px; cursor: pointer; }
+.qb:hover { background: var(--tile-h); }
+.rb {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--btn); box-shadow: inset 0 0 0 2px transparent; color: var(--ink);
+  transition: background-color var(--t-color), box-shadow var(--t-color), color var(--t-color), transform var(--t-press);
+}
+.rb:hover { background: var(--btn-h); }
+.rb:active { transform: scale(.94); }
+.rb .i { width: 19px; height: 19px; }
+.rb.on { background: rgba(var(--accent-rgb), .2); box-shadow: inset 0 0 0 2px var(--accent); color: var(--accent); }
+.rb.sq { border-radius: 10px; background: rgba(var(--accent-rgb), .2); box-shadow: inset 0 0 0 2px var(--accent); color: var(--accent); }
+.rb.sq[aria-expanded="true"] { background: var(--accent); color: #fff; }
+
+/* ---------- flyout ---------- */
+.fly {
+  position: absolute; width: 360px; z-index: 5;
+  background: var(--pop); color: var(--ink); border-radius: 16px; box-shadow: var(--pop-shadow);
+  opacity: 0; visibility: hidden; transform: translateY(6px) scale(.98);
+  /* close: fade only, 120 ms; reset transform after fade */
+  transition: opacity 120ms ease-out, visibility 0s linear 120ms, transform 0s linear 120ms, background-color var(--t-color);
+}
+.fly.open {
+  opacity: 1; visibility: visible; transform: none;
+  /* open: fade + 6 px slide + scale from .98, 180 ms */
+  transition: opacity 180ms ease-out, transform 180ms cubic-bezier(.2,.8,.2,1), visibility 0s, background-color var(--t-color);
+}
+.viewport { overflow: hidden; border-radius: 16px; transition: height 160ms cubic-bezier(.2,.8,.2,1); }
+.viewport.instant { transition: none; }
+.views { display: flex; width: 200%; align-items: flex-start; transition: transform 160ms cubic-bezier(.2,.8,.2,1); }
+.views.detail { transform: translateX(-50%); }
+.view { width: 50%; }
+
+.fh { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 10px 0 14px; }
+.fh .logo { width: 24px; height: 24px; border-radius: 7px; background: rgba(var(--accent-rgb), .18); color: var(--accent); display: grid; place-items: center; }
+.fh .logo .i { width: 15px; height: 15px; }
+.fh .ttl { font-size: 14px; font-weight: 600; flex: 1; }
+.fh .tag { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 999px; background: var(--pop-2); color: rgba(var(--ink-rgb), .6); }
+.xbtn, .back {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: rgba(var(--ink-rgb), .6);
+  transition: background-color var(--t-color), color var(--t-color), transform var(--t-press);
+}
+.xbtn:hover, .back:hover { background: var(--pop-2); color: var(--ink); }
+.xbtn:active, .back:active { transform: scale(.94); }
+.xbtn .i { width: 15px; height: 15px; }
+.back .i { width: 17px; height: 17px; }
+
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 12px; }
+.card {
+  position: relative; display: flex; align-items: center; gap: 9px; height: 62px; padding: 0 6px 0 9px;
+  border-radius: 13px; background: var(--pop-2); text-align: left; min-width: 0;
+  transition: background-color var(--t-color), transform var(--t-press);
+}
+button.card:active, .card .ctext:active { transform: scale(.97); }
+.card:hover { background: color-mix(in srgb, var(--pop-2) 88%, var(--ink)); }
+.cic {
+  flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(var(--ink-rgb), .1); color: var(--ink);
+  transition: background-color var(--t-color), color var(--t-color), transform var(--t-press);
+}
+button.cic:active { transform: scale(.94); }
+.cic .i { width: 19px; height: 19px; }
+.card.on .cic { background: var(--accent); color: #fff; }
+.ctext { flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px; height: 100%; text-align: left; transition: transform var(--t-press); }
+.ctext .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cl { font-size: 12.5px; font-weight: 600; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cs { font-size: 11.5px; line-height: 1.3; color: rgba(var(--ink-rgb), .55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card.on .cs { color: rgba(var(--ink-rgb), .7); }
+.chev { flex: none; width: 12px; height: 12px; color: rgba(var(--ink-rgb), .38); }
+
+.sliders { padding: 14px 12px 4px; display: flex; flex-direction: column; gap: 10px; }
+.srow { display: flex; align-items: center; gap: 8px; }
+.sicon {
+  flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: rgba(var(--ink-rgb), .7);
+  transition: background-color var(--t-color), color var(--t-color), transform var(--t-press);
+}
+button.sicon:hover { background: var(--pop-2); color: var(--ink); }
+button.sicon:active { transform: scale(.94); }
+.sicon .i { width: 18px; height: 18px; }
+.sicon.muted { color: var(--accent); }
+.slider {
+  position: relative; flex: 1; height: 24px; border-radius: 12px; background: var(--pop-2);
+  touch-action: none; cursor: pointer; overflow: hidden;
+}
+.slider .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 12px; background: var(--accent); transition: background-color var(--t-color); }
+.slider.dragging .fill, .slider.dragging .knob { transition: none; }
+.slider .knob {
+  position: absolute; top: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: var(--knob-shadow);
+  transition: transform var(--t-press);
+}
+.slider:active .knob { transform: scale(.94); }
+.slider.off .fill { background: rgba(var(--ink-rgb), .28); }
+.sval { flex: none; width: 36px; text-align: right; font-size: 12px; color: rgba(var(--ink-rgb), .6); }
+
+.ff {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: 12px; padding: 10px 12px 12px 14px; border-top: 1px solid var(--pop-line);
+}
+.note { font-size: 11.5px; color: rgba(var(--ink-rgb), .4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill {
+  flex: none; height: 28px; padding: 0 12px; border-radius: 999px; background: var(--pop-2); font-size: 12.5px; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: background-color var(--t-color), transform var(--t-press);
+}
+.pill:hover { background: var(--pop-3); }
+.pill:active { transform: scale(.97); }
+.pill .i { width: 14px; height: 14px; opacity: .75; }
+
+/* detail view */
+.sec { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: rgba(var(--ink-rgb), .5); background: var(--pop-band); padding: 6px 14px; }
+.list { padding: 2px 0 4px; }
+.row {
+  width: 100%; display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 4px 14px; text-align: left;
+  transition: background-color var(--t-color);
+}
+.row + .row { box-shadow: inset 0 1px 0 var(--pop-line); }
+.row:hover { background: var(--pop-2); }
+.row .ri { flex: none; width: 18px; height: 18px; color: var(--ink); }
+.row .rdot { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--pop-2); color: var(--ink); transition: background-color var(--t-color), color var(--t-color); }
+.row:hover .rdot { background: var(--pop-3); }
+.row .rdot .i { width: 16px; height: 16px; }
+.row.conn .rdot { background: var(--accent); color: #fff; }
+.row .rt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.row .rn { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row.conn .rn { font-weight: 600; }
+.row .rs { font-size: 11.5px; color: rgba(var(--ink-rgb), .5); }
+.row .rs.blue { color: var(--accent); }
+.row .lk { flex: none; width: 13px; height: 13px; color: rgba(var(--ink-rgb), .4); }
+.row .ck { flex: none; width: 16px; height: 16px; color: var(--accent); }
+.row .ck.hide { visibility: hidden; }
+.spin { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid rgba(var(--accent-rgb), .3); border-top-color: var(--accent); vertical-align: -1px; margin-right: 5px; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty { padding: 28px 24px 22px; text-align: center; color: rgba(var(--ink-rgb), .5); font-size: 13px; }
+.empty .big { width: 30px; height: 30px; margin: 0 auto 10px; color: rgba(var(--ink-rgb), .3); }
+.empty b { display: block; color: var(--ink); font-weight: 600; margin-bottom: 2px; }
+
+.sw {
+  flex: none; position: relative; width: 40px; height: 24px; border-radius: 12px; background: rgba(var(--ink-rgb), .18);
+  transition: background-color var(--t-color), transform var(--t-press);
+}
+.sw::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: var(--knob-shadow);
+  transition: transform var(--t-color);
+}
+.sw[aria-checked="true"] { background: var(--accent); }
+.sw[aria-checked="true"]::after { transform: translateX(16px); }
+.sw:active { transform: scale(.95); }
+
+/* ---------- notes ---------- */
+.notes { margin-top: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.nc { background: var(--page-card); border: 1px solid var(--page-line); border-radius: 16px; padding: 18px 20px; min-width: 0; }
+.nc.wide { grid-column: 1 / -1; }
+.nc h2 { font-size: 15px; margin: 0 0 10px; font-weight: 650; }
+.nc h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: rgba(var(--ink-rgb), .5); margin: 16px 0 6px; font-weight: 600; }
+.nc p, .nc li { color: rgba(var(--ink-rgb), .78); }
+.nc p { margin: 0 0 8px; }
+.nc ul { margin: 0; padding-left: 18px; }
+.nc li { margin: 3px 0; }
+.nc b { color: var(--ink); font-weight: 600; }
+code { font: 12px/1.5 "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; background: var(--code-bg); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+.tw { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px 8px 0; border-top: 1px solid var(--page-line); }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: rgba(var(--ink-rgb), .5); font-weight: 600; border-top: 0; }
+td code { white-space: normal; }
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cmp > div { border-radius: 12px; background: rgba(var(--ink-rgb), .035); padding: 12px 14px; }
+.cmp h4 { margin: 0 0 6px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.cmp h4 b { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; }
+.q li { margin: 6px 0; }
+
+@media (max-width: 860px) {
+  .notes, .cmp { grid-template-columns: 1fr; }
+  .hide-narrow { display: none; }
+}
+@media (max-width: 560px) {
+  .hide-xs { display: none; }
+  .fly { width: calc(100% - 24px); max-width: 360px; }
+  .stage { height: 660px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="top">
+    <div>
+      <h1>Quick Toggles: collapsed and expanded</h1>
+      <p>Design exploration for the Quick Toggles tile. Two collapsed variants sit side by side in the dock; either one opens the same flyout above it. Everything below is clickable.</p>
+    </div>
+    <div class="seg" role="group" aria-label="Theme">
+      <button type="button" data-theme-btn="light">Light</button>
+      <button type="button" data-theme-btn="dark">Dark</button>
+    </div>
+  </header>
+
+  <section class="stage" id="stage" aria-label="Dock preview">
+    <svg class="wall" viewBox="0 0 1200 620" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect width="1200" height="620" style="fill:var(--wp-sky)"/>
+      <circle cx="905" cy="150" r="54" style="fill:var(--wp-orb)"/>
+      <path d="M0 330 L150 250 L260 300 L420 190 L560 290 L700 230 L860 300 L1010 210 L1200 300 V620 H0Z" style="fill:var(--wp-far)"/>
+      <path d="M0 390 L120 340 L300 380 L470 320 L640 385 L820 335 L1000 380 L1200 340 V620 H0Z" style="fill:var(--wp-mid)"/>
+      <rect y="430" width="1200" height="190" style="fill:var(--wp-lake)"/>
+      <rect x="860" y="452" width="90" height="3" rx="1.5" style="fill:var(--wp-glint)"/>
+      <rect x="884" y="470" width="44" height="3" rx="1.5" style="fill:var(--wp-glint)"/>
+      <path d="M0 430 L180 405 L330 432 L0 432Z M820 432 L1010 398 L1200 420 V432Z" style="fill:var(--wp-near)"/>
+      <path d="M0 560 Q300 540 600 562 T1200 556 V620 H0Z" style="fill:var(--wp-near)"/>
+    </svg>
+
+    <div class="stage-hint">Click a variant, toggles, sliders. Esc or outside click closes.</div>
+
+    <div class="dock" id="dock">
+      <div class="tile ghost hide-narrow" aria-hidden="true"><div class="ring"></div><div class="stack"><div class="bar-a"></div><div class="bar-b"></div></div></div>
+      <div class="appicon hide-xs" aria-hidden="true"></div>
+      <div class="appicon hide-narrow" aria-hidden="true"></div>
+
+      <div class="vwrap">
+        <button type="button" class="tile qa" id="tileA" data-open aria-haspopup="dialog" aria-expanded="false" aria-controls="fly" title="Quick Settings">
+          <span class="g" data-g="wifi"></span>
+          <span class="g" data-g="bt"></span>
+          <span class="g" data-g="dnd"></span>
+          <span class="g" data-g="night"></span>
+        </button>
+        <div class="vcap"><b>A</b> Status strip <span class="dim tnum" data-w="tileA"></span></div>
+      </div>
+
+      <div class="appicon hide-xs" aria-hidden="true"></div>
+
+      <div class="vwrap">
+        <div class="tile qb" id="tileB" data-open-bg>
+          <button type="button" class="rb" data-toggle="wifi" title="Wi-Fi"><span class="i" data-i></span></button>
+          <button type="button" class="rb" data-toggle="bt" title="Bluetooth"><span class="i" data-i></span></button>
+          <button type="button" class="rb" data-toggle="dnd" title="Do Not Disturb"><span class="i" data-i></span></button>
+          <button type="button" class="rb" data-toggle="night" title="Night Light"><span class="i" data-i></span></button>
+          <button type="button" class="rb sq" data-open aria-haspopup="dialog" aria-expanded="false" aria-controls="fly" title="Quick Settings"><span class="i" data-ic="grid"></span></button>
+        </div>
+        <div class="vcap"><b>B</b> Direct toggles <span class="dim tnum" data-w="tileB"></span></div>
+      </div>
+
+      <div class="tile ghost hide-narrow" aria-hidden="true"><div class="stack"><div class="bar-a"></div><div class="bar-b"></div></div></div>
+      <div class="tile ghost sq" aria-hidden="true"><div class="blk"></div></div>
+    </div>
+
+    <!-- Flyout: opaque popup, 8 px above the bar, aligned to the tile's left edge. -->
+    <div class="fly" id="fly" role="dialog" aria-label="Quick Settings" aria-modal="false" tabindex="-1">
+      <div class="viewport" id="viewport">
+        <div class="views" id="views">
+
+          <div class="view" id="vMain">
+            <div class="fh">
+              <span class="logo"><span class="i" data-ic="grid"></span></span>
+              <span class="ttl">Quick Settings</span>
+              <span class="tag">aryan-desktop</span>
+              <button type="button" class="xbtn" data-close aria-label="Close"><span class="i" data-ic="close"></span></button>
+            </div>
+
+            <div class="grid">
+              <div class="card" data-card="wifi">
+                <button type="button" class="cic" data-toggle="wifi" aria-label="Toggle Wi-Fi"><span class="i" data-i></span></button>
+                <button type="button" class="ctext" data-detail="wifi" aria-label="Wi-Fi networks">
+                  <span class="tx"><span class="cl">Wi-Fi</span><span class="cs" data-sub></span></span>
+                  <span class="chev" data-ic="chevron-right"></span>
+                </button>
+              </div>
+              <div class="card" data-card="bt">
+                <button type="button" class="cic" data-toggle="bt" aria-label="Toggle Bluetooth"><span class="i" data-i></span></button>
+                <button type="button" class="ctext" data-detail="bt" aria-label="Bluetooth devices">
+                  <span class="tx"><span class="cl">Bluetooth</span><span class="cs" data-sub></span></span>
+                  <span class="chev" data-ic="chevron-right"></span>
+                </button>
+              </div>
+              <button type="button" class="card" data-card="dnd" data-toggle="dnd">
+                <span class="cic"><span class="i" data-i></span></span>
+                <span class="ctext"><span class="tx"><span class="cl">Do Not Disturb</span><span class="cs" data-sub></span></span></span>
+              </button>
+              <button type="button" class="card" data-card="night" data-toggle="night">
+                <span class="cic"><span class="i" data-i></span></span>
+                <span class="ctext"><span class="tx"><span class="cl">Night Light</span><span class="cs" data-sub></span></span></span>
+              </button>
+            </div>
+
+            <div class="sliders">
+              <div class="srow">
+                <span class="sicon" aria-hidden="true"><span class="i" data-ic="sun"></span></span>
+                <div class="slider" data-slider="bri" role="slider" tabindex="0" aria-label="Brightness" aria-valuemin="0" aria-valuemax="100"><div class="fill"></div><div class="knob"></div></div>
+                <span class="sval tnum" data-val="bri"></span>
+              </div>
+              <div class="srow">
+                <button type="button" class="sicon" id="muteBtn" data-toggle="muted" aria-label="Mute"><span class="i" data-i></span></button>
+                <div class="slider" data-slider="vol" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="100"><div class="fill"></div><div class="knob"></div></div>
+                <span class="sval tnum" data-val="vol"></span>
+              </div>
+            </div>
+
+            <div class="ff">
+              <span class="note">Updates every 5 s while open</span>
+              <button type="button" class="pill" data-settings="System Settings">System Settings</button>
+            </div>
+          </div>
+
+          <div class="view" id="vDetail" inert>
+            <!-- filled by renderDetail() -->
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- annotations ---------- -->
+  <section class="notes">
+
+    <div class="nc wide">
+      <h2>Collapsed variants</h2>
+      <div class="cmp">
+        <div>
+          <h4><b>A</b> Status strip, about 130 × 48</h4>
+          <ul>
+            <li>Four 18 px glyphs, no buttons inside: Wi-Fi, Bluetooth, DND, Night Light. Blue when on, ink at 42 % when off; off glyphs use the slashed icons.</li>
+            <li>The whole tile is one target that opens the flyout (Tile.qml <code>clicked()</code>). No toggle is one click away, but nothing can be flipped by accident.</li>
+            <li>Roughly 40 % of the current tile width. Reads like a menu-bar status cluster.</li>
+            <li>Open state: blue hairline and 14 % blue fill on the tile, so it is clear which tile owns the popup.</li>
+          </ul>
+        </div>
+        <div>
+          <h4><b>B</b> Direct toggles, about 212 × 48</h4>
+          <ul>
+            <li>Today's row with chevrons removed: four 34 px round toggles plus the rounded-square panel button. Every pill is the same width.</li>
+            <li>One click flips a toggle in place; the grid button (or the tile gap) opens the flyout. The grid button turns solid blue while the flyout is open.</li>
+            <li>Mute moves into the flyout (speaker button on the volume slider), which saves one pill.</li>
+            <li>Roughly 70 % of the current width (5 round buttons instead of 2 split pills + 4 round).</li>
+          </ul>
+        </div>
+      </div>
+      <p style="margin-top:12px">Recommendation: <b>B</b> as the default, <b>A</b> as a "Compact" option in the config page. Both share one flyout and one ToggleSource, so offering both costs one extra delegate.</p>
+    </div>
+
+    <div class="nc">
+      <h2>Expanded flyout</h2>
+      <ul>
+        <li><b>Surface.</b> Opaque <code>#1C1C1E</code> / <code>#FFFFFF</code>, 360 px wide (over STYLE.md's 260–300 so "Do Not Disturb" fits on one line), 16 px radius, popup shadow from STYLE.md. Aligned to the tile's left edge, 8 px above the bar, clamped to the screen.</li>
+        <li><b>Toggle cards.</b> 2 × 2 grid of 62 px cards in the second surface step. The icon circle goes solid blue when on (stronger than the dock's 20 % fill, because the popup is opaque).</li>
+        <li><b>Split targets.</b> On Wi-Fi and Bluetooth, the circle toggles and the label area with the chevron opens the detail view. DND and Night Light toggle on the whole card.</li>
+        <li><b>Sliders.</b> 24 px pill tracks, blue fill, white knob, tabular percent on the right. The speaker button mutes; a muted slider goes grey. Arrow keys step 5 %.</li>
+        <li><b>Detail view.</b> Slides in from the right inside the same popup (160 ms), with a back button, a switch for the radio, sectioned rows and a settings pill in the footer. Height animates to fit.</li>
+        <li><b>Footer.</b> Tertiary note on the left, "System Settings" pill on the right (<code>systemsettings</code>, or <code>kcmshell6 kcm_networkmanagement</code> / <code>kcm_bluetooth</code> from the detail views).</li>
+      </ul>
+      <h3>Motion</h3>
+      <ul>
+        <li>Open: fade, 6 px rise and scale from 0.98, 180 ms ease-out. Close: fade only, 120 ms.</li>
+        <li>Colour changes 120 ms; press scale 0.94 on buttons, 0.97 on tiles and cards, 80 ms.</li>
+        <li>Detail push and pop 160 ms. Nothing animates at idle.</li>
+      </ul>
+      <h3>New icons needed</h3>
+      <p><code>sun</code>, <code>check</code>, <code>lock</code>, <code>close</code>, <code>chevron-left</code>, <code>headphones</code>, <code>keyboard</code>, <code>mouse</code>, <code>phone</code>, plus a <code>wifi</code> variant with dimmable arcs for signal strength. They are drawn here in the same 24-unit, 2.1 stroke, round-cap style as <code>contents/icons</code>.</p>
+    </div>
+
+    <div class="nc">
+      <h2>What ToggleSource must also expose</h2>
+      <p>Today it has only booleans: <code>wifiOn</code>, <code>btOn</code>, <code>muted</code>, <code>dndOn</code>, <code>nightOn</code>. The flyout needs the values below. Fast values join the existing 5 s poll. Lists are fetched only while their detail view is open.</p>
+      <div class="tw">
+      <table>
+        <thead><tr><th>Property</th><th>Read</th><th>Write</th></tr></thead>
+        <tbody>
+          <tr><td><code>wifiSsid</code>, <code>wifiSignal</code></td>
+              <td><code>nmcli -t -f ACTIVE,SSID,SIGNAL dev wifi | grep '^yes'</code></td>
+              <td>n/a</td></tr>
+          <tr><td><code>wifiNetworks</code> (detail only)</td>
+              <td><code>nmcli -t -f IN-USE,SSID,SIGNAL,SECURITY dev wifi list --rescan auto</code> plus <code>nmcli -t -f NAME,TYPE con show</code> for known networks</td>
+              <td><code>nmcli con up id "&lt;ssid&gt;"</code> (known), <code>nmcli dev wifi connect "&lt;ssid&gt;"</code> (open). Secured and new: hand off to the KCM.</td></tr>
+          <tr><td><code>btDevice</code>, <code>btBattery</code></td>
+              <td><code>bluetoothctl devices Connected</code>, then <code>bluetoothctl info &lt;MAC&gt;</code> for <code>Name</code> and <code>Battery Percentage</code></td>
+              <td>n/a</td></tr>
+          <tr><td><code>btDevices</code> (detail only)</td>
+              <td><code>bluetoothctl devices Paired</code> plus <code>info</code> per device (<code>Icon</code>, <code>Connected</code>)</td>
+              <td><code>bluetoothctl connect &lt;MAC&gt;</code> / <code>disconnect &lt;MAC&gt;</code></td></tr>
+          <tr><td><code>volume</code> (0–1)</td>
+              <td>Already polled: parse the number from <code>wpctl get-volume @DEFAULT_AUDIO_SINK@</code> (<code>Volume: 0.45 [MUTED]</code>)</td>
+              <td><code>wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 0.45</code>, sent at most every 60 ms while dragging and once on release</td></tr>
+          <tr><td><code>brightness</code>, <code>brightnessAvailable</code></td>
+              <td><code>busctl --user get-property org.kde.ScreenBrightness /org/kde/ScreenBrightness/display0 org.kde.ScreenBrightness.Display Brightness</code> (and <code>MaxBrightness</code>)</td>
+              <td><code>busctl --user call org.kde.ScreenBrightness /org/kde/ScreenBrightness/display0 org.kde.ScreenBrightness.Display SetBrightness iu &lt;value&gt; 0</code>. Fallback: <code>brightnessctl -m</code> / <code>brightnessctl set 40%</code></td></tr>
+          <tr><td><code>nightUntil</code></td>
+              <td><code>busctl --user get-property org.kde.KWin /org/kde/KWin/NightLight org.kde.KWin.NightLight scheduledTransitionDateTime</code></td>
+              <td>n/a (toggle already goes through <code>NightLightInhibitor</code>)</td></tr>
+          <tr><td><code>dndUntil</code></td>
+              <td>Already there: <code>notif.notificationsInhibitedUntil</code></td>
+              <td>n/a</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p style="margin-top:10px">Possible cleaner sources, to check before adding shell code: the <code>org.kde.bluezqt</code> QML module for devices and battery, <code>org.kde.plasma.networkmanagement</code> models for networks, and the brightness plugin already imported in ToggleSource. The ScreenBrightness D-Bus path needs Plasma 6.2 or newer; check that on the target machine.</p>
+    </div>
+
+    <div class="nc wide">
+      <h2>Open questions</h2>
+      <ol class="q">
+        <li>Which collapsed variant should ship as the default: A (status only, about 130 px) or B (direct toggles, about 212 px)? Should the other be a config option?</li>
+        <li>Should mute stay in the collapsed row of variant B, or is the speaker button on the flyout's volume slider enough?</li>
+        <li>Is the split card (circle toggles, label opens the list) clear enough, or should Wi-Fi and Bluetooth cards always open the list and toggle only from the switch inside it?</li>
+        <li>Secured networks that are not saved need a password. Should the flyout open the Network KCM, or should it get an inline password field?</li>
+        <li>Desktop with several monitors: one brightness slider for the primary display, one per display, or hide brightness when no backlight or DDC display is found?</li>
+        <li>Should the flyout be the plasmoid's <code>fullRepresentation</code> (Plasma draws the dialog chrome) or a custom <code>PlasmaCore.PopupPlasmoidDialog</code> so it can match this surface exactly?</li>
+      </ol>
+    </div>
+
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* Icons: the repo set from package/contents/icons (stroke 2.1, round), plus new
+     glyphs in the same style. fill="#000" in the originals becomes currentColor. */
+  var P = {
+    "wifi": '<path d="M2.5 9.2a13.5 13.5 0 0 1 19 0"/><path d="M5.6 12.6a9 9 0 0 1 12.8 0"/><path d="M8.7 16a4.6 4.6 0 0 1 6.6 0"/><circle cx="12" cy="19.2" r="1.1" fill="currentColor" stroke="none"/>',
+    "wifi-off": '<path d="M2.5 9.2a13.5 13.5 0 0 1 19 0"/><path d="M5.6 12.6a9 9 0 0 1 12.8 0"/><path d="M8.7 16a4.6 4.6 0 0 1 6.6 0"/><circle cx="12" cy="19.2" r="1.1" fill="currentColor" stroke="none"/><path d="M3.5 3.5l17 17"/>',
+    "bluetooth": '<path d="M7 7.5l10 9-5 4.5V3l5 4.5-10 9"/>',
+    "bluetooth-off": '<path d="M7 7.5l10 9-5 4.5V3l5 4.5-10 9"/><path d="M3.5 3.5l17 17"/>',
+    "moon-dnd": '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
+    "night-light": '<circle cx="12" cy="12" r="4"/><path d="M12 8a4 4 0 0 0 0 8z" fill="currentColor"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+    "speaker": '<path d="M4 9.5h3l5-4v13l-5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18.2 6.4a7.5 7.5 0 0 1 0 11.2"/>',
+    "speaker-muted": '<path d="M4 9.5h3l5-4v13l-5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
+    "grid": '<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>',
+    "chevron-right": '<path d="M9.5 6l6 6-6 6"/>',
+    /* new */
+    "chevron-left": '<path d="M14.5 6l-6 6 6 6"/>',
+    "close": '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
+    "sun": '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+    "check": '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    "lock": '<rect x="5.5" y="10.5" width="13" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',
+    "headphones": '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3.5" y="14" width="4.5" height="6.5" rx="1.8"/><rect x="16" y="14" width="4.5" height="6.5" rx="1.8"/>',
+    "keyboard": '<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 10h.01M10 10h.01M14 10h.01M17.5 10h.01M8 14.5h8"/>',
+    "mouse": '<rect x="6.5" y="3" width="11" height="18" rx="5.5"/><path d="M12 7v3"/>',
+    "phone": '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>'
+  };
+  function svg(inner) {
+    return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+  }
+  function ic(name) { return svg(P[name] || ""); }
+  /* Signal strength: inner arc always full, outer arcs dim below level. */
+  function signal(level) {
+    var o3 = level >= 3 ? 1 : .25, o2 = level >= 2 ? 1 : .25;
+    return svg('<path d="M2.5 9.2a13.5 13.5 0 0 1 19 0" opacity="' + o3 + '"/><path d="M5.6 12.6a9 9 0 0 1 12.8 0" opacity="' + o2 + '"/><path d="M8.7 16a4.6 4.6 0 0 1 6.6 0"/><circle cx="12" cy="19.2" r="1.1" fill="currentColor" stroke="none"/>');
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  document.querySelectorAll("[data-ic]").forEach(function (el) { el.innerHTML = ic(el.getAttribute("data-ic")); });
+
+  /* ---------- state (stands in for ToggleSource) ---------- */
+  var S = {
+    wifi: true, bt: true, dnd: false, night: true, muted: false,
+    vol: 45, bri: 70,
+    ssid: "Home-5G",
+    nets: [
+      { ssid: "Home-5G", sig: 3, lock: true, known: true },
+      { ssid: "Home-2.4", sig: 2, lock: true, known: true },
+      { ssid: "Office Guest", sig: 1, lock: false, known: true },
+      { ssid: "Cafe Lumen", sig: 2, lock: false, known: false },
+      { ssid: "Vodafone-8C21", sig: 2, lock: true, known: false },
+      { ssid: "DIRECT-41-Printer", sig: 1, lock: true, known: false }
+    ],
+    devs: [
+      { id: "a", name: "WH-1000XM5", type: "headphones", conn: true, batt: 80 },
+      { id: "b", name: "MX Keys", type: "keyboard", conn: true, batt: 62 },
+      { id: "c", name: "MX Master 3S", type: "mouse", conn: false, batt: 0 },
+      { id: "d", name: "Pixel 8", type: "phone", conn: false, batt: 0 }
+    ],
+    busy: null,      // ssid or device id being connected
+    msg: null,       // { key, text } one-off row message
+    open: false, anchor: null, detail: null
+  };
+
+  var ICONS = {
+    wifi: function () { return S.wifi ? "wifi" : "wifi-off"; },
+    bt: function () { return S.bt ? "bluetooth" : "bluetooth-off"; },
+    dnd: function () { return "moon-dnd"; },
+    night: function () { return "night-light"; },
+    muted: function () { return (S.muted || S.vol === 0) ? "speaker-muted" : "speaker"; }
+  };
+  var LABEL = { wifi: "Wi-Fi", bt: "Bluetooth", dnd: "Do Not Disturb", night: "Night Light" };
+
+  function connectedDevs() { return S.devs.filter(function (d) { return d.conn; }); }
+  function sub(k) {
+    if (k === "wifi") {
+      if (!S.wifi) return "Off";
+      if (S.busy && S.nets.some(function (n) { return n.ssid === S.busy; })) return "Connecting…";
+      return S.ssid || "Not connected";
+    }
+    if (k === "bt") {
+      if (!S.bt) return "Off";
+      var c = connectedDevs();
+      if (!c.length) return "On, no devices";
+      var head = c[0];
+      var t = head.name + (head.batt ? " · " + head.batt + "%" : "");
+      return c.length > 1 ? head.name + " +" + (c.length - 1) : t;
+    }
+    if (k === "dnd") return S.dnd ? "Until turned off" : "Off";
+    if (k === "night") return S.night ? "On until 07:00" : "Off, starts 19:30";
+    return "";
+  }
+
+  /* ---------- render ---------- */
+  function renderCollapsed() {
+    document.querySelectorAll("#tileA .g").forEach(function (g) {
+      var k = g.getAttribute("data-g");
+      g.innerHTML = ic(ICONS[k]());
+      g.classList.toggle("on", !!S[k]);
+    });
+    var title = ["wifi", "bt", "dnd", "night"].map(function (k) { return LABEL[k] + ": " + sub(k); }).join("\n");
+    document.getElementById("tileA").title = "Quick Settings\n" + title;
+
+    document.querySelectorAll("#tileB .rb[data-toggle]").forEach(function (b) {
+      var k = b.getAttribute("data-toggle");
+      b.querySelector("[data-i]").innerHTML = ic(ICONS[k]());
+      b.classList.toggle("on", !!S[k]);
+      b.setAttribute("aria-pressed", S[k] ? "true" : "false");
+      b.title = LABEL[k] + ": " + sub(k);
+    });
+  }
+
+  function renderCards() {
+    document.querySelectorAll("[data-card]").forEach(function (c) {
+      var k = c.getAttribute("data-card");
+      c.classList.toggle("on", !!S[k]);
+      c.querySelector("[data-i]").innerHTML = ic(ICONS[k]());
+      c.querySelector("[data-sub]").textContent = sub(k);
+      var t = c.matches("[data-toggle]") ? c : c.querySelector("[data-toggle]");
+      t.setAttribute("aria-pressed", S[k] ? "true" : "false");
+    });
+    var mb = document.getElementById("muteBtn");
+    mb.querySelector("[data-i]").innerHTML = ic(ICONS.muted());
+    mb.classList.toggle("muted", S.muted);
+    mb.setAttribute("aria-pressed", S.muted ? "true" : "false");
+    mb.setAttribute("aria-label", S.muted ? "Unmute" : "Mute");
+    renderSlider("bri");
+    renderSlider("vol");
+  }
+
+  function renderSlider(key) {
+    var el = document.querySelector('[data-slider="' + key + '"]');
+    var v = S[key];
+    var f = v / 100;
+    el.querySelector(".fill").style.width = "calc(24px + (100% - 24px) * " + f + ")";
+    el.querySelector(".knob").style.left = "calc(2px + (100% - 24px) * " + f + ")";
+    el.setAttribute("aria-valuenow", v);
+    el.setAttribute("aria-valuetext", (key === "vol" && S.muted) ? "Muted" : v + "%");
+    el.classList.toggle("off", key === "vol" && S.muted);
+    document.querySelector('[data-val="' + key + '"]').textContent = (key === "vol" && S.muted) ? "Muted" : v + "%";
+  }
+
+  function renderDetail() {
+    var d = S.detail;
+    var el = document.getElementById("vDetail");
+    if (!d) return;
+    var isWifi = d === "wifi";
+    var on = S[d];
+    var h = '<div class="fh">' +
+      '<button type="button" class="back" data-back aria-label="Back">' + '<span class="i">' + ic("chevron-left") + '</span></button>' +
+      '<span class="ttl">' + LABEL[d] + '</span>' +
+      '<button type="button" class="sw" role="switch" data-toggle="' + d + '" aria-checked="' + on + '" aria-label="' + LABEL[d] + '"></button>' +
+      '</div>';
+
+    if (!on) {
+      h += '<div class="empty"><div class="big">' + ic(isWifi ? "wifi-off" : "bluetooth-off") + '</div><b>' + LABEL[d] + ' is off</b>' +
+        (isWifi ? "Turn it on to see networks." : "Turn it on to connect your devices.") + '</div>';
+    } else if (isWifi) {
+      var known = S.nets.filter(function (n) { return n.known; });
+      var other = S.nets.filter(function (n) { return !n.known; });
+      h += '<div class="sec">Known networks</div><div class="list">' + known.map(netRow).join("") + '</div>';
+      h += '<div class="sec">Other networks</div><div class="list">' + other.map(netRow).join("") + '</div>';
+    } else {
+      h += '<div class="sec">My devices</div><div class="list">' + S.devs.map(devRow).join("") + '</div>';
+    }
+
+    h += '<div class="ff" style="margin-top:4px"><span class="note">' +
+      (isWifi ? "nmcli · scanned just now" : "Pairing lives in System Settings") +
+      '</span><button type="button" class="pill" data-settings="' + (isWifi ? "Network Settings" : "Bluetooth Settings") + '">' +
+      (isWifi ? "Network Settings" : "Bluetooth Settings") + '</button></div>';
+
+    el.innerHTML = h;
+  }
+
+  function netRow(n) {
+    var cur = S.ssid === n.ssid && S.busy !== n.ssid;
+    var busy = S.busy === n.ssid;
+    var msg = S.msg && S.msg.key === n.ssid ? S.msg.text : null;
+    var status = busy ? '<span class="rs blue"><span class="spin"></span>Connecting…</span>'
+      : msg ? '<span class="rs">' + esc(msg) + '</span>'
+      : cur ? '<span class="rs blue">Connected</span>' : "";
+    return '<button type="button" class="row' + (cur ? " conn" : "") + '" data-net="' + esc(n.ssid) + '">' +
+      '<span class="ri">' + signal(n.sig) + '</span>' +
+      '<span class="rt"><span class="rn">' + esc(n.ssid) + '</span>' + status + '</span>' +
+      (n.lock ? '<span class="lk">' + ic("lock") + '</span>' : "") +
+      '<span class="ck' + (cur ? "" : " hide") + '">' + ic("check") + '</span>' +
+      '</button>';
+  }
+
+  function devRow(dv) {
+    var busy = S.busy === dv.id;
+    var status = busy ? '<span class="rs blue"><span class="spin"></span>' + (dv.conn ? "Disconnecting…" : "Connecting…") + '</span>'
+      : dv.conn ? '<span class="rs blue">Connected' + (dv.batt ? " · " + dv.batt + "%" : "") + '</span>'
+      : '<span class="rs">Not connected</span>';
+    return '<button type="button" class="row' + (dv.conn ? " conn" : "") + '" data-dev="' + dv.id + '">' +
+      '<span class="rdot"><span class="i">' + ic(dv.type) + '</span></span>' +
+      '<span class="rt"><span class="rn">' + esc(dv.name) + '</span>' + status + '</span>' +
+      '</button>';
+  }
+
+  function render() {
+    renderCollapsed();
+    renderCards();
+    if (S.detail) renderDetail();
+    fitHeight(false);
+    widths();
+  }
+
+  function widths() {
+    document.querySelectorAll("[data-w]").forEach(function (s) {
+      var t = document.getElementById(s.getAttribute("data-w"));
+      s.textContent = Math.round(t.offsetWidth) + " × " + Math.round(t.offsetHeight);
+    });
+  }
+
+  /* ---------- flyout ---------- */
+  var stage = document.getElementById("stage");
+  var dock = document.getElementById("dock");
+  var fly = document.getElementById("fly");
+  var viewport = document.getElementById("viewport");
+  var views = document.getElementById("views");
+  var vMain = document.getElementById("vMain");
+  var vDetail = document.getElementById("vDetail");
+
+  function fitHeight(instant) {
+    var v = S.detail ? vDetail : vMain;
+    viewport.classList.toggle("instant", !!instant);
+    viewport.style.height = v.offsetHeight + "px";
+    if (instant) { void viewport.offsetHeight; viewport.classList.remove("instant"); }
+  }
+
+  function place() {
+    if (!S.anchor) return;
+    var st = stage.getBoundingClientRect();
+    var tile = S.anchor.getBoundingClientRect();
+    var bar = dock.getBoundingClientRect();
+    var w = fly.offsetWidth;
+    var left = tile.left - st.left;
+    left = Math.max(12, Math.min(left, st.width - w - 12));
+    fly.style.left = left + "px";
+    fly.style.bottom = (st.bottom - bar.top + 8) + "px";
+    fly.style.transformOrigin = (tile.left + tile.width / 2 - st.left - left) + "px 100%";
+  }
+
+  function setExpanded() {
+    document.querySelectorAll("[data-open]").forEach(function (b) {
+      var owner = b.closest(".tile");
+      b.setAttribute("aria-expanded", S.open && S.anchor === owner ? "true" : "false");
+    });
+  }
+
+  function openFly(anchor) {
+    S.anchor = anchor;
+    S.open = true;
+    showView(null, true);
+    place();
+    fly.classList.add("open");
+    setExpanded();
+  }
+  function closeFly() {
+    if (!S.open) return;
+    var hadFocus = fly.contains(document.activeElement);
+    S.open = false;
+    fly.classList.remove("open");
+    setExpanded();
+    if (hadFocus && S.anchor) {
+      var t = S.anchor.matches("button") ? S.anchor : S.anchor.querySelector("[data-open]");
+      if (t) t.focus({ preventScroll: true });
+    }
+  }
+  function toggleFly(anchor) {
+    if (S.open && S.anchor === anchor) closeFly(); else openFly(anchor);
+  }
+
+  function showView(detail, instant) {
+    S.detail = detail;
+    S.msg = null;
+    if (detail) renderDetail();
+    views.classList.toggle("detail", !!detail);
+    vMain.inert = !!detail;
+    vDetail.inert = !detail;
+    if (instant) { views.style.transition = "none"; void views.offsetWidth; views.style.transition = ""; }
+    fitHeight(instant);
+    var f = detail ? vDetail.querySelector(".back") : null;
+    if (f) f.focus({ preventScroll: true });
+  }
+
+  /* ---------- actions ---------- */
+  function toggle(k) {
+    S[k] = !S[k];
+    if (k === "wifi") { S.ssid = S.wifi ? "Home-5G" : null; S.busy = null; }
+    if (k === "bt" && !S.bt) S.busy = null;
+    if (k === "muted" && !S.muted && S.vol === 0) S.vol = 20;
+    render();
+  }
+
+  function connectNet(ssid) {
+    var n = S.nets.filter(function (x) { return x.ssid === ssid; })[0];
+    if (!n || S.busy) return;
+    if (S.ssid === ssid) return;
+    if (n.lock && !n.known) {
+      S.msg = { key: ssid, text: "Needs a password, opens Network Settings" };
+      render();
+      return;
+    }
+    S.msg = null;
+    S.busy = ssid;
+    render();
+    setTimeout(function () {
+      S.busy = null;
+      S.ssid = ssid;
+      n.known = true;
+      render();
+    }, 900);
+  }
+
+  function toggleDev(id) {
+    var d = S.devs.filter(function (x) { return x.id === id; })[0];
+    if (!d || S.busy) return;
+    S.busy = id;
+    render();
+    setTimeout(function () {
+      S.busy = null;
+      d.conn = !d.conn;
+      if (d.conn && !d.batt) d.batt = d.type === "phone" ? 0 : 74;
+      render();
+    }, 800);
+  }
+
+  document.addEventListener("click", function (e) {
+    var t = e.target;
+    var el;
+    if ((el = t.closest("[data-theme-btn]"))) { setTheme(el.getAttribute("data-theme-btn")); return; }
+    if ((el = t.closest("[data-toggle]"))) { toggle(el.getAttribute("data-toggle")); return; }
+    if ((el = t.closest("[data-open]"))) { toggleFly(el.closest(".tile")); return; }
+    if ((el = t.closest("[data-detail]"))) { showView(el.getAttribute("data-detail")); return; }
+    if (t.closest("[data-back]")) {
+      var from = S.detail;
+      showView(null);
+      var ret = vMain.querySelector('[data-detail="' + from + '"]');
+      if (ret) ret.focus({ preventScroll: true });
+      return;
+    }
+    if (t.closest("[data-close]")) { closeFly(); return; }
+    if ((el = t.closest("[data-net]"))) { connectNet(el.getAttribute("data-net")); return; }
+    if ((el = t.closest("[data-dev]"))) { toggleDev(el.getAttribute("data-dev")); return; }
+    if ((el = t.closest("[data-settings]"))) {
+      var b = el, txt = b.textContent;
+      b.textContent = "Opening…";
+      setTimeout(function () { b.textContent = txt; closeFly(); }, 450);
+      return;
+    }
+    if ((el = t.closest("[data-open-bg]"))) { toggleFly(el); return; }
+  });
+
+  /* Outside press closes (pointerdown, like a Plasma popup). */
+  document.addEventListener("pointerdown", function (e) {
+    if (!S.open) return;
+    if (fly.contains(e.target)) return;
+    if (S.anchor && S.anchor.contains(e.target)) return;
+    closeFly();
+  }, true);
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && S.open) { e.preventDefault(); closeFly(); }
+  });
+
+  window.addEventListener("resize", function () { place(); widths(); });
+
+  /* ---------- sliders ---------- */
+  document.querySelectorAll("[data-slider]").forEach(function (el) {
+    var key = el.getAttribute("data-slider");
+    function setFrom(x) {
+      var r = el.getBoundingClientRect();
+      var f = (x - r.left - 12) / (r.width - 24);
+      var v = Math.round(Math.max(0, Math.min(1, f)) * 100);
+      setVal(v);
+    }
+    function setVal(v) {
+      S[key] = v;
+      if (key === "vol") S.muted = false;
+      renderCards();
+      renderCollapsed();
+    }
+    el.addEventListener("pointerdown", function (e) {
+      el.setPointerCapture(e.pointerId);
+      el.classList.add("dragging");
+      setFrom(e.clientX);
+    });
+    el.addEventListener("pointermove", function (e) {
+      if (el.hasPointerCapture(e.pointerId)) setFrom(e.clientX);
+    });
+    function end() { el.classList.remove("dragging"); }
+    el.addEventListener("pointerup", end);
+    el.addEventListener("pointercancel", end);
+    el.addEventListener("keydown", function (e) {
+      var step = { ArrowRight: 5, ArrowUp: 5, ArrowLeft: -5, ArrowDown: -5, PageUp: 20, PageDown: -20 }[e.key];
+      if (e.key === "Home") step = -100;
+      if (e.key === "End") step = 100;
+      if (step === undefined) return;
+      e.preventDefault();
+      setVal(Math.max(0, Math.min(100, S[key] + step)));
+    });
+  });
+
+  /* ---------- theme ---------- */
+  function setTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    document.querySelectorAll("[data-theme-btn]").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-theme-btn") === t ? "true" : "false");
+    });
+    try { localStorage.setItem("qs-mock-theme", t); } catch (err) {}
+  }
+  var saved = null;
+  try { saved = localStorage.getItem("qs-mock-theme"); } catch (err) {}
+  setTheme(saved || (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+
+  render();
+  fitHeight(true);
+})();
+</script>
+</body>
+</html>

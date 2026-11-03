@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 
 // Glass tile (docs/STYLE.md, "Glass material"): faint fill, hairline border,
@@ -9,7 +10,29 @@ Rectangle {
     readonly property bool darkTheme: Kirigami.Theme.textColor.hslLightness > 0.5
     readonly property real padding: Math.round(height * 0.14)
 
+    // Shown as a tooltip while hovered (and not being dragged).
+    property string hoverName
+
     signal clicked()
+
+    // True when the point (in tile coordinates) sits on a button or slider inside
+    // the tile, so a tap there does that control's job and not the tile's.
+    function controlAt(x, y) {
+        let item = tile;
+        let px = x;
+        let py = y;
+        while (true) {
+            const c = item.childAt(px, py);
+            if (!c)
+                return false;
+            if (c.pressed !== undefined && c.hovered !== undefined)
+                return true;
+            const p = c.mapFromItem(item, px, py);
+            px = p.x;
+            py = p.y;
+            item = c;
+        }
+    }
 
     radius: height * 0.24
     color: Qt.alpha(Kirigami.Theme.textColor, hover.hovered ? 0.095 : 0.055)
@@ -35,11 +58,22 @@ Rectangle {
         color: Qt.alpha("white", 0.08)
     }
 
+    SlideOnMove {}
+
+    QQC2.ToolTip {
+        visible: hover.hovered && tile.hoverName !== "" && tile.opacity === 1
+        text: tile.hoverName
+        delay: Kirigami.Units.toolTipDelay
+    }
+
     HoverHandler {
         id: hover
     }
     TapHandler {
         id: tap
-        onTapped: tile.clicked()
+        onTapped: eventPoint => {
+            if (!tile.controlAt(eventPoint.position.x, eventPoint.position.y))
+                tile.clicked();
+        }
     }
 }

@@ -12,6 +12,9 @@ import "../components"
 Tile {
     id: pomo
 
+    // Tapping the tile body starts or pauses; its buttons keep their own jobs.
+    onClicked: toggle()
+
     property int focusMs: 25 * 60 * 1000
     property int breakMs: 5 * 60 * 1000
     property string phase: "focus" // "focus" or "break"
