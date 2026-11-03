@@ -15,6 +15,9 @@ Notable changes to Dockyard. Newest first.
 
 ### Changed
 
+- The Notes tile keeps several notes. The popup shows a chip per note, a button for a new one and a delete button. The tile shows the selected note and a count when there is more than one. An old single note becomes the first note (`notesJson`, `notesCurrent`).
+- The Todos popup lists every todo, open ones first and a Completed section below. Tap the circle to complete or restore a todo, and the bin button to delete it. The list scrolls when long.
+- The Todos tile fits its header and two rows inside the tile height, so long text or tall fonts no longer run past the bottom.
 - Settings are split into five pages. Widgets turns tiles on and off. Apps, Clock & Calendar, Weather and System hold each tile's options, so the options are no longer at the bottom of one long page.
 - City search lists every match (several cities share a name) and remembers the chosen place name (`locationName`).
 - World clock zones and your own pinned-app list are edited as lists with reorder and remove, not as comma-separated text. Zones are picked from the ones the tile supports. Editing the pinned list keeps the launcher pins in step.

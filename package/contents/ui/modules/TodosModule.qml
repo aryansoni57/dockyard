@@ -17,10 +17,14 @@ Tile {
     property int openCount: 0
 
     readonly property real inner: height - padding * 2
+    // Header and two rows share the tile's inner height, so nothing runs past the bottom.
+    readonly property real headerH: inner * 0.36
+    readonly property real rowH: inner * 0.3
 
     signal jsonEdited(string json)
 
     implicitWidth: Math.min(Kirigami.Units.gridUnit * 9, content.implicitWidth) + padding * 2
+    clip: true
 
     ListModel {
         id: items
@@ -113,8 +117,11 @@ Tile {
 
         PlasmaComponents.Label {
             Layout.fillWidth: true
+            Layout.preferredHeight: todos.headerH
+            Layout.maximumHeight: todos.headerH
+            verticalAlignment: Text.AlignVCenter
             text: todos.openCount + " left"
-            font.pixelSize: Math.max(Kirigami.Theme.smallFont.pixelSize, todos.inner * 0.38)
+            font.pixelSize: Math.max(8, Math.round(todos.headerH * 0.8))
             font.weight: Font.Bold
             font.features: { "tnum": 1 }
             elide: Text.ElideRight
@@ -130,12 +137,14 @@ Tile {
                 required property bool done
 
                 Layout.fillWidth: true
+                Layout.preferredHeight: todos.rowH
+                Layout.maximumHeight: todos.rowH
                 visible: index < 2
                 opacity: done ? 0.5 : 1
                 spacing: todos.padding * 0.5
 
                 Rectangle {
-                    Layout.preferredWidth: todos.inner * 0.26
+                    Layout.preferredWidth: todos.rowH * 0.7
                     Layout.preferredHeight: Layout.preferredWidth
                     radius: width / 2
                     color: row.done ? Kirigami.Theme.highlightColor : "transparent"
@@ -149,8 +158,10 @@ Tile {
 
                 PlasmaComponents.Label {
                     Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    verticalAlignment: Text.AlignVCenter
                     text: row.text
-                    font.pixelSize: Math.max(Kirigami.Theme.smallFont.pixelSize, todos.inner * 0.2)
+                    font.pixelSize: Math.max(8, Math.round(todos.rowH * 0.78))
                     font.strikeout: row.done
                     elide: Text.ElideRight
                 }

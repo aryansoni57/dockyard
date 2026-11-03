@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls as QQC2
 import org.kde.plasma.plasmoid
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.components as PlasmaComponents
@@ -114,8 +115,60 @@ PlasmoidItem {
         list.push({ text: t, done: false });
         Plasmoid.configuration.todosJson = JSON.stringify(list);
     }
+    function toggleTodo(i) {
+        const list = todoItems();
+        if (!list[i]) return;
+        list[i].done = !list[i].done;
+        Plasmoid.configuration.todosJson = JSON.stringify(list);
+    }
+    function deleteTodo(i) {
+        const list = todoItems();
+        list.splice(i, 1);
+        Plasmoid.configuration.todosJson = JSON.stringify(list);
+    }
     function clearDoneTodos() {
         Plasmoid.configuration.todosJson = JSON.stringify(todoItems().filter(i => !i.done));
+    }
+
+    // Notes live in notesJson ([{text}]); notesCurrent is the one the tile shows.
+    // An empty notesJson falls back to the old single notesText as the first note.
+    function noteList() {
+        try {
+            const list = JSON.parse(cfg.notesJson);
+            if (Array.isArray(list) && list.length > 0)
+                return list.map(n => ({ text: String((n && n.text) ?? "") }));
+        } catch (e) {}
+        return [{ text: cfg.notesText }];
+    }
+    readonly property var notes: noteList()
+    readonly property int noteIndex: Math.max(0, Math.min(cfg.notesCurrent, notes.length - 1))
+    function saveNotes(list, current) {
+        Plasmoid.configuration.notesJson = JSON.stringify(list);
+        Plasmoid.configuration.notesCurrent = current;
+    }
+    function setNoteText(i, text) {
+        const list = notes.slice();
+        list[i] = { text: text };
+        saveNotes(list, noteIndex);
+    }
+    function addNote() {
+        const list = notes.concat([{ text: "" }]);
+        saveNotes(list, list.length - 1);
+    }
+    function selectNote(i) {
+        Plasmoid.configuration.notesCurrent = i;
+    }
+    function deleteNote(i) {
+        if (notes.length <= 1) {
+            saveNotes([{ text: "" }], 0);
+            return;
+        }
+        const list = notes.filter((_, k) => k !== i);
+        saveNotes(list, Math.min(i, list.length - 1));
+    }
+    function noteTitle(n) {
+        const first = n.text.split("\n").find(l => l.trim() !== "");
+        return first ? first.trim() : i18n("Empty note");
     }
 
     Mpris.Mpris2Model {
@@ -621,7 +674,8 @@ PlasmoidItem {
                     Layout.column: root.colOf("notes")
                     Layout.fillHeight: true
                     visible: root.cfg.showNotes
-                    text: root.cfg.notesText
+                    text: root.notes[root.noteIndex].text
+                    count: root.notes.length
                     onClicked: src => root.togglePopup("notes", src)
                 }
                 Modules.ProgressModule {
@@ -1055,17 +1109,102 @@ PlasmoidItem {
             visible: root.inMode("notes") && root.cfg.showNotes
             text: i18n("Notes")
         }
+        // One chip per note, plus a button for a new one.
+        Flow {
+            visible: root.inMode("notes") && root.cfg.showNotes
+            Layout.fillWidth: true
+            Layout.leftMargin: Kirigami.Units.largeSpacing
+            Layout.rightMargin: Kirigami.Units.largeSpacing
+            spacing: Kirigami.Units.smallSpacing
+
+            Repeater {
+                model: root.inMode("notes") ? root.notes : []
+
+                delegate: Rectangle {
+                    id: chip
+                    required property var modelData
+                    required property int index
+                    readonly property bool picked: index === root.noteIndex
+
+                    implicitWidth: Math.min(Kirigami.Units.gridUnit * 7, chipLabel.implicitWidth + Kirigami.Units.largeSpacing * 2)
+                    implicitHeight: chipLabel.implicitHeight + Kirigami.Units.smallSpacing * 2
+                    radius: height / 2
+                    color: picked ? Qt.alpha(Kirigami.Theme.highlightColor, 0.22)
+                        : Qt.alpha(Kirigami.Theme.textColor, chipTap.hovered ? 0.1 : 0.06)
+                    border.width: 1
+                    border.color: picked ? Kirigami.Theme.highlightColor : Qt.alpha(Kirigami.Theme.textColor, 0.12)
+
+                    PlasmaComponents.Label {
+                        id: chipLabel
+                        anchors.fill: parent
+                        anchors.leftMargin: Kirigami.Units.largeSpacing
+                        anchors.rightMargin: Kirigami.Units.largeSpacing
+                        verticalAlignment: Text.AlignVCenter
+                        text: root.noteTitle(chip.modelData)
+                        elide: Text.ElideRight
+                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                        font.weight: chip.picked ? Font.DemiBold : Font.Normal
+                        color: chip.picked ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                    }
+                    HoverHandler { id: chipTap }
+                    TapHandler {
+                        onTapped: root.selectNote(chip.index)
+                    }
+                }
+            }
+            PlasmaComponents.ToolButton {
+                icon.name: "list-add"
+                text: i18n("New note")
+                display: PlasmaComponents.AbstractButton.IconOnly
+                onClicked: root.addNote()
+
+                PlasmaComponents.ToolTip {
+                    text: i18n("New note")
+                }
+            }
+        }
         PlasmaComponents.TextArea {
+            id: noteEditor
             visible: root.inMode("notes") && root.cfg.showNotes
             Layout.fillWidth: true
             Layout.margins: Kirigami.Units.largeSpacing
             Layout.preferredHeight: Kirigami.Units.gridUnit * 7
             placeholderText: i18n("Write a note")
             wrapMode: TextEdit.Wrap
-            Component.onCompleted: text = root.cfg.notesText
+            // Shows the current note; typing writes it back.
+            function sync() {
+                const t = root.notes[root.noteIndex].text;
+                if (text !== t)
+                    text = t;
+            }
+            Component.onCompleted: sync()
+            Connections {
+                target: root
+                function onNoteIndexChanged() { noteEditor.sync(); }
+                function onNotesChanged() { if (!noteEditor.activeFocus) noteEditor.sync(); }
+            }
             onTextChanged: {
-                if (text !== root.cfg.notesText)
-                    Plasmoid.configuration.notesText = text;
+                if (text !== root.notes[root.noteIndex].text)
+                    root.setNoteText(root.noteIndex, text);
+            }
+        }
+        RowLayout {
+            visible: root.inMode("notes") && root.cfg.showNotes
+            Layout.fillWidth: true
+            Layout.leftMargin: Kirigami.Units.largeSpacing
+            Layout.rightMargin: Kirigami.Units.largeSpacing
+            Layout.bottomMargin: Kirigami.Units.largeSpacing
+
+            PlasmaComponents.Label {
+                Layout.fillWidth: true
+                text: i18n("Note %1 of %2", root.noteIndex + 1, root.notes.length)
+                opacity: 0.6
+                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+            }
+            PlasmaComponents.Button {
+                icon.name: "edit-delete"
+                text: root.notes.length > 1 ? i18n("Delete note") : i18n("Clear note")
+                onClicked: root.deleteNote(root.noteIndex)
             }
         }
 
@@ -1073,12 +1212,132 @@ PlasmoidItem {
             visible: root.inMode("todos") && root.cfg.showTodos
             text: i18n("Todos")
         }
-        Repeater {
-            model: root.inMode("todos") && root.cfg.showTodos ? root.todoItems().slice(0, 6) : []
-            delegate: InfoRow {
-                required property var modelData
-                label: modelData.text
-                value: modelData.done ? i18n("done") : ""
+        // Open todos first, then the completed ones. Tap the circle to complete or
+        // restore, the trash button to delete. Scrolls when the list is long.
+        QQC2.ScrollView {
+            id: todoScroll
+            visible: root.inMode("todos") && root.cfg.showTodos
+            Layout.fillWidth: true
+            Layout.preferredHeight: Math.min(todoList.implicitHeight, Kirigami.Units.gridUnit * 14)
+            contentWidth: availableWidth
+            QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
+            clip: true
+
+            ColumnLayout {
+                id: todoList
+                width: todoScroll.availableWidth
+                spacing: 0
+
+                PlasmaComponents.Label {
+                    visible: root.inMode("todos") && root.todoItems().length === 0
+                    Layout.fillWidth: true
+                    Layout.margins: Kirigami.Units.largeSpacing
+                    text: i18n("Nothing to do. Add a todo below.")
+                    opacity: 0.6
+                }
+
+                // Pass 0 lists open todos, pass 1 the completed ones.
+                Repeater {
+                    model: root.inMode("todos") && root.cfg.showTodos ? [0, 1] : []
+
+                    delegate: ColumnLayout {
+                        id: pass
+                        required property int modelData
+                        readonly property bool doneList: modelData === 1
+                        readonly property var rows: {
+                            const out = [];
+                            const all = root.todoItems();
+                            for (let i = 0; i < all.length; ++i) {
+                                if (!!all[i].done === doneList)
+                                    out.push({ index: i, text: all[i].text, done: !!all[i].done });
+                            }
+                            return out;
+                        }
+                        Layout.fillWidth: true
+                        spacing: 0
+                        visible: rows.length > 0
+
+                        PlasmaComponents.Label {
+                            visible: pass.doneList
+                            Layout.fillWidth: true
+                            Layout.topMargin: Kirigami.Units.smallSpacing
+                            Layout.leftMargin: Kirigami.Units.largeSpacing
+                            text: i18n("Completed (%1)", pass.rows.length)
+                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                            font.weight: Font.DemiBold
+                            opacity: 0.55
+                        }
+
+                        Repeater {
+                            model: pass.rows
+
+                            delegate: Item {
+                                id: todoRow
+                                required property var modelData
+                                Layout.fillWidth: true
+                                implicitHeight: Kirigami.Units.gridUnit * 2
+
+                                HoverHandler { id: rowHover }
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: Qt.alpha(Kirigami.Theme.textColor, rowHover.hovered ? 0.05 : 0)
+                                }
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: Kirigami.Units.largeSpacing
+                                    anchors.rightMargin: Kirigami.Units.smallSpacing
+                                    spacing: Kirigami.Units.largeSpacing
+
+                                    // Round checkbox.
+                                    Rectangle {
+                                        Layout.preferredWidth: Kirigami.Units.gridUnit * 1.1
+                                        Layout.preferredHeight: Layout.preferredWidth
+                                        radius: width / 2
+                                        color: todoRow.modelData.done ? Kirigami.Theme.highlightColor : "transparent"
+                                        border.width: 1.5
+                                        border.color: todoRow.modelData.done ? Kirigami.Theme.highlightColor
+                                            : Qt.alpha(Kirigami.Theme.textColor, 0.55)
+
+                                        Kirigami.Icon {
+                                            anchors.centerIn: parent
+                                            width: parent.width * 0.7
+                                            height: width
+                                            visible: todoRow.modelData.done
+                                            source: "checkmark-symbolic"
+                                            isMask: true
+                                            color: Kirigami.Theme.highlightedTextColor
+                                        }
+                                        TapHandler {
+                                            onTapped: root.toggleTodo(todoRow.modelData.index)
+                                        }
+                                    }
+                                    PlasmaComponents.Label {
+                                        Layout.fillWidth: true
+                                        text: todoRow.modelData.text
+                                        elide: Text.ElideRight
+                                        font.strikeout: todoRow.modelData.done
+                                        opacity: todoRow.modelData.done ? 0.5 : 1
+
+                                        TapHandler {
+                                            onTapped: root.toggleTodo(todoRow.modelData.index)
+                                        }
+                                    }
+                                    PlasmaComponents.ToolButton {
+                                        icon.name: "edit-delete"
+                                        display: PlasmaComponents.AbstractButton.IconOnly
+                                        opacity: rowHover.hovered ? 1 : 0.5
+                                        onClicked: root.deleteTodo(todoRow.modelData.index)
+
+                                        PlasmaComponents.ToolTip {
+                                            text: i18n("Delete")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         RowLayout {
@@ -1097,7 +1356,7 @@ PlasmoidItem {
                 }
             }
             PlasmaComponents.Button {
-                text: i18n("Clear done")
+                text: i18n("Clear completed")
                 onClicked: root.clearDoneTodos()
             }
         }

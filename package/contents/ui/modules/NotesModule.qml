@@ -11,6 +11,8 @@ Tile {
     id: tile
 
     property string text
+    // How many notes there are; the badge shows when there is more than one.
+    property int count: 1
 
     readonly property real inner: height - padding * 2
     readonly property var lines: text.split("\n").filter(l => l.trim() !== "")
@@ -62,6 +64,24 @@ Tile {
                 elide: Text.ElideRight
                 opacity: 0.6
                 font.pixelSize: Math.max(7, tile.inner * 0.2)
+            }
+        }
+
+        Rectangle {
+            visible: tile.count > 1
+            Layout.alignment: Qt.AlignVCenter
+            implicitWidth: Math.max(tile.inner * 0.34, badge.implicitWidth + tile.padding)
+            implicitHeight: tile.inner * 0.34
+            radius: height / 2
+            color: Qt.alpha(Kirigami.Theme.highlightColor, 0.25)
+
+            PlasmaComponents.Label {
+                id: badge
+                anchors.centerIn: parent
+                text: tile.count
+                color: Kirigami.Theme.highlightColor
+                font.pixelSize: Math.max(7, tile.inner * 0.2)
+                font.weight: Font.DemiBold
             }
         }
 
