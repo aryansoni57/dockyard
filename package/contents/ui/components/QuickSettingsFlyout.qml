@@ -519,8 +519,10 @@ PlasmaCore.Dialog {
                     readonly property bool wifi: detailView.isWifi
                     readonly property bool connected: wifi ? modelData.active : modelData.connected
                     readonly property bool asking: wifi && detailView.pending === modelData.ssid
+                    // Secured and never saved: the password comes first.
+                    readonly property bool needsPassword: wifi && modelData.secure && !modelData.known
                     width: ListView.view.width
-                    height: rowItem.height + (asking ? pwRow.height : 0)
+                    height: rowItem.height + (asking ? (needsPassword ? pwRow.height : actionRow.height) : 0)
 
                     Behavior on height {
                         NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
@@ -608,16 +610,46 @@ PlasmaCore.Dialog {
                             onTapped: {
                                 if (!entry.wifi) {
                                     fly.source.toggleDevice(entry.modelData.mac, entry.modelData.connected);
-                                } else if (entry.connected) {
-                                    return;
-                                } else if (entry.modelData.known || !entry.modelData.secure) {
-                                    detailView.pending = "";
-                                    fly.source.connectNetwork(entry.modelData.ssid);
                                 } else {
                                     detailView.pending = entry.asking ? "" : entry.modelData.ssid;
-                                    if (detailView.pending !== "")
+                                    if (detailView.pending !== "" && entry.needsPassword)
                                         pwField.forceActiveFocus();
                                 }
+                            }
+                        }
+                    }
+
+                    // Saved or open network: Connect / Disconnect and Forget.
+                    RowLayout {
+                        id: actionRow
+                        visible: entry.asking && !entry.needsPassword
+                        y: rowItem.height
+                        width: parent.width
+                        height: visible ? Math.round(fly.unit * 2.5) : 0
+                        spacing: Kirigami.Units.smallSpacing
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+                        QQC2.Button {
+                            visible: entry.modelData.known
+                            text: i18n("Forget")
+                            icon.name: "edit-delete"
+                            onClicked: {
+                                detailView.pending = "";
+                                fly.source.forgetNetwork(entry.modelData.ssid);
+                            }
+                        }
+                        QQC2.Button {
+                            Layout.rightMargin: Kirigami.Units.largeSpacing
+                            highlighted: !entry.connected
+                            text: entry.connected ? i18n("Disconnect") : i18n("Connect")
+                            onClicked: {
+                                detailView.pending = "";
+                                if (entry.connected)
+                                    fly.source.disconnectNetwork(entry.modelData.ssid);
+                                else
+                                    fly.source.connectNetwork(entry.modelData.ssid);
                             }
                         }
                     }
@@ -625,10 +657,10 @@ PlasmaCore.Dialog {
                     // New secured network: own password field.
                     RowLayout {
                         id: pwRow
-                        visible: entry.asking
+                        visible: entry.asking && entry.needsPassword
                         y: rowItem.height
                         width: parent.width
-                        height: entry.asking ? Math.round(fly.unit * 2.5) : 0
+                        height: visible ? Math.round(fly.unit * 2.5) : 0
                         spacing: Kirigami.Units.smallSpacing
 
                         QQC2.TextField {

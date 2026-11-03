@@ -100,6 +100,8 @@ Item {
                 src.parseDevices(out);
             else if (sourceName.indexOf("nmcli dev wifi connect") === 0 || sourceName.indexOf("nmcli con up") === 0)
                 src.finishConnect(sourceName, out + (data["stderr"] || ""));
+            else if (sourceName.indexOf("nmcli con down") === 0 || sourceName.indexOf("nmcli con delete") === 0)
+                src.finishManage(out + (data["stderr"] || ""));
         }
     }
 
@@ -245,6 +247,23 @@ Item {
             run("nmcli con up id " + quote(name) + " 2>&1");
         else
             run("nmcli dev wifi connect " + quote(name) + " password " + quote(password) + " 2>&1");
+    }
+
+    function disconnectNetwork(name) {
+        netStatus = i18nc("Wi-Fi connect status", "Disconnecting…");
+        run("nmcli con down id " + quote(name) + " 2>&1");
+    }
+
+    // Drop the saved profile (and its password).
+    function forgetNetwork(name) {
+        netStatus = "";
+        run("nmcli con delete id " + quote(name) + " 2>&1");
+    }
+
+    function finishManage(out) {
+        netStatus = out.indexOf("successfully") >= 0 ? "" : i18nc("Wi-Fi connect status", "Could not change network");
+        scanNetworks();
+        schedulePoll(1500);
     }
 
     function finishConnect(cmd, out) {
