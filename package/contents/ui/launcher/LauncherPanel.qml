@@ -198,7 +198,22 @@ Item {
             }
         }
 
-        onVisibleChanged: if (visible) { search.text = ""; panel.view = "home"; search.forceActiveFocus(); }
+        onVisibleChanged: if (visible) { search.text = ""; panel.view = "home"; search.forceActiveFocus(); focusLater.restart(); }
+
+        // The popup window is not active yet when the panel first shows, so focus the
+        // search again once it is (and once the show animation has settled).
+        Timer {
+            id: focusLater
+            interval: 120
+            onTriggered: search.forceActiveFocus()
+        }
+        Connections {
+            target: panel.Window.window
+            function onActiveChanged() {
+                if (panel.Window.window && panel.Window.window.active && panel.visible && panel.view === "home")
+                    search.forceActiveFocus();
+            }
+        }
 
         RowLayout {
             anchors.fill: parent

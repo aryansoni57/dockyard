@@ -235,6 +235,10 @@ PlasmoidItem {
 
     // The popup shows either the info panel (most tiles) or the launcher (Start tile).
     property string popupMode: "info"
+    // The Meta key: plasmashell activates the applet that provides the launcher menu.
+    activationTogglesExpanded: false
+    Plasmoid.onActivated: togglePopup("launcher")
+
     function togglePopup(mode) {
         if (expanded && popupMode === mode) {
             expanded = false;
