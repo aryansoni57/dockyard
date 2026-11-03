@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "KWin/Script",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "aryansoni57"
+            }
+        ],
+        "Description": "Meta+1 to Meta+9 open or switch to the apps in the Dockyard dock",
+        "Id": "dockyardshortcuts",
+        "License": "GPL-2.0-or-later",
+        "Name": "Dockyard Shortcuts",
+        "Version": "0.1.0"
+    },
+    "X-Plasma-API": "javascript",
+    "X-Plasma-MainScript": "code/main.js"
+}

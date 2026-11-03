@@ -22,7 +22,7 @@
 | System | CPU/memory stats, temperature, network, disk, battery |
 | Media | now playing (MPRIS) |
 | Info | weather, todos |
-| Apps | pinned apps with running dots |
+| Apps | pinned apps with running dots; Meta+1 to Meta+9 open or switch to them |
 | Quick toggles | Wi-Fi, Bluetooth, Do Not Disturb, Night Light, mute |
 
 Click the dock to open the detail popup.
@@ -37,6 +37,10 @@ Install, then add "Dock" to a panel via Add Widgets:
 ```bash
 ./install.sh
 ```
+
+`install.sh` also installs and enables the Dockyard Shortcuts KWin script for Meta+1 to Meta+9.
+It clears those keys from the stock Task Manager's plasmashell entries. If you add a Task Manager to a panel later,
+set its keys again in System Settings > Shortcuts.
 
 Or install the plasmoid and the glass desktop theme together, then restart plasmashell
 (`--apply-theme` also activates the theme, `--no-restart` skips the restart):
@@ -61,6 +65,7 @@ package/
   contents/config/main.xml config keys
   contents/ui/main.qml     shared data sources + compact/full views
   contents/ui/modules/     one dumb view per module
+kwin-script/               KWin script that owns Meta+1..9 and tells the dock
 ```
 
 Data sources (sensors, MPRIS, clock) live once in `main.qml` and feed every module.

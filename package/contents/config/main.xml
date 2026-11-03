@@ -73,6 +73,10 @@
         <entry name="appLaunchers" type="String">
             <default>preferred://browser,applications:org.kde.dolphin.desktop,applications:org.kde.konsole.desktop,applications:systemsettings.desktop,applications:discord.desktop</default>
         </entry>
+        <!-- Written by the Dockyard KWin script on Meta+1..9: "<index>:<time>". The time makes each press a change. -->
+        <entry name="taskShortcut" type="String">
+            <default></default>
+        </entry>
         <entry name="showToggles" type="Bool">
             <default>false</default>
         </entry>

@@ -274,6 +274,47 @@ PlasmoidItem {
         expanded = true;
     }
 
+    // Meta+1..9: the KWin script in kwin-script/ writes "<index>:<time>" to
+    // taskShortcut through plasmashell's scripting API. Index is 0-based and
+    // matches the app icons left to right.
+    Connections {
+        target: Plasmoid.configuration
+        function onTaskShortcutChanged() {
+            const index = parseInt(root.cfg.taskShortcut, 10);
+            if (!isNaN(index))
+                root.activateTaskAtIndex(index);
+        }
+    }
+
+    function activateTaskAtIndex(index) {
+        const tasks = tasksLoader.item;
+        if (!cfg.showApps || !tasks || typeof index !== "number" || index < 0 || index >= tasks.count)
+            return;
+        const roles = TaskManager.AbstractTasksModel;
+        const idx = tasks.makeModelIndex(index);
+        if (tasks.data(idx, roles.IsLauncher)) {
+            tasks.requestNewInstance(idx);
+            return;
+        }
+        const children = tasks.rowCount(idx);
+        if (!tasks.data(idx, roles.IsGroupParent) || children === 0) {
+            if (tasks.data(idx, roles.IsActive))
+                tasks.requestToggleMinimized(idx);
+            else
+                tasks.requestActivate(idx);
+            return;
+        }
+        // Several windows of one app: switch to the one after the active window.
+        let next = 0;
+        for (let i = 0; i < children; ++i) {
+            if (tasks.data(tasks.makeModelIndex(index, i), roles.IsActive)) {
+                next = (i + 1) % children;
+                break;
+            }
+        }
+        tasks.requestActivate(tasks.makeModelIndex(index, next));
+    }
+
     Plasmoid.icon: "preferences-desktop-panel"
     toolTipMainText: Qt.formatDate(root.now, Qt.locale().dateFormat(Locale.LongFormat))
     toolTipSubText: root.playing ? i18n("Playing: %1", root.player.track) : ""

@@ -6,6 +6,7 @@ Notable changes to Dockyard. Newest first.
 
 ### Added
 
+- Meta+1 to Meta+9 open or switch to the app icons in the Apps module, left to right. A launcher opens, a window is focused or minimised, and an app with several windows cycles through them. A KWin script installed by `install.sh` owns the keys, because Plasma 6.8 gives them only to the stock Task Manager.
 - Tiles open their own popup view over the tapped tile: clock, calendar, world clocks, progress, media, notes and todos. The Start tile opens the launcher over itself.
 - `tilePopups` setting, a kill switch for the per-tile popup. When it is off, popups use Plasma's centred popup as before. It defaults to off.
 - The first search match in the launcher is highlighted, and Enter launches it. A math query still copies its result.
