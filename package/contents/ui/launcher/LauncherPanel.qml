@@ -105,13 +105,41 @@ Item {
     function matches(name) {
         return !searching || name.toLowerCase().indexOf(query.toLowerCase()) >= 0;
     }
+    // The first visible search match, in tree order: highlighted, and launched by Enter.
+    property var topApp: null
+    function findApp(item) {
+        for (const c of item.children) {
+            if (c.objectName === "app" && c.visible)
+                return c;
+            const found = findApp(c);
+            if (found)
+                return found;
+        }
+        return null;
+    }
+    function updateTopApp() {
+        const best = searching ? findApp(panel) : null;
+        if (topApp && topApp !== best)
+            topApp.searchHit = false;
+        topApp = best;
+        if (best)
+            best.searchHit = true;
+    }
     function pin(id) {
         if (id === "" || favList.indexOf(id) >= 0)
             return;
         Plasmoid.configuration.launcherFavorites = favList.concat([id]).join(",");
+        setDockPinned(id, true);
     }
     function unpin(id) {
         Plasmoid.configuration.launcherFavorites = favList.filter(f => f !== id).join(",");
+        setDockPinned(id, false);
+    }
+    // Keep the dock's app row in step with the launcher's pins.
+    function setDockPinned(id, on) {
+        const docked = cfg.appLaunchers.split(",").map(s => s.trim()).filter(s => s !== "");
+        const next = on ? (docked.indexOf(id) >= 0 ? docked : docked.concat([id])) : docked.filter(d => d !== id);
+        Plasmoid.configuration.appLaunchers = next.join(",");
     }
     function close() {
         panel.closeRequested();
@@ -206,6 +234,14 @@ Item {
             id: focusLater
             interval: 120
             onTriggered: search.forceActiveFocus()
+        }
+        // Start menu closed: clear the query so it opens fresh.
+        Connections {
+            target: panel.applet
+            function onExpandedChanged() {
+                if (!panel.applet.expanded)
+                    search.text = "";
+            }
         }
         Connections {
             target: panel.Window.window
@@ -471,13 +507,20 @@ Item {
                     inputMethodHints: Qt.ImhNoPredictiveText
                     color: Kirigami.Theme.textColor
                     font.pixelSize: panel.bodyFont
-                    onTextChanged: panel.searchText = text
+                    onTextChanged: {
+                        panel.searchText = text;
+                        Qt.callLater(panel.updateTopApp);
+                    }
                     onAccepted: {
-                        const n = search.nextItemInFocusChain(true);
-                        if (n && n !== search && n.launched)
-                            n.launched();
-                        else if (panel.calcValue !== null)
+                        if (panel.calcValue !== null)
                             panel.copyResult();
+                        else if (panel.topApp)
+                            panel.topApp.launched();
+                        else {
+                            const n = search.nextItemInFocusChain(true);
+                            if (n && n !== search && n.launched)
+                                n.launched();
+                        }
                     }
                     Keys.onDownPressed: search.nextItemInFocusChain(true).forceActiveFocus()
 

@@ -13,7 +13,8 @@ Rectangle {
     // Shown as a tooltip while hovered (and not being dragged).
     property string hoverName
 
-    signal clicked()
+    // Passes the tile itself, so a handler can anchor a popup to it.
+    signal clicked(Item source)
 
     // True when the point (in tile coordinates) sits on a button or slider inside
     // the tile, so a tap there does that control's job and not the tile's.
@@ -73,7 +74,7 @@ Rectangle {
         id: tap
         onTapped: eventPoint => {
             if (!tile.controlAt(eventPoint.position.x, eventPoint.position.y))
-                tile.clicked();
+                tile.clicked(tile);
         }
     }
 }

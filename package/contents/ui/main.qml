@@ -234,12 +234,38 @@ PlasmoidItem {
     }
 
     // The popup shows either the info panel (most tiles) or the launcher (Start tile).
-    property string popupMode: "info"
+    property string popupMode: "clock"
+    // Header title for each popup view; every tile opens its own view.
+    readonly property var popupTitles: ({
+        clock: i18n("Clock"),
+        calendar: i18n("Calendar"),
+        worldclocks: i18n("World clocks"),
+        progress: i18n("Progress"),
+        media: i18n("Now playing"),
+        notes: i18n("Notes"),
+        todos: i18n("Todos")
+    })
+    function inMode(...modes) {
+        return modes.indexOf(popupMode) >= 0;
+    }
     // The Meta key: plasmashell activates the applet that provides the launcher menu.
     activationTogglesExpanded: false
-    Plasmoid.onActivated: togglePopup("launcher")
+    Plasmoid.onActivated: togglePopup("launcher", root.startTile)
 
-    function togglePopup(mode) {
+    // Tile popups (cfg.tilePopups): the dock owns the popup window and sets dockItem.
+    property Item dockItem: null
+    property Item startTile: null
+    readonly property var tilePopupModes: ["launcher", "clock", "calendar", "worldclocks", "progress", "media", "notes", "todos"]
+
+    function togglePopup(mode, tile) {
+        const tileOpen = dockItem !== null && dockItem.popup !== null && dockItem.popup.visible;
+        if (tileOpen) {
+            dockItem.hide();
+            if (popupMode === mode)
+                return;
+        }
+        if (cfg.tilePopups && tilePopupModes.indexOf(mode) >= 0 && tile && tile.visible && dockItem && dockItem.show(mode, tile))
+            return;
         if (expanded && popupMode === mode) {
             expanded = false;
             return;
@@ -254,6 +280,7 @@ PlasmoidItem {
 
     compactRepresentation: Item {
         id: dock
+        Component.onCompleted: root.dockItem = dock
 
         // Bar padding around the tiles: thin inside a panel, roomier on the desktop.
         readonly property real inset: root.onDesktop ? Kirigami.Units.smallSpacing * 1.5 : 2
@@ -332,12 +359,14 @@ PlasmoidItem {
                 height: scroller.height
 
                 Modules.StartModule {
+                    id: startModule
                     objectName: "start"
                     hoverName: i18n("Start")
                     Layout.column: root.colOf("start")
                     Layout.fillHeight: true
                     visible: root.cfg.showStart
-                    onClicked: root.togglePopup("launcher")
+                    Component.onCompleted: root.startTile = startModule
+                    onClicked: src => root.togglePopup("launcher", src)
                 }
                 Modules.StatsModule {
                     objectName: "stats"
@@ -357,7 +386,13 @@ PlasmoidItem {
                     visible: root.showMedia
                     player: root.player
                     playing: root.playing
-                    onClicked: root.togglePopup("info")
+                    onClicked: src => {
+                        // Raise the player app when it can be raised, else show the media view.
+                        if (root.player && typeof root.player.Raise === "function")
+                            root.player.Raise();
+                        else
+                            root.togglePopup("media", src);
+                    }
                 }
                 Modules.AppsModule {
                     objectName: "apps"
@@ -367,8 +402,14 @@ PlasmoidItem {
                     tasks: tasksLoader.item
                     onMoved: {
                         // A drag only sticks when the list is ours; the Task Manager owns its own.
-                        if (!root.followTaskManager)
-                            Plasmoid.configuration.appLaunchers = tasksLoader.item.launcherList.join(",");
+                        if (!root.followTaskManager) {
+                            const docked = tasksLoader.item.launcherList;
+                            Plasmoid.configuration.appLaunchers = docked.join(",");
+                            // Same order in the launcher's pins; pins not on the dock keep their place after.
+                            const favs = root.cfg.launcherFavorites.split(",").map(s => s.trim()).filter(s => s !== "");
+                            const rest = favs.filter(f => docked.indexOf(f) < 0);
+                            Plasmoid.configuration.launcherFavorites = docked.concat(rest).join(",");
+                        }
                     }
                 }
                 Modules.WeatherModule {
@@ -415,7 +456,7 @@ PlasmoidItem {
                     visible: root.cfg.showWorldClocks
                     zones: root.cfg.worldZones.split(",").map(z => z.trim()).filter(z => z !== "")
                     now: root.now
-                    onClicked: root.togglePopup("info")
+                    onClicked: src => root.togglePopup("worldclocks", src)
                 }
                 Modules.TodosModule {
                     objectName: "todos"
@@ -425,6 +466,7 @@ PlasmoidItem {
                     visible: root.cfg.showTodos
                     json: root.cfg.todosJson
                     onJsonEdited: json => Plasmoid.configuration.todosJson = json
+                    onClicked: src => root.togglePopup("todos", src)
                 }
                 Modules.TemperatureModule {
                     objectName: "temperature"
@@ -485,6 +527,8 @@ PlasmoidItem {
                     Layout.fillHeight: true
                     visible: root.cfg.showVolume
                     active: root.cfg.showVolume
+                    // Taps off the slider open the audio settings; the slider keeps its own taps.
+                    onClicked: root.launch("systemsettings kcm_pulseaudio")
                 }
                 Modules.RecycleBinModule {
                     objectName: "recyclebin"
@@ -508,7 +552,7 @@ PlasmoidItem {
                     Layout.fillHeight: true
                     visible: root.cfg.showNotes
                     text: root.cfg.notesText
-                    onClicked: root.togglePopup("info")
+                    onClicked: src => root.togglePopup("notes", src)
                 }
                 Modules.ProgressModule {
                     objectName: "monthprogress"
@@ -518,7 +562,7 @@ PlasmoidItem {
                     visible: root.cfg.showMonthProgress
                     kind: "month"
                     now: root.now
-                    onClicked: root.togglePopup("info")
+                    onClicked: src => root.togglePopup("progress", src)
                 }
                 Modules.ProgressModule {
                     objectName: "dayprogress"
@@ -528,7 +572,7 @@ PlasmoidItem {
                     visible: root.cfg.showDayProgress
                     kind: "day"
                     now: root.now
-                    onClicked: root.togglePopup("info")
+                    onClicked: src => root.togglePopup("progress", src)
                 }
                 Modules.ProgressModule {
                     objectName: "yearprogress"
@@ -538,7 +582,7 @@ PlasmoidItem {
                     visible: root.cfg.showYearProgress
                     kind: "year"
                     now: root.now
-                    onClicked: root.togglePopup("info")
+                    onClicked: src => root.togglePopup("progress", src)
                 }
                 Modules.DateModule {
                     objectName: "date"
@@ -548,7 +592,7 @@ PlasmoidItem {
                     visible: root.cfg.showDate
                     kind: "long"
                     now: root.now
-                    onClicked: root.togglePopup("info")
+                    onClicked: src => root.togglePopup("calendar", src)
                 }
                 Modules.CalendarModule {
                     objectName: "calendar"
@@ -563,9 +607,9 @@ PlasmoidItem {
                     planeKey: root.cfg.planeApiKey
                     // Nothing set up yet: open Google Calendar settings, where each
                     // calendar's "Secret address in iCal format" lives.
-                    onClicked: {
+                    onClicked: src => {
                         if (configured)
-                            root.togglePopup("info");
+                            root.togglePopup("calendar", src);
                         else
                             root.launch("xdg-open https://calendar.google.com/calendar/u/0/r/settings");
                     }
@@ -578,7 +622,7 @@ PlasmoidItem {
                     visible: root.cfg.showDayNumber
                     kind: "number"
                     now: root.now
-                    onClicked: root.togglePopup("info")
+                    onClicked: src => root.togglePopup("calendar", src)
                 }
                 Modules.BatteryModule {
                     objectName: "battery"
@@ -600,7 +644,7 @@ PlasmoidItem {
                     style: root.cfg.clockStyle
                     zones: root.cfg.worldZones.split(",").map(z => z.trim()).filter(z => z !== "")
                     weatherSource: sharedWeather
-                    onClicked: root.togglePopup("info")
+                    onClicked: src => root.togglePopup("clock", src)
                 }
                 // Clock is pinned at the far right.
                 Modules.ClockModule {
@@ -611,7 +655,7 @@ PlasmoidItem {
                     visible: root.cfg.showClock
                     now: root.now
                     weatherSource: sharedWeather
-                    onClicked: root.togglePopup("info")
+                    onClicked: src => root.togglePopup("clock", src)
                 }
 
                 // Drag a tile sideways to reorder it. Tiles swap places as the
@@ -701,6 +745,90 @@ PlasmoidItem {
                 }
             }
         }
+
+        // Tile popup (cfg.tilePopups): the launcher opens over its tile, not the whole dock.
+        property var popup: null
+        property double hiddenAt: 0
+        property Item lastTile: null
+
+        function show(mode, tile) {
+            if (lastTile === tile && Date.now() - hiddenAt < 250)
+                return true; // the tap that just dismissed it
+            if (!popup) {
+                try {
+                    popup = tilePopupComp.createObject(dock);
+                } catch (e) {
+                    popup = null;
+                }
+                if (!popup) {
+                    console.warn("Dockyard: tile popup failed", tilePopupComp.errorString());
+                    return false;
+                }
+            }
+            root.expanded = false;
+            root.popupMode = mode;
+            popup.visualParent = tile;
+            lastTile = tile;
+            if (popup.visible && typeof popup.queuePositionUpdate === "function")
+                popup.queuePositionUpdate();
+            popup.visible = true;
+            popup.requestActivate();
+            return true;
+        }
+        function hide() {
+            if (popup)
+                popup.visible = false;
+        }
+
+        Component {
+            id: tilePopupComp
+
+            PlasmaCore.PopupPlasmaWindow {
+                id: popupWindow
+
+                popupDirection: {
+                    switch (Plasmoid.location) {
+                    case PlasmaCore.Types.TopEdge:
+                        return Qt.BottomEdge
+                    case PlasmaCore.Types.LeftEdge:
+                        return Qt.RightEdge
+                    case PlasmaCore.Types.RightEdge:
+                        return Qt.LeftEdge
+                    default:
+                        return Qt.TopEdge
+                    }
+                }
+                margin: (Plasmoid.containmentDisplayHints & PlasmaCore.Types.ContainmentPrefersFloatingApplets) ? Kirigami.Units.largeSpacing : 0
+                floating: Plasmoid.location === PlasmaCore.Types.Floating
+                removeBorderStrategy: Plasmoid.location === PlasmaCore.Types.Floating
+                    ? PlasmaCore.AppletPopup.AtScreenEdges
+                    : PlasmaCore.AppletPopup.AtScreenEdges | PlasmaCore.AppletPopup.AtPanelEdges
+                backgroundHints: (Plasmoid.containmentDisplayHints & PlasmaCore.Types.ContainmentPrefersOpaqueBackground) ? PlasmaCore.AppletPopup.SolidBackground : PlasmaCore.AppletPopup.StandardBackground
+
+                hideOnWindowDeactivate: true
+                visible: false
+                onVisibleChanged: {
+                    if (!visible)
+                        dock.hiddenAt = Date.now();
+                }
+
+                mainItem: FocusScope {
+                    readonly property bool launcher: root.popupMode === "launcher"
+                    implicitWidth: Kirigami.Units.gridUnit * (launcher ? 38 : 17)
+                    implicitHeight: launcher ? Kirigami.Units.gridUnit * 24
+                        : (content.item ? content.item.implicitHeight : Kirigami.Units.gridUnit * 10)
+                    Keys.onEscapePressed: dock.hide()
+
+                    // Recreated on each open, so the search starts empty.
+                    Loader {
+                        id: content
+                        anchors.fill: parent
+                        active: popupWindow.visible
+                        sourceComponent: parent.launcher ? launcherComp : infoComp
+                    }
+                }
+            }
+        }
     }
 
     fullRepresentation: Loader {
@@ -721,7 +849,11 @@ PlasmoidItem {
 
         Launcher.LauncherPanel {
             applet: root
-            onCloseRequested: root.expanded = false
+            onCloseRequested: {
+                root.expanded = false;
+                if (root.dockItem)
+                    root.dockItem.hide();
+            }
         }
     }
 
@@ -746,7 +878,7 @@ PlasmoidItem {
                 Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium
             }
             PlasmaComponents.Label {
-                text: i18n("Dock")
+                text: root.popupTitles[root.popupMode] ?? i18n("Dock")
                 font.weight: Font.DemiBold
             }
             Rectangle {
@@ -769,41 +901,41 @@ PlasmoidItem {
         }
 
         SectionHeader {
-            visible: root.cfg.showClock
+            visible: root.inMode("clock")
             text: i18n("Time")
         }
         InfoRow {
-            visible: root.cfg.showClock
+            visible: root.inMode("clock")
             label: i18n("Now")
             value: Qt.formatTime(root.now, Qt.locale().timeFormat(Locale.ShortFormat))
             emphasized: true
         }
         InfoRow {
-            visible: root.cfg.showClock
+            visible: root.inMode("clock")
             label: i18n("Date")
             value: Qt.formatDate(root.now, Qt.locale().dateFormat(Locale.LongFormat))
             divider: false
         }
 
         SectionHeader {
-            visible: root.cfg.showDate || root.cfg.showDayNumber
+            visible: root.inMode("clock", "calendar")
             text: Qt.formatDate(root.now, "MMMM yyyy")
         }
         MonthGrid {
-            visible: root.cfg.showDate || root.cfg.showDayNumber
+            visible: root.inMode("clock", "calendar")
             now: root.now
         }
 
         SectionHeader {
-            visible: root.cfg.showMonthProgress || root.cfg.showDayProgress || root.cfg.showYearProgress
+            visible: root.inMode("progress") && (root.cfg.showMonthProgress || root.cfg.showDayProgress || root.cfg.showYearProgress)
             text: i18n("Progress")
         }
         Repeater {
-            model: [
+            model: root.inMode("progress") ? [
                 { kind: "day", show: root.cfg.showDayProgress, label: i18n("Day") },
                 { kind: "month", show: root.cfg.showMonthProgress, label: i18n("Month") },
                 { kind: "year", show: root.cfg.showYearProgress, label: i18n("Year") }
-            ]
+            ] : []
             delegate: InfoRow {
                 required property var modelData
                 visible: modelData.show
@@ -814,7 +946,7 @@ PlasmoidItem {
         }
 
         SectionHeader {
-            visible: root.cfg.showWorldClocks
+            visible: root.inMode("worldclocks") && root.cfg.showWorldClocks
             text: i18n("World clocks")
         }
         // Hidden tile used only for its time-zone maths.
@@ -824,7 +956,7 @@ PlasmoidItem {
             now: root.now
         }
         Repeater {
-            model: root.cfg.showWorldClocks
+            model: root.inMode("worldclocks") && root.cfg.showWorldClocks
                 ? root.cfg.worldZones.split(",").map(z => z.trim()).filter(z => z !== "") : []
             delegate: InfoRow {
                 required property var modelData
@@ -834,29 +966,11 @@ PlasmoidItem {
         }
 
         SectionHeader {
-            visible: root.cfg.showStats
-            text: i18n("System")
-        }
-        InfoRow {
-            visible: root.cfg.showStats
-            label: i18n("CPU")
-            value: Math.round(cpuSensor.value ?? 0) + "%"
-            progress: cpuSensor.value ?? 0
-        }
-        InfoRow {
-            visible: root.cfg.showStats
-            label: i18n("Memory")
-            value: Math.round(memSensor.value ?? 0) + "%"
-            progress: memSensor.value ?? 0
-            divider: false
-        }
-
-        SectionHeader {
-            visible: root.showMedia
+            visible: root.inMode("media") && root.showMedia
             text: i18n("Now playing")
         }
         Modules.MediaModule {
-            visible: root.showMedia
+            visible: root.inMode("media") && root.showMedia
             Layout.fillWidth: true
             Layout.margins: Kirigami.Units.largeSpacing
             Layout.preferredHeight: Kirigami.Units.gridUnit * 3
@@ -865,11 +979,11 @@ PlasmoidItem {
         }
 
         SectionHeader {
-            visible: root.cfg.showNotes
+            visible: root.inMode("notes") && root.cfg.showNotes
             text: i18n("Notes")
         }
         PlasmaComponents.TextArea {
-            visible: root.cfg.showNotes
+            visible: root.inMode("notes") && root.cfg.showNotes
             Layout.fillWidth: true
             Layout.margins: Kirigami.Units.largeSpacing
             Layout.preferredHeight: Kirigami.Units.gridUnit * 7
@@ -883,11 +997,11 @@ PlasmoidItem {
         }
 
         SectionHeader {
-            visible: root.cfg.showTodos
+            visible: root.inMode("todos") && root.cfg.showTodos
             text: i18n("Todos")
         }
         Repeater {
-            model: root.cfg.showTodos ? root.todoItems().slice(0, 6) : []
+            model: root.inMode("todos") && root.cfg.showTodos ? root.todoItems().slice(0, 6) : []
             delegate: InfoRow {
                 required property var modelData
                 label: modelData.text
@@ -895,7 +1009,7 @@ PlasmoidItem {
             }
         }
         RowLayout {
-            visible: root.cfg.showTodos
+            visible: root.inMode("todos") && root.cfg.showTodos
             Layout.fillWidth: true
             Layout.margins: Kirigami.Units.largeSpacing
             spacing: Kirigami.Units.smallSpacing

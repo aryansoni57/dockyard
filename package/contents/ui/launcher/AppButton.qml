@@ -17,7 +17,9 @@ QQC2.AbstractButton {
     // The icon sits on a faint rounded-square tile, so theme icons of any shape read as one set.
     readonly property real tileSize: listMode ? Math.round(Kirigami.Units.gridUnit * 1.75) : Math.round(iconSize * 1.25)
     property color accent: "#0A84FF"
-    readonly property bool selected: app.visualFocus || app.activeFocus
+    // Set by the launcher on the first search match, so Enter launches it.
+    property bool searchHit: false
+    readonly property bool selected: app.visualFocus || app.activeFocus || app.searchHit
 
     signal launched()
     signal menuRequested(real x, real y)
