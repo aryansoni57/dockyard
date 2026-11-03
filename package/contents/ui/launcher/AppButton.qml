@@ -66,6 +66,8 @@ QQC2.AbstractButton {
         columnSpacing: Kirigami.Units.largeSpacing * 1.25
 
         Rectangle {
+            // Fixed size, so a tight cell elides the label instead of squashing the icon.
+            Layout.minimumWidth: app.tileSize
             Layout.preferredWidth: app.tileSize
             Layout.preferredHeight: app.tileSize
             Layout.alignment: app.listMode ? Qt.AlignVCenter : Qt.AlignHCenter

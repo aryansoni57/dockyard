@@ -89,11 +89,16 @@ Item {
         }
         return n;
     }
-    // Grid cells share each row evenly, five to a row as in the mockup.
-    readonly property int gridColumns: 5
+    // Grid cells share each row evenly. As many columns as fit at the button's
+    // natural width (at least four), so a narrow popup never squeezes the icons.
     readonly property int cellSpacing: 4
+    readonly property real minCellWidth: Kirigami.Units.gridUnit * 5
+    function gridColumns(rowWidth) {
+        return Math.max(4, Math.floor((rowWidth + cellSpacing) / (minCellWidth + cellSpacing)));
+    }
     function cellWidth(rowWidth) {
-        return Math.floor((rowWidth - cellSpacing * (gridColumns - 1)) / gridColumns);
+        const n = gridColumns(rowWidth);
+        return Math.floor((rowWidth - cellSpacing * (n - 1)) / n);
     }
     // Shared radii and font sizes, from the launcher mockup.
     readonly property int railRadius: Math.round(Kirigami.Units.gridUnit * 0.55)
@@ -203,7 +208,7 @@ Item {
     }
 
 
-        Layout.preferredWidth: Kirigami.Units.gridUnit * 38
+        Layout.preferredWidth: Kirigami.Units.gridUnit * 42
         Layout.preferredHeight: Kirigami.Units.gridUnit * 24
 
         Keys.onEscapePressed: {

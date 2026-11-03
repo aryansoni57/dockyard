@@ -254,9 +254,25 @@ PlasmoidItem {
     function inMode(...modes) {
         return modes.indexOf(popupMode) >= 0;
     }
+    readonly property real launcherWidth: Kirigami.Units.gridUnit * 42
+
     // The Meta key: plasmashell activates the applet that provides the launcher menu.
     activationTogglesExpanded: false
     Plasmoid.onActivated: togglePopup("launcher", root.startTile)
+
+    // Plasma still expands the applet after an activation. When the tile popup took
+    // the press, that would open a second, centred launcher, so undo it.
+    property double tilePopupAt: 0
+    onExpandedChanged: function () {
+        if (root.expanded && Date.now() - tilePopupAt < 500)
+            collapseLater.restart();
+    }
+    // Plasma ignores a reset made inside its own expanded change, so do it next tick.
+    Timer {
+        id: collapseLater
+        interval: 0
+        onTriggered: root.expanded = false
+    }
 
     // Tile popups (cfg.tilePopups): the dock owns the popup window and sets dockItem.
     property Item dockItem: null
@@ -267,11 +283,18 @@ PlasmoidItem {
         const tileOpen = dockItem !== null && dockItem.popup !== null && dockItem.popup.visible;
         if (tileOpen) {
             dockItem.hide();
-            if (popupMode === mode)
+            if (popupMode === mode) {
+                tilePopupAt = Date.now();
                 return;
+            }
         }
-        if (cfg.tilePopups && tilePopupModes.indexOf(mode) >= 0 && tile && tile.visible && dockItem && dockItem.show(mode, tile))
-            return;
+        if (cfg.tilePopups && tilePopupModes.indexOf(mode) >= 0 && tile && tile.visible && dockItem) {
+            // Stamp first: Plasma's expand can land while show() builds the window.
+            tilePopupAt = Date.now();
+            if (dockItem.show(mode, tile))
+                return;
+            tilePopupAt = 0;
+        }
         if (expanded && popupMode === mode) {
             expanded = false;
             return;
@@ -854,6 +877,9 @@ PlasmoidItem {
 
                 hideOnWindowDeactivate: true
                 visible: false
+                // The window does not follow mainItem's size on its own (it stays 500x500).
+                width: mainItem.implicitWidth + leftPadding + rightPadding
+                height: mainItem.implicitHeight + topPadding + bottomPadding
                 onVisibleChanged: {
                     if (!visible)
                         dock.hiddenAt = Date.now();
@@ -861,7 +887,7 @@ PlasmoidItem {
 
                 mainItem: FocusScope {
                     readonly property bool launcher: root.popupMode === "launcher"
-                    implicitWidth: Kirigami.Units.gridUnit * (launcher ? 38 : 17)
+                    implicitWidth: launcher ? root.launcherWidth : Kirigami.Units.gridUnit * 17
                     implicitHeight: launcher ? Kirigami.Units.gridUnit * 24
                         : (content.item ? content.item.implicitHeight : Kirigami.Units.gridUnit * 10)
                     Keys.onEscapePressed: dock.hide()
@@ -883,9 +909,9 @@ PlasmoidItem {
         // final size and sits clear of the dock.
         readonly property bool launcher: root.popupMode === "launcher"
         sourceComponent: launcher ? launcherComp : infoComp
-        Layout.minimumWidth: launcher ? Kirigami.Units.gridUnit * 36 : Kirigami.Units.gridUnit * 17
-        Layout.preferredWidth: launcher ? Kirigami.Units.gridUnit * 38 : Kirigami.Units.gridUnit * 17
-        Layout.maximumWidth: launcher ? Kirigami.Units.gridUnit * 38 : Kirigami.Units.gridUnit * 17
+        Layout.minimumWidth: launcher ? root.launcherWidth : Kirigami.Units.gridUnit * 17
+        Layout.preferredWidth: launcher ? root.launcherWidth : Kirigami.Units.gridUnit * 17
+        Layout.maximumWidth: launcher ? root.launcherWidth : Kirigami.Units.gridUnit * 17
         Layout.minimumHeight: launcher ? Kirigami.Units.gridUnit * 24 : (item ? item.Layout.minimumHeight : 0)
         Layout.preferredHeight: launcher ? Kirigami.Units.gridUnit * 24 : -1
         Layout.maximumHeight: launcher ? Kirigami.Units.gridUnit * 24 : -1
