@@ -1,0 +1,296 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Dockyard reel</title>
+<style>
+@font-face{font-family:Inter;src:url(assets/Inter.woff2) format("woff2");font-weight:100 900}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#05060c;font-family:Inter,sans-serif;color:#fff;-webkit-font-smoothing:antialiased}
+#stage{position:absolute;inset:0;overflow:hidden}
+#bg{position:absolute;left:-200px;top:-150px;width:1480px;height:2220px;
+ background:
+  radial-gradient(520px 420px at 22% 34%,rgba(64,86,255,.55),transparent 70%),
+  radial-gradient(560px 460px at 78% 58%,rgba(180,60,255,.42),transparent 70%),
+  radial-gradient(500px 380px at 40% 80%,rgba(0,170,255,.30),transparent 70%),
+  radial-gradient(420px 340px at 70% 18%,rgba(255,80,140,.22),transparent 70%),
+  linear-gradient(180deg,#070a1c,#0b0820 55%,#05060c)}
+.star{position:absolute;border-radius:50%;background:#fff}
+#cam{position:absolute;inset:0;perspective:1600px;perspective-origin:540px 960px}
+#world{position:absolute;left:0;top:0;transform-origin:0 0;transform-style:preserve-3d}
+#bar{position:absolute;left:0;top:0;height:170px;border-radius:42px;
+ background:linear-gradient(180deg,rgba(54,60,86,.82),rgba(20,22,34,.86));
+ border:1.5px solid rgba(255,255,255,.14);border-top-color:rgba(255,255,255,.32);
+ box-shadow:0 20px 60px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.12)}
+#floor{position:absolute;left:0;top:150px;height:140px;border-radius:50%;
+ background:radial-gradient(closest-side,rgba(120,140,255,.22),transparent);filter:blur(6px)}
+.ping{position:absolute;top:-40px;height:250px;border-radius:50%;
+ background:radial-gradient(closest-side,rgba(130,170,255,.75),rgba(10,132,255,.15) 60%,transparent);opacity:0}
+.slot{position:absolute;top:12px;height:146px}
+.tile{position:absolute;inset:0;border-radius:35px;background:rgba(255,255,255,.06);
+ border:1.5px solid rgba(255,255,255,.14);border-top-color:rgba(255,255,255,.26);
+ display:flex;align-items:center;padding:0 20px;gap:14px;transform-origin:50% 100%}
+.tile.bare{background:none;border:none}
+.ico{display:inline-block;background:#fff;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+.lbl{font-size:17px;font-weight:500;color:rgba(255,255,255,.58)}
+.big{font-weight:700;letter-spacing:-.02em}
+.col{display:flex;flex-direction:column;justify-content:center}
+.row{display:flex;align-items:center}
+/* overlays */
+.ov{position:absolute;left:0;right:0;text-align:center;pointer-events:none}
+#title{top:520px}
+#title h1{font-size:132px;font-weight:800;letter-spacing:-.045em}
+#title p{font-size:40px;font-weight:500;color:rgba(255,255,255,.7);margin-top:8px}
+#cap{top:1250px;padding:0 140px 0 60px}
+#cap .n{font-size:26px;font-weight:600;color:#0A84FF;letter-spacing:.14em}
+#cap h2{font-size:78px;font-weight:800;letter-spacing:-.035em;margin-top:6px}
+#cap p{font-size:36px;font-weight:500;color:rgba(255,255,255,.66);margin-top:10px}
+#brand{top:150px;font-size:30px;font-weight:700;letter-spacing:.02em;color:rgba(255,255,255,.75)}
+#brand span{color:#0A84FF}
+#mont{position:absolute;inset:0;perspective:1500px;perspective-origin:540px 860px}
+.panel{position:absolute;left:50%;top:860px;transform-style:preserve-3d;opacity:0}
+.glass{border-radius:44px;background:linear-gradient(180deg,rgba(46,50,72,.92),rgba(20,22,34,.95));
+ border:1.5px solid rgba(255,255,255,.14);border-top-color:rgba(255,255,255,.3);
+ box-shadow:0 40px 120px rgba(0,0,0,.6);padding:40px}
+.pcap{position:absolute;left:0;right:0;top:1460px;text-align:center;padding:0 120px 0 60px;opacity:0}
+.pcap h2{font-size:66px;font-weight:800;letter-spacing:-.03em}
+.pcap p{font-size:32px;color:rgba(255,255,255,.62);margin-top:10px;font-weight:500}
+.field{height:92px;border-radius:26px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.12);
+ display:flex;align-items:center;padding:0 28px;font-size:36px;gap:18px}
+.caret{width:3px;height:40px;background:#0A84FF}
+.item{display:flex;align-items:center;gap:24px;padding:18px 22px;border-radius:24px;font-size:32px;font-weight:600}
+.item.sel{background:rgba(10,132,255,.28);box-shadow:inset 0 0 0 2px rgba(10,132,255,.8)}
+.sub{font-size:24px;font-weight:500;color:rgba(255,255,255,.55)}
+.kbd{display:inline-flex;align-items:center;justify-content:center;min-width:48px;height:44px;padding:0 12px;border-radius:12px;
+ background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);border-bottom-width:4px;font-size:22px;font-weight:700;color:#fff}
+.btn{padding:12px 24px;border-radius:999px;font-size:24px;font-weight:600;background:rgba(255,255,255,.1)}
+.btn.blue{background:#0A84FF}
+.chk{width:40px;height:40px;border-radius:50%;border:2.5px solid rgba(255,255,255,.5);flex:none}
+.chk.on{background:#0A84FF;border-color:#0A84FF;display:flex;align-items:center;justify-content:center}
+.hd{font-size:26px;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:.04em;margin:22px 0 10px 8px}
+#flash{position:absolute;inset:0;background:#fff;opacity:0}
+#vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 55%,rgba(0,0,0,.55))}
+</style></head>
+<body><div id="stage">
+<div id="bg"></div>
+<div id="cam"><div id="world"><div id="floor"></div><div id="bar"></div></div></div>
+<div id="mont"></div>
+<div id="brand" class="ov">Dock<span>yard</span></div>
+<div id="title" class="ov"><h1>Dockyard</h1><p>A smart dock for KDE Plasma 6</p></div>
+<div id="cap" class="ov"><div class="n"></div><h2></h2><p></p></div>
+<div id="vig"></div><div id="flash"></div>
+</div>
+<script src="icons.js"></script>
+<script>
+const H=146, B=170, PAD=12, GAP=10;
+const A='assets/';
+const ico=(n,s,c='#fff',st='')=>`<i class="ico" style="--m:url(&quot;${ICONS[n]}&quot;);width:${s}px;height:${s}px;background:${c};${st}"></i>`;
+const svgI={
+ play:'<path d="M8 5v14l11-7z" fill="currentColor"/>',
+ pause:'<path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/>',
+ prev:'<path d="M6 5h2v14H6zM20 5v14L9 12z" fill="currentColor"/>',
+ next:'<path d="M16 5h2v14h-2zM4 5v14l11-7z" fill="currentColor"/>',
+ pencil:'<path d="M4 20h4L19 9l-4-4L4 16z M14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+ bin:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+ search:'<circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+ bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z" fill="currentColor"/>',
+ check:'<path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+ lock:'<rect x="5" y="11" width="14" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/>',
+ moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+ restart:'<path d="M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+ power:'<path d="M12 3v9M6.3 6.8a8 8 0 1 0 11.4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+ plus:'<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+ clip:'<rect x="6" y="4" width="12" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 4h6v3H9z" fill="currentColor"/>',
+ gear:'<circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+};
+const si=(n,s,c='#fff')=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" style="color:${c};flex:none">${svgI[n]}</svg>`;
+const sun=s=>`<svg width="${s}" height="${s}" viewBox="0 0 40 40" style="flex:none"><circle cx="20" cy="20" r="8.5" fill="#FFCC00"/>${[...Array(8)].map((_,i)=>{const a=i*Math.PI/4;return `<line x1="${20+13*Math.cos(a)}" y1="${20+13*Math.sin(a)}" x2="${20+17.5*Math.cos(a)}" y2="${20+17.5*Math.sin(a)}" stroke="#FFCC00" stroke-width="3" stroke-linecap="round"/>`}).join('')}</svg>`;
+const ring=(d,p,c,txt,sw=8)=>{const r=(d-sw)/2,C=2*Math.PI*r;return `<div style="position:relative;width:${d}px;height:${d}px;flex:none"><svg width="${d}" height="${d}" style="transform:rotate(-90deg)"><circle cx="${d/2}" cy="${d/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="${sw}"/><circle cx="${d/2}" cy="${d/2}" r="${r}" fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${C*p} ${C}"/></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${d*.27}px">${txt}</div></div>`};
+const appImg=(n,s)=>`<img src="${A}${n}" style="width:${s}px;height:${s}px;flex:none;object-fit:contain">`;
+const APPS=['firefox.svg','org.kde.dolphin.svg','discord.png','vscode.png','spotify-launcher.png','kate.svg'];
+const RUN=[1,0,1,1,0,0];
+
+// ---------- tiles ----------
+const TILES=[
+ {k:'Start',w:H,cap:'Start',line:'Meta opens the launcher',html:()=>`<div style="margin:auto">${ico('start',66)}</div>`},
+ {k:'Stats',w:290,cap:'System stats',line:'CPU and memory, live',html:()=>`${ring(84,.23,'#0A84FF','23')}<div class="col" style="gap:2px;width:34px"><span class="lbl">CPU</span></div>${ring(84,.61,'#30D158','61')}<span class="lbl">RAM</span>`},
+ {k:'Media',w:560,cap:'Now playing',line:'Any MPRIS player',html:()=>`<div style="width:106px;height:106px;border-radius:22px;flex:none;background:radial-gradient(circle at 30% 30%,#ff9a5a,#c23fd8 55%,#2a1a6e)"></div>
+  <div class="col" style="flex:1;min-width:0;gap:4px"><div style="font-size:27px;font-weight:700;white-space:nowrap">Midnight Drive</div><div class="lbl" style="font-size:21px">Neon Coast</div>
+  <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.15);margin-top:8px"><div style="width:42%;height:100%;border-radius:3px;background:#fff"></div></div></div>
+  ${si('prev',30)}<div style="width:62px;height:62px;border-radius:50%;background:#0A84FF;display:flex;align-items:center;justify-content:center;flex:none">${si('pause',30)}</div>${si('next',30)}`},
+ {k:'Apps',w:6*105+5*16,bare:1,cap:'Your apps',line:'Running dots. Meta+1 to Meta+9',html:()=>`<div class="row" style="gap:16px;margin:auto;padding:0">${APPS.map((a,i)=>`<div style="position:relative;width:105px;height:146px;display:flex;align-items:center;justify-content:center">${appImg(a,96)}${RUN[i]?'<div style="position:absolute;bottom:8px;left:48px;width:9px;height:9px;border-radius:50%;background:#0A84FF;box-shadow:0 0 10px #0A84FF"></div>':''}</div>`).join('')}</div>`},
+ {k:'Weather',w:300,cap:'Weather',line:'Your city, at a glance',html:()=>`${sun(84)}<div class="col"><div class="big" style="font-size:52px;line-height:1">24°</div><div class="lbl" style="margin-top:6px">Clear · H 29°</div></div>`},
+ {k:'Pomodoro',w:360,cap:'Pomodoro',line:'Focus and break rounds',html:()=>`<div class="col" style="flex:1"><div class="big" style="font-size:54px;line-height:1;font-variant-numeric:tabular-nums">24:12</div><div class="row" style="gap:10px;margin-top:8px"><span style="font-size:19px;font-weight:600;color:#FF3B30">Focus</span><span class="lbl">2/4</span></div></div>
+  <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center">${si('next',24)}</div>
+  <div style="width:64px;height:64px;border-radius:50%;background:#FF3B30;display:flex;align-items:center;justify-content:center">${si('pause',30)}</div>`},
+ {k:'World',w:440,cap:'World clocks',line:'Three zones, one tile',html:()=>[['08:36','New York'],['13:36','London'],['22:36','Tokyo']].map(([t,c])=>`<div class="col" style="flex:1;align-items:center"><div class="big" style="font-size:38px;font-variant-numeric:tabular-nums">${t}</div><div class="lbl" style="font-size:16px;margin-top:4px">${c}</div></div>`).join('')},
+ {k:'Todos',w:400,cap:'Todos',line:'Tick them off from the dock',html:()=>`<div class="col" style="flex:1;gap:9px"><div class="row" style="justify-content:space-between"><span style="font-size:19px;font-weight:700">Todos</span><span class="lbl" style="font-size:16px">2 left</span></div>
+  ${[['Film the reel',0],['Write the caption',0]].map(([t,d])=>`<div class="row" style="gap:12px"><div style="width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.5);flex:none"></div><span style="font-size:21px;font-weight:500;white-space:nowrap">${t}</span></div>`).join('')}</div>`},
+ {k:'Notes',w:470,cap:'Notes',line:'Several notes, one tile',html:()=>`<div style="width:106px;height:106px;border-radius:22px;flex:none;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);overflow:hidden"><div style="height:24px;background:#FFCC00"></div></div>
+  <div class="col" style="flex:1;gap:5px"><div style="font-size:25px;font-weight:700;white-space:nowrap">Ship update 2</div><div class="lbl" style="font-size:18px;white-space:nowrap">Record, then post Friday</div></div>
+  <div style="min-width:36px;height:36px;border-radius:12px;background:rgba(10,132,255,.25);color:#0A84FF;font-weight:700;font-size:19px;display:flex;align-items:center;justify-content:center">3</div>${si('pencil',28)}`},
+ {k:'Network',w:250,cap:'Network',line:'Live up and down speed',html:()=>`<div class="col" style="gap:8px;font-variant-numeric:tabular-nums">${[['↓','#30D158','4.2 MB/s'],['↑','#0A84FF','312 KB/s']].map(([a,c,v])=>`<div class="row" style="gap:12px"><span style="color:${c};font-size:30px;font-weight:800">${a}</span><span style="font-size:28px;font-weight:700">${v}</span></div>`).join('')}</div>`},
+ {k:'Toggles',w:350,cap:'Quick toggles',line:'Wi-Fi, Bluetooth, Do Not Disturb, Night Light',html:()=>[['wifi',1],['bluetooth',1],['moon-dnd',0],['night-light',0]].map(([n,on])=>`<div style="width:66px;height:66px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:${on?'#0A84FF':'rgba(255,255,255,.1)'}">${ico(n,34)}</div>`).join('')},
+ {k:'Calendar',w:560,cap:'Calendar',line:"Today and what's next",html:()=>`<div class="col" style="width:106px;height:106px;border-radius:22px;flex:none;background:rgba(10,10,16,.55);border:1px solid rgba(255,255,255,.12);align-items:center"><span style="color:#FF3B30;font-weight:700;font-size:19px;letter-spacing:.06em">TUE</span><span class="big" style="font-size:50px;line-height:1">3</span></div>
+  <div style="width:6px;height:84px;border-radius:3px;background:#FF9F0A;flex:none"></div><div class="col" style="gap:6px"><div style="font-size:26px;font-weight:700;white-space:nowrap">Design review</div><div class="lbl" style="font-size:19px">15:00 · in 40 min</div></div>`},
+ {k:'Progress',w:360,cap:'Month progress',line:'How far through November',html:()=>`<div style="display:grid;grid-template-columns:repeat(10,13px);gap:6px;flex:none">${[...Array(30)].map((_,i)=>`<div style="width:13px;height:13px;border-radius:50%;background:${i<3?'#0A84FF':'rgba(255,255,255,.15)'}"></div>`).join('')}</div><div class="col"><span style="font-size:20px;font-weight:700">Nov</span><span class="big" style="font-size:34px">10%</span></div>`},
+ {k:'Battery',w:170,cap:'Battery',line:'Charge and charging state',html:()=>`<div class="row" style="margin:auto;gap:4px">${ring(96,.82,'#30D158','82',9)}${si('bolt',26,'#30D158')}</div>`},
+ {k:'Clock',w:170,cap:'Clock',line:'Time, day and weather',clock:1,html:()=>`<div style="position:absolute;inset:0;border-radius:35px;overflow:hidden;background:#000"><div style="height:62px;background:#FF3B30;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:40px;font-variant-numeric:tabular-nums">19:06</div>
+  <div style="position:absolute;left:18px;top:74px;font-size:22px;font-weight:600;color:rgba(255,255,255,.7)">Tue</div><div style="position:absolute;left:18px;top:98px;font-size:34px;font-weight:700">3</div>
+  <div style="position:absolute;right:14px;bottom:14px;width:62px;height:62px;border-radius:50%;background:rgba(255,255,255,.88);color:#1C1C1E;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:21px">24°</div></div>`},
+];
+const world=document.getElementById('world');
+let x=PAD+6;
+TILES.forEach((T,i)=>{
+ T.x=x; T.cx=x+T.w/2; x+=T.w+GAP;
+ const p=document.createElement('div');p.className='ping';p.style.left=(T.cx-T.w*0.9)+'px';p.style.width=(T.w*1.8)+'px';world.appendChild(p);T.ping=p;
+ const s=document.createElement('div');s.className='slot';s.style.left=T.x+'px';s.style.width=T.w+'px';
+ s.innerHTML=`<div class="tile${T.bare?' bare':''}" style="${T.clock?'background:#000;border-color:rgba(255,255,255,.16)':''}">${T.html()}</div>`;
+ world.appendChild(s);T.el=s;T.inner=s.firstChild;
+});
+const W=x-GAP+PAD+6;
+const bar=document.getElementById('bar');bar.style.width=W+'px';
+const floor=document.getElementById('floor');floor.style.left='-100px';floor.style.width=(W+200)+'px';
+
+// stars
+const bg=document.getElementById('bg');
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+for(let i=0;i<160;i++){const d=document.createElement('div');d.className='star';const r=rnd()*2.4+.6;d.style.cssText+=`left:${rnd()*1480}px;top:${rnd()*2220}px;width:${r}px;height:${r}px;opacity:${.25+rnd()*.6}`;bg.appendChild(d)}
+
+// ---------- montage panels ----------
+const P=[];
+const panel=(cap,line,w,html)=>P.push({cap,line,w,html});
+panel('Launcher','Type, Enter, done',860,`<div class="glass" style="width:860px">
+ <div class="field">${si('search',38,'rgba(255,255,255,.6)')}<span>fi</span><div class="caret"></div></div>
+ <div class="hd">RESULTS</div>
+ <div class="item sel">${appImg('firefox.svg',72)}<div class="col"><span>Firefox</span><span class="sub">Web browser</span></div><span style="margin-left:auto" class="kbd">Enter</span></div>
+ <div class="item">${appImg('org.kde.dolphin.svg',72)}<div class="col"><span>Dolphin</span><span class="sub">File manager</span></div></div>
+ <div class="item">${appImg('spectacle.svg',72)}<div class="col"><span>Spectacle</span><span class="sub">Screenshot capture</span></div></div>
+ <div class="row" style="justify-content:space-between;margin-top:26px;padding:22px 10px 0;border-top:1.5px solid rgba(255,255,255,.1)">${[['lock','Lock'],['moon','Sleep'],['restart','Restart'],['power','Shut down']].map(([i,l])=>`<div class="col" style="align-items:center;gap:10px"><div style="width:76px;height:76px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center">${si(i,36)}</div><span class="sub">${l}</span></div>`).join('')}</div></div>`);
+panel('Sums in the search','Enter copies the result',860,`<div class="glass" style="width:860px">
+ <div class="field">${si('search',38,'rgba(255,255,255,.6)')}<span>12 * 8 + 4</span><div class="caret"></div></div>
+ <div class="item sel" style="margin-top:26px;padding:30px"><div style="width:72px;height:72px;border-radius:20px;background:#FF9F0A;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:800">=</div><div class="col"><span style="font-size:64px;font-weight:800;line-height:1">100</span><span class="sub" style="margin-top:6px">Calculator</span></div></div>
+ <div class="row" style="gap:14px;margin-top:22px;justify-content:center"><span class="kbd">Enter</span><span class="sub">copies the result</span></div></div>`);
+panel('Wi-Fi from the dock','Connect, disconnect, forget',860,`<div class="glass" style="width:860px">
+ <div class="row" style="gap:18px">${[['wifi','Wi-Fi',1],['bluetooth','Bluetooth',1],['moon-dnd','Focus',0],['night-light','Night',0]].map(([n,l,on])=>`<div class="col" style="flex:1;align-items:center;gap:12px;padding:22px 0;border-radius:28px;background:${on?'rgba(10,132,255,.22)':'rgba(255,255,255,.07)'}"><div style="width:78px;height:78px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:${on?'#0A84FF':'rgba(255,255,255,.12)'}">${ico(n,40)}</div><span class="sub" style="color:#fff">${l}</span></div>`).join('')}</div>
+ <div class="hd">WI-FI</div>
+ ${[['Home 5G','Connected','Disconnect',1],['Cafe Lumen','Secured','Connect',0],['Office','Saved','Forget',0]].map(([n,s,b,on])=>`<div class="item" style="${on?'background:rgba(255,255,255,.07)':''}">${ico('wifi',40,on?'#0A84FF':'#fff')}<div class="col"><span>${n}</span><span class="sub">${s}</span></div><span class="btn${b==='Connect'?' blue':''}" style="margin-left:auto">${b}</span></div>`).join('')}</div>`);
+panel('Todos','Complete. Restore. Delete.',860,`<div class="glass" style="width:860px">
+ <div class="row" style="justify-content:space-between;margin:0 8px 10px"><span style="font-size:40px;font-weight:800">Todos</span><span class="sub">Tue 3 Nov · 2 left</span></div>
+ ${['Film the reel','Write the caption'].map(t=>`<div class="item"><div class="chk"></div><span style="font-weight:500">${t}</span><span style="margin-left:auto;opacity:.5">${si('bin',32)}</span></div>`).join('')}
+ <div class="hd">COMPLETED (2)</div>
+ ${['Ship update 2','Fix Meta+V'].map(t=>`<div class="item"><div class="chk on">${si('check',26)}</div><span style="font-weight:500;text-decoration:line-through;color:rgba(255,255,255,.45)">${t}</span><span style="margin-left:auto;opacity:.5">${si('bin',32)}</span></div>`).join('')}
+ <div class="field" style="margin-top:20px;color:rgba(255,255,255,.4);font-size:30px">${si('plus',32,'rgba(255,255,255,.5)')}New todo</div></div>`);
+panel('Many notes','A chip for each one',860,`<div class="glass" style="width:860px">
+ <div class="row" style="gap:14px;flex-wrap:wrap">${['Ship update 2','Ideas for reels','Shopping'].map((c,i)=>`<span class="btn" style="${i==0?'background:#FFCC00;color:#1C1C1E':''}">${c}</span>`).join('')}<span class="btn" style="padding:12px 16px">${si('plus',26)}</span><span style="margin-left:auto;opacity:.6">${si('bin',36)}</span></div>
+ <div style="margin-top:26px;border-radius:28px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.1);overflow:hidden"><div style="height:18px;background:#FFCC00"></div>
+ <div style="padding:28px 32px;font-size:32px;line-height:1.5"><b style="font-size:40px">Ship update 2</b><br><span style="color:rgba(255,255,255,.75)">Record the reel on the clean desktop.<br>Post Friday on Instagram and LinkedIn.</span></div></div>
+ <div class="sub" style="text-align:center;margin-top:20px">Note 1 of 3</div></div>`);
+panel('Meta+1 to Meta+9','Open or switch to your dock apps',900,`<div class="glass" style="width:900px;padding:56px 40px 46px">
+ <div class="row" style="justify-content:space-between">${APPS.map((a,i)=>`<div class="col" style="align-items:center;gap:20px"><div class="kbd" style="font-size:28px;height:56px;min-width:60px;${i==2?'background:#0A84FF;border-color:#5aaeff':''}">${i+1}</div>${appImg(a,104)}<div style="width:10px;height:10px;border-radius:50%;background:${RUN[i]?'#0A84FF':'transparent'}"></div></div>`).join('')}</div>
+ <div class="row" style="justify-content:center;gap:16px;margin-top:30px"><span class="kbd" style="font-size:30px;height:66px;padding:0 26px">Meta</span><span style="font-size:40px;font-weight:700">+</span><span class="kbd" style="font-size:30px;height:66px;min-width:66px;background:#0A84FF;border-color:#5aaeff">3</span></div></div>`);
+panel('Meta+V clipboard','History, right from the dock',860,`<div class="glass" style="width:860px">
+ <div class="row" style="gap:18px;margin:0 8px 16px">${si('clip',44)}<span style="font-size:40px;font-weight:800">Clipboard</span><span style="margin-left:auto" class="row"><span class="kbd">Meta</span><span style="margin:0 8px;font-weight:700">+</span><span class="kbd">V</span></span></div>
+ ${['./install-all.sh --apply-theme','https://kde.org/plasma-desktop','Meeting moved to 15:00','plasmoidviewer -a package'].map((c,i)=>`<div class="item${i==0?' sel':''}" style="font-weight:500;font-size:30px;${i?'background:rgba(255,255,255,.05)':''};margin-bottom:10px"><span style="font-family:${i==0||i==3?'monospace':'inherit'}">${c}</span></div>`).join('')}</div>`);
+panel('Four clock styles','Digital, Flip, 7 days, Today',880,`<div style="display:grid;grid-template-columns:1fr 1fr;gap:26px;width:880px">
+ <div class="glass" style="padding:34px;border-radius:40px"><div class="big" style="font-size:70px;font-variant-numeric:tabular-nums">19:06<span style="font-size:36px;opacity:.55">:42</span></div><div class="sub" style="font-size:28px">Tue 3 Nov</div><div class="sub" style="margin-top:16px;color:#0A84FF;font-weight:700">DIGITAL</div></div>
+ <div class="glass" style="padding:34px;border-radius:40px"><div class="row" style="gap:10px">${'1906'.split('').map((d,i)=>`<div style="width:74px;height:100px;border-radius:14px;background:#111;border:1px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:700;position:relative;${i==2?'margin-left:12px':''}">${d}<div style="position:absolute;left:0;right:0;top:50%;height:2px;background:#000"></div></div>`).join('')}</div><div class="sub" style="margin-top:16px;color:#0A84FF;font-weight:700">FLIP</div></div>
+ <div class="glass" style="padding:30px 26px;border-radius:40px"><div class="row" style="justify-content:space-between">${['Tue','Wed','Thu','Fri','Sat'].map((d,i)=>`<div class="col" style="align-items:center;gap:8px;padding:10px 6px;border-radius:18px;${i==0?'background:#0A84FF':''}"><span style="font-size:22px;font-weight:600">${d}</span>${sun(40)}<span style="font-size:24px;font-weight:700">${24+(i%3)}°</span></div>`).join('')}</div><div class="sub" style="margin-top:12px;color:#0A84FF;font-weight:700">7 DAYS</div></div>
+ <div class="glass" style="padding:34px;border-radius:40px"><div class="row" style="gap:20px">${sun(80)}<div class="col"><span class="big" style="font-size:60px;line-height:1">24°</span><span class="sub" style="font-size:26px">Tuesday 3</span></div></div><div class="sub" style="margin-top:20px;color:#0A84FF;font-weight:700">TODAY</div></div></div>`);
+panel('Five settings pages','Every tile has its options',880,`<div class="glass" style="width:880px;padding:0;display:flex;overflow:hidden">
+ <div style="width:330px;padding:34px 20px;background:rgba(0,0,0,.25)">${['Widgets','Apps','Clock & Calendar','Weather','System'].map((p,i)=>`<div class="item" style="font-size:28px;padding:20px 22px;${i==0?'background:#0A84FF':''}">${p}</div>`).join('')}</div>
+ <div style="flex:1;padding:36px 34px">${['Start','System stats','Now playing','Apps','Weather','Pomodoro','World clocks','Todos'].map((p,i)=>`<div class="row" style="justify-content:space-between;padding:13px 0;font-size:28px;font-weight:500;border-bottom:1px solid rgba(255,255,255,.07)"><span>${p}</span><div style="width:66px;height:38px;border-radius:19px;background:${i==5?'rgba(255,255,255,.2)':'#30D158'};position:relative"><div style="position:absolute;top:4px;${i==5?'left:4px':'right:4px'};width:30px;height:30px;border-radius:50%;background:#fff"></div></div></div>`).join('')}</div></div>`);
+panel('Power profiles','Battery and performance in one flyout',860,`<div class="glass" style="width:860px">
+ <div class="row" style="gap:28px">${ring(150,.82,'#30D158','82%',14)}<div class="col" style="gap:6px"><span style="font-size:44px;font-weight:800">Battery</span><span class="row" style="gap:8px;font-size:28px;color:#30D158;font-weight:600">${si('bolt',28,'#30D158')}Charging</span><span class="sub" style="font-size:26px">Battery Health: 96%</span></div></div>
+ <div class="hd" style="margin-top:34px">POWER PROFILE</div>
+ <div class="row" style="background:rgba(255,255,255,.07);border-radius:26px;padding:8px">${['Power Save','Balanced','Performance'].map((p,i)=>`<div style="flex:1;text-align:center;padding:22px 0;border-radius:20px;font-size:28px;font-weight:600;${i==1?'background:#0A84FF':''}">${p}</div>`).join('')}</div></div>`);
+const mont=document.getElementById('mont');
+P.forEach(p=>{const d=document.createElement('div');d.className='panel';d.innerHTML=p.html;d.style.marginLeft=(-p.w/2)+'px';mont.appendChild(d);p.el=d;
+ const c=document.createElement('div');c.className='pcap';c.innerHTML=`<h2>${p.cap}</h2><p>${p.line}</p>`;document.getElementById('stage').insertBefore(c,document.getElementById('vig'));p.c=c;});
+// centre each panel vertically on its own height
+requestAnimationFrame(()=>P.forEach(p=>p.el.style.marginTop=(-p.el.offsetHeight/2)+'px'));
+
+// ---------- timing ----------
+const T0=2.4, STEP=1.0, FALL=0.55;
+TILES.forEach((T,i)=>{T.t0=T0+0.1+i*STEP;T.land=T.t0+FALL});
+const ACT3=T0+TILES.length*STEP, ACT4=ACT3+2.6, MSTART=ACT4+1.0, MDUR=1.2, END=MSTART+(P.length-1)*MDUR+0.8, TOTAL=END+2.6;
+window.TOTAL=TOTAL;
+
+const cl=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const lerp=(a,b,u)=>a+(b-a)*u;
+const eio=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
+const eo=u=>1-Math.pow(1-u,3);
+const ei=u=>u*u*u;
+const mix=(A,B,u)=>{const o={};for(const k in A)o[k]=lerp(A[k],B[k],u);return o};
+
+// camera track for act 2: Catmull-Rom through landing points
+const keys=[{t:T0-0.6,x:TILES[0].cx-260},{t:T0,x:TILES[0].cx-110},...TILES.map(T=>({t:T.land,x:T.cx})),{t:ACT3,x:TILES.at(-1).cx+90},{t:ACT3+1,x:TILES.at(-1).cx+200}];
+function trackX(t){let i=0;while(i<keys.length-2&&keys[i+1].t<t)i++;
+ const p0=keys[Math.max(0,i-1)],p1=keys[i],p2=keys[i+1],p3=keys[Math.min(keys.length-1,i+2)];
+ const u=cl((t-p1.t)/(p2.t-p1.t));
+ const m1=(p2.x-p0.x)/(p2.t-p0.t)*(p2.t-p1.t), m2=(p3.x-p1.x)/(p3.t-p1.t)*(p2.t-p1.t);
+ const u2=u*u,u3=u2*u;return (2*u3-3*u2+1)*p1.x+(u3-2*u2+u)*m1+(-2*u3+3*u2)*p2.x+(u3-u2)*m2;}
+function punch(t){let p=0;TILES.forEach(T=>{const d=t-T.land;if(d>0&&d<.5)p+=Math.sin(d/.5*Math.PI)*(1-d/.5)*.03});return p}
+const FAR={cx:W*0.16,s:0.95,rx:4,ry:46,rz:-4,ox:420,oy:1080,tz:-300};
+const FAR2={cx:W*0.12,s:1.0,rx:5,ry:40,rz:-3,ox:440,oy:1060,tz:-150};
+const TRK=t=>({cx:trackX(t),s:1.72+punch(t),rx:7,ry:15,rz:0,ox:540,oy:900,tz:0});
+const OVER={cx:W*0.30,s:0.95,rx:8,ry:64,rz:-28,ox:560,oy:960,tz:-200};
+const OVER2={cx:W*0.34,s:0.95,rx:8,ry:62,rz:-28,ox:560,oy:960,tz:-140};
+const ENDC={cx:W*0.30,s:0.9,rx:8,ry:62,rz:-28,ox:560,oy:1360,tz:-200};
+function cam(t){
+ if(t<1.2)return mix(FAR,FAR2,t/1.2);
+ if(t<T0)return mix(FAR2,TRK(T0),eio((t-1.2)/(T0-1.2)));
+ if(t<ACT3)return TRK(t);
+ if(t<ACT4)return mix(mix(TRK(ACT3),OVER,eio(cl((t-ACT3)/1.5))),OVER2,cl((t-ACT3-1.5)/1.1));
+ if(t<END)return OVER2;
+ return ENDC;
+}
+const $=id=>document.getElementById(id);
+function setCap(el,n,h,p,u){el.querySelector('.n').textContent=n;el.querySelector('h2').textContent=h;el.querySelector('p').textContent=p;
+ el.style.opacity=u;el.style.transform=`translateY(${(1-u)*30}px)`}
+
+window.render=function(t){
+ const c=cam(t);
+ world.style.transform=`translate3d(${c.ox}px,${c.oy}px,${c.tz}px) rotateZ(${c.rz}deg) rotateX(${c.rx}deg) rotateY(${c.ry}deg) scale(${c.s}) translate(${-c.cx}px,${-B/2}px)`;
+ bg.style.transform=`translate(${-(c.cx/W-.5)*160}px,0) scale(${1+(c.s-.6)*.04})`;
+ // world visibility
+ let wo=1; if(t>=ACT4&&t<END)wo=1-cl((t-ACT4)/0.4); if(t>=END)wo=cl((t-END)/0.5);
+ world.style.opacity=wo;
+ // tiles
+ TILES.forEach((T,i)=>{
+  const u=(t-T.t0)/FALL; let y=0,z=0,rz=0,sx=1,sy=1,op=1,blur=0;
+  if(u<0){op=0;y=-1500}
+  else if(u<1){const g=u*u;y=-1500*(1-g);z=420*(1-u);rz=(i%2?7:-7)*(1-u);op=cl(u*4);blur=4*u}
+  else{const d=t-T.land;if(d<.45){const k=d/.45;const b=Math.sin(k*Math.PI*2)*Math.exp(-k*4);sy=1-.10*b;sx=1+.06*b;y=-22*Math.max(0,Math.sin(k*Math.PI))*Math.exp(-k*3)*(k>.25?1:0)}}
+  T.el.style.opacity=op;
+  T.el.style.transform=`translate3d(0,${y}px,${z}px) rotateZ(${rz}deg)`;
+  T.inner.style.transform=`scale(${sx},${sy})`;
+  T.el.style.filter=blur>0.3&&u<1?`blur(${blur*(1-u)*2}px)`:'none';
+  const d=t-T.land; T.ping.style.opacity=d>0&&d<.7?(1-d/.7)*.9:0;
+ });
+ // title
+ const tu=t<0.25?0:t<1.6?cl((t-.25)/.5):1-cl((t-1.6)/.6);
+ $('title').style.opacity=t<T0+.1?tu:(t>=END+0.35?cl((t-END-0.35)/.5):0);
+ $('title').style.transform=t<END?`translateY(${t<1.6?(1-tu)*30:-(1-tu)*60}px)`:`translateY(${(1-cl((t-END-.35)/.5))*30}px)`;
+ $('title').style.top=t<END?'520px':'700px';
+ // brand on top during acts 2-3
+ $('brand').style.opacity=t>T0&&t<ACT4?cl((t-T0)/.4)*(1-cl((t-ACT4+.4)/.4)):0;
+ // captions
+ const cap=$('cap'); cap.style.opacity=0;
+ if(t>=T0&&t<ACT3){let k=-1;TILES.forEach((T,i)=>{if(t>=T.land-.3)k=i});
+  if(k>=0){const T=TILES[k];const s0=T.land-.3,e0=(k<TILES.length-1?TILES[k+1].land-.3:ACT3);
+   const u=Math.min(cl((t-s0)/.22),1-cl((t-e0+.12)/.12));
+   setCap(cap,String(k+1).padStart(2,'0')+' / '+TILES.length,T.cap,T.line,u)}}
+ else if(t>=ACT3+.7&&t<ACT4){const u=Math.min(cl((t-ACT3-.7)/.3),1-cl((t-ACT4+.25)/.25));setCap(cap,'',TILES.length+' tiles. One bar.','Turn each one on or off in Settings',u)}
+ else if(t>=ACT4&&t<MSTART){const u=Math.min(cl((t-ACT4-.1)/.25),1-cl((t-MSTART+.2)/.2));setCap(cap,'',' ','',0);
+  cap.style.opacity=u;cap.querySelector('h2').textContent='Beyond the dock';cap.querySelector('p').textContent='What opens when you tap';cap.style.transform=`translateY(${-420+(1-u)*40}px) scale(${1+.15*(1-u)})`}
+ // montage
+ P.forEach((p,i)=>{const s=MSTART+i*MDUR,d=i==P.length-1?0.8+0.0:MDUR;const u=(t-s)/d;
+  if(u<0||u>1){p.el.style.opacity=0;p.c.style.opacity=0;return}
+  let z,ry,rx,op;
+  if(u<.22){const k=eo(u/.22);z=lerp(-900,0,k);ry=lerp(22,5,k);rx=lerp(10,3,k);op=cl(u/.12)}
+  else if(u<.8){const k=(u-.22)/.58;z=lerp(0,60,k);ry=lerp(5,-4,k);rx=lerp(3,1,k);op=1}
+  else{const k=ei((u-.8)/.2);z=lerp(60,1300,k);ry=lerp(-4,-14,k);rx=1;op=1-cl((u-.88)/.12)}
+  if(i==P.length-1&&u>.8){z=60;ry=-4;op=1-cl((u-.8)/.2)}
+  p.el.style.opacity=op;p.el.style.transform=`translateZ(${z}px) rotateY(${ry}deg) rotateX(${rx}deg)`;
+  const cu=Math.min(cl((u-.1)/.15),1-cl((u-.82)/.1));p.c.style.opacity=cu;p.c.style.transform=`translateY(${(1-cu)*24}px)`});
+};
+document.fonts.ready.then(()=>{window.ready=true;render(0)});
+</script></body></html>
