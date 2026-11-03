@@ -74,7 +74,7 @@ Data sources (sensors, MPRIS, clock) live once in `main.qml` and feed every modu
 
 1. Add a new file in `modules/`.
 2. Add a `show<Name>` key in `main.xml`.
-3. Add a checkbox in `configGeneral.qml`.
+3. Add a checkbox in `configWidgets.qml`. Put the module's own options on the settings page it belongs to (`configApps.qml`, `configClock.qml`, `configWeather.qml` or `configSystem.qml`).
 
 ## Notes
 

@@ -15,6 +15,14 @@ Notable changes to Dockyard. Newest first.
 
 ### Changed
 
+- Settings are split into five pages. Widgets turns tiles on and off. Apps, Clock & Calendar, Weather and System hold each tile's options, so the options are no longer at the bottom of one long page.
+- City search lists every match (several cities share a name) and remembers the chosen place name (`locationName`).
+- World clock zones and your own pinned-app list are edited as lists with reorder and remove, not as comma-separated text. Zones are picked from the ones the tile supports. Editing the pinned list keeps the launcher pins in step.
+- The System page finds the battery sensor and shows a live reading. Sensor refresh is a choice of intervals instead of a millisecond box.
+- The launcher's grid or list view and `tilePopups` can now be set in Settings.
+- Presets keep the launcher on, and a preset can be undone.
+- Enter in the city search or a list's add field no longer closes the settings dialog.
+
 - Pinning or unpinning an app in the launcher also updates the dock app row. Reordering apps on the dock writes the same order back to the launcher pins.
 - The launcher search clears when the Start menu closes.
 - Clicking a tile no longer opens one generic Dock panel. Each tile opens the view that fits it. The System section of that panel is gone, since the Stats tile already opens System Monitor.
