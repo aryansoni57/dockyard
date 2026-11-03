@@ -38,6 +38,13 @@ Install, then add "Dock" to a panel via Add Widgets:
 ./install.sh
 ```
 
+Or install the plasmoid and the glass desktop theme together, then restart plasmashell
+(`--apply-theme` also activates the theme, `--no-restart` skips the restart):
+
+```bash
+./install-all.sh
+```
+
 ## Run
 
 Test without installing:
