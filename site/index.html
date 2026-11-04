@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dockyard: a glass dock for KDE Plasma 6</title>
+<meta name="description" content="Dockyard is a glass dock and matching theme for KDE Plasma 6. Free and open source.">
+<meta name="theme-color" content="#050608">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Dockyard: a glass dock for KDE Plasma 6">
+<meta property="og:description" content="A glass dock and matching theme for KDE Plasma 6.">
+<meta property="og:url" content="https://aryansoni57.github.io/dockyard/">
+<meta property="og:image" content="https://aryansoni57.github.io/dockyard/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/Inter.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<script>document.documentElement.classList.add('js')</script>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="#top" aria-label="Dockyard home"><img src="assets/icons/favicon.svg" alt="" width="20" height="20">Dockyard</a>
+  <nav aria-label="Main">
+    <a href="#features">Features</a>
+    <a href="#theme">Theme</a>
+    <a href="#install">Install</a>
+    <a class="gh" href="https://github.com/aryansoni57/dockyard">GitHub</a>
+  </nav>
+</header>
+
+<main>
+<section class="hero" id="top">
+  <img class="wall" src="assets/wallpaper.webp" width="2560" height="1440" alt="" fetchpriority="high">
+  <div class="hero-copy">
+    <h1>Your panel, rebuilt in glass.</h1>
+    <p>Dockyard is a dock and matching theme for KDE Plasma&nbsp;6. It runs inside plasmashell, with nothing extra to keep running.</p>
+    <div class="acts">
+      <a class="btn" href="#install">Install Dockyard</a>
+      <a class="btn ghost" href="https://github.com/aryansoni57/dockyard">View on GitHub</a>
+    </div>
+  </div>
+
+  <div class="glass launcher menu" id="menu" data-ui role="dialog" aria-label="Start menu" hidden>
+    <label class="search"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg><input id="mq" placeholder="Search, or try 12*8+4" aria-label="Search this site" autocomplete="off" spellcheck="false"></label>
+    <div id="mres" class="res"></div>
+  </div>
+
+  <div class="dock" data-ui role="group" aria-label="The Dockyard dock">
+    <button class="tile sq start" id="start" aria-label="Open the start menu" aria-expanded="false" aria-controls="menu"><i class="gly" style="--m:url(assets/icons/start.svg)"></i></button>
+    <div class="tile media wide">
+      <span class="art"></span>
+      <span class="stack"><b>Dockyard reel</b><small id="vtime">Playing</small></span>
+      <button class="round p" id="hplay" aria-label="Pause" aria-pressed="true"></button>
+    </div>
+    <div class="apps">
+      <span class="app run"><img src="assets/icons/firefox.svg" alt=""></span>
+      <span class="app run"><img src="assets/icons/org.kde.dolphin.svg" alt=""></span>
+      <span class="app"><img src="assets/icons/discord.png" alt=""></span>
+      <span class="app run"><img src="assets/icons/vscode.png" alt=""></span>
+      <span class="app"><img src="assets/icons/spotify-launcher.png" alt=""></span>
+      <span class="app mid"><img src="assets/icons/kate.svg" alt=""></span>
+    </div>
+    <div class="tile tgl mid">
+      <i class="gly" style="--m:url(assets/icons/wifi.svg)"></i>
+      <i class="gly" style="--m:url(assets/icons/bluetooth.svg)"></i>
+      <i class="gly dim" style="--m:url(assets/icons/moon-dnd.svg)"></i>
+      <i class="gly dim" style="--m:url(assets/icons/night-light.svg)"></i>
+    </div>
+    <div class="tile mid"><span class="stack"><b class="n">24°</b><small>H 29° L 23°</small></span></div>
+    <div class="tile wide note"><span class="nt"></span><span class="stack"><b>Ship update 2</b><small>Click to write</small></span></div>
+    <div class="tile"><span class="stack"><b class="n"><span data-clock>12:00</span></b><small data-date>Today</small></span></div>
+    <div class="tile sq mid"><span class="ring" style="--p:82"><b>82</b></span></div>
+  </div>
+</section>
+
+<section class="see">
+  <div class="see-copy">
+    <h2 class="rise">One bar for everything.</h2>
+    <ul>
+      <li class="rise">29 tiles, each one optional.</li>
+      <li class="rise">No extra process. It lives in plasmashell.</li>
+      <li class="rise">Free and open source.</li>
+    </ul>
+  </div>
+  <figure class="reel rise">
+    <video id="reel" src="assets/reel.mp4" poster="assets/reel-poster.webp" width="720" height="1280" muted loop playsinline preload="metadata" aria-label="Dockyard feature reel"></video>
+    <button class="bigplay" id="rplay" aria-label="Play the reel" hidden><svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg></button>
+    <button class="copy snd" id="snd">Sound on</button>
+  </figure>
+</section>
+
+<section class="features" id="features">
+  <h2 class="rise">Five things you'll use all day.</h2>
+  <div class="split">
+    <div class="list" role="tablist" aria-label="Features" aria-orientation="vertical">
+      <button class="row on" role="tab" id="t0" aria-controls="p0" aria-selected="true"><strong>Tiles you choose</strong><span>Clock, weather, now playing, stats, notes, todos and more. A hidden tile stops its sensors and timers.</span></button>
+      <button class="row" role="tab" id="t1" aria-controls="p1" aria-selected="false"><strong>A launcher that does sums</strong><span>Meta opens it. Enter launches the first match, or copies the answer.</span></button>
+      <button class="row" role="tab" id="t2" aria-controls="p2" aria-selected="false"><strong>Meta+1 to Meta+9</strong><span>Open or switch to your dock apps, left to right.</span></button>
+      <button class="row" role="tab" id="t3" aria-controls="p3" aria-selected="false"><strong>A popup for every tile</strong><span>Todos, notes, calendar and media open right over the tile you tapped.</span></button>
+      <button class="row" role="tab" id="t4" aria-controls="p4" aria-selected="false"><strong>Quick settings</strong><span>Wi-Fi, Bluetooth, Do Not Disturb, Night Light and power profiles, one tap away.</span></button>
+    </div>
+
+    <div class="stage" data-ui>
+      <img class="bg" src="assets/wallpaper-1280.webp" width="1280" height="720" alt="" loading="lazy">
+
+      <div class="pane on" id="p0" role="tabpanel" aria-labelledby="t0">
+        <div class="tiles">
+          <div class="tile big"><span class="art"></span><span class="stack"><b>Midnight Drive</b><small>Neon Coast</small><i class="track"><i style="width:42%"></i></i></span></div>
+          <div class="tile big"><span class="sun"></span><span class="stack"><b class="n">24°</b><small>Clear, H 29°</small></span></div>
+          <div class="tile big"><span class="ring" style="--p:23"><b>23</b></span><span class="ring" style="--p:61;--c:var(--green)"><b>61</b></span><small>CPU, RAM</small></div>
+          <div class="tile big"><span class="stack"><b class="n">24:12</b><small class="red">Focus, 2/4</small></span></div>
+          <div class="tile big span"><span class="stack"><b class="n" data-zone="America/New_York">08:36</b><small>New York</small></span><span class="stack"><b class="n" data-zone="Europe/London">13:36</b><small>London</small></span><span class="stack"><b class="n" data-zone="Asia/Tokyo">22:36</b><small>Tokyo</small></span></div>
+        </div>
+      </div>
+
+      <div class="pane" id="p1" role="tabpanel" aria-labelledby="t1" hidden>
+        <div class="glass launcher">
+          <label class="search"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg><input id="q" value="12*8+4" aria-label="Try the launcher" autocomplete="off" spellcheck="false"></label>
+          <div id="res" class="res"></div>
+        </div>
+      </div>
+
+      <div class="pane" id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+        <div class="glass keys">
+          <div class="keyapps" id="keyapps">
+            <span><kbd>1</kbd><img src="assets/icons/firefox.svg" alt=""></span>
+            <span><kbd>2</kbd><img src="assets/icons/org.kde.dolphin.svg" alt=""></span>
+            <span><kbd>3</kbd><img src="assets/icons/discord.png" alt=""></span>
+            <span><kbd>4</kbd><img src="assets/icons/vscode.png" alt=""></span>
+            <span><kbd>5</kbd><img src="assets/icons/spotify-launcher.png" alt=""></span>
+          </div>
+          <div class="chord"><kbd>Meta</kbd><em>+</em><kbd class="on" id="keynum">1</kbd></div>
+        </div>
+      </div>
+
+      <div class="pane" id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+        <div class="anchor">
+          <div class="glass pop">
+            <h3>Todos <small>2 left</small></h3>
+            <div class="todo"><i></i>Film the reel</div>
+            <div class="todo"><i></i>Write the caption</div>
+            <h4>Completed</h4>
+            <div class="todo done"><i></i>Ship update 2</div>
+          </div>
+          <div class="tile big solo"><span class="stack"><b>Todos</b><small>2 left</small></span></div>
+        </div>
+      </div>
+
+      <div class="pane" id="p4" role="tabpanel" aria-labelledby="t4" hidden>
+        <div class="glass qs">
+          <div class="tgs">
+            <button class="tg on" aria-pressed="true"><i><b class="gly" style="--m:url(assets/icons/wifi.svg)"></b></i>Wi-Fi</button>
+            <button class="tg on" aria-pressed="true"><i><b class="gly" style="--m:url(assets/icons/bluetooth.svg)"></b></i>Bluetooth</button>
+            <button class="tg" aria-pressed="false"><i><b class="gly" style="--m:url(assets/icons/moon-dnd.svg)"></b></i>Focus</button>
+            <button class="tg" aria-pressed="false"><i><b class="gly" style="--m:url(assets/icons/night-light.svg)"></b></i>Night</button>
+          </div>
+          <div class="net"><span><b>Home 5G</b><small>Connected</small></span><em>Disconnect</em></div>
+          <div class="net"><span><b>Cafe Lumen</b><small>Secured</small></span><em class="p">Connect</em></div>
+          <div class="seg"><span>Power Save</span><span class="on">Balanced</span><span>Performance</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="theme" id="theme">
+  <div class="theme-head">
+    <div class="rise">
+      <h2>The whole desktop matches.</h2>
+      <p>The Glass Plasma style carries the dock's frosted dark material to panels, notifications, tooltips and popups. One switch in the dock's settings makes all of it solid.</p>
+    </div>
+    <div class="seg pick rise" role="group" aria-label="Opaque dock bar">
+      <button class="on" data-a=".62" data-b=".55" aria-pressed="true">Frosted</button>
+      <button data-a=".96" data-b=".96" aria-pressed="false">Opaque</button>
+    </div>
+  </div>
+  <div class="desk rise" data-ui id="desk">
+    <div class="scene" id="scene" role="img" aria-label="A Plasma desktop using the Glass style, with a panel, notification, calendar and volume display">
+      <img src="assets/wallpaper.webp" width="2560" height="1440" alt="" loading="lazy">
+      <div class="g bar"><b>Dockyard</b><span>File</span><span>Edit</span><span>View</span><em data-clock>12:00</em></div>
+      <div class="g notice"><span class="ic"><i class="gly" style="--m:url(assets/icons/start.svg)"></i></span><span><b>Focus round done</b><small>Take a five minute break.</small></span></div>
+      <div class="g notice two"><span class="ic y"></span><span><b>Screenshot saved</b><small>Pictures/Screenshots</small></span></div>
+      <div class="g cal">
+        <b class="mon" data-month>This month</b>
+        <div class="grid" id="cal"></div>
+      </div>
+      <div class="g osd"><span>Volume</span><i class="track"><i style="width:66%"></i></i><span>66%</span></div>
+      <div class="g tip">Open Dolphin</div>
+      <div class="g mini">
+        <span class="s"><i class="gly" style="--m:url(assets/icons/start.svg)"></i></span>
+        <img src="assets/icons/firefox.svg" alt=""><img src="assets/icons/org.kde.dolphin.svg" alt=""><img src="assets/icons/vscode.png" alt=""><img src="assets/icons/kate.svg" alt="">
+        <span class="s"><b data-clock>12:00</b></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="install" id="install">
+  <h2 class="rise">Install it.</h2>
+  <div class="term rise">
+    <pre><code>git clone https://github.com/aryansoni57/dockyard
+cd dockyard
+./install-all.sh --apply-theme</code></pre>
+    <button class="copy" id="copy">Copy</button>
+  </div>
+  <p class="rise">Then add Dockyard to a panel from Add Widgets.</p>
+  <p class="fine rise">Needs KDE Plasma 6. Dockyard uses some private Plasma APIs, so a Plasma update can break it.</p>
+</section>
+</main>
+
+<footer>
+  <span>Dockyard. Free under GPL-2.0-or-later.</span>
+  <nav aria-label="Project">
+    <a href="https://github.com/aryansoni57/dockyard">GitHub</a>
+    <a href="https://github.com/aryansoni57/dockyard/blob/master/CHANGELOG.md">Changelog</a>
+    <a href="https://github.com/aryansoni57/dockyard/issues">Issues</a>
+  </nav>
+  <small>Wallpaper: Metal by Dharam Dhurandhar, GPLv3. Icons belong to their projects.</small>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
