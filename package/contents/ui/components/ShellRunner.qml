@@ -6,7 +6,7 @@ import org.kde.plasma.plasma5support as Plasma5Support
 Item {
     id: sh
 
-    signal finished(string cmd, string out)
+    signal finished(string cmd, string out, int code, string err)
 
     function run(cmd) {
         exec.disconnectSource(cmd);
@@ -19,7 +19,7 @@ Item {
         connectedSources: []
         onNewData: (sourceName, data) => {
             disconnectSource(sourceName);
-            sh.finished(sourceName, data["stdout"] || "");
+            sh.finished(sourceName, data["stdout"] || "", data["exit code"] || 0, data["stderr"] || "");
         }
     }
 }

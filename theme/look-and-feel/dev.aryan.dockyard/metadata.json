@@ -1,0 +1,15 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "aryan"
+            }
+        ],
+        "Description": "Dockyard dark glass: color scheme, Kvantum, Aurorae and the glass Plasma theme.",
+        "Id": "dev.aryan.dockyard",
+        "License": "GPL-2.0+",
+        "Name": "Dockyard",
+        "Version": "1.1"
+    }
+}

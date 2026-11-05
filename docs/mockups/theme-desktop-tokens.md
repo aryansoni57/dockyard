@@ -8,7 +8,8 @@ Plasma file paths are relative to the theme folder (`~/.local/share/plasma/deskt
 
 | Token | Value | Used for | Plasma target |
 | --- | --- | --- | --- |
-| `--accent` | `#0A84FF` (rgb 10,132,255) | Rings, slider fill, active toggles, selection, running dot | `colors`: `[Colors:Selection] BackgroundNormal`, `[Colors:View] DecorationFocus`, `DecorationHover`, `[Colors:Window] ForegroundActive`; Kirigami `highlightColor` |
+| `--accent` | `#0A84FF` (rgb 10,132,255) | Rings, slider fill, active toggles, running dot, Kvantum focus ring | `colors`: `[Colors:Selection] BackgroundNormal`, `[Colors:View] DecorationFocus`, `DecorationHover`, `[Colors:Window] ForegroundActive`; Kirigami `highlightColor` |
+| `--select` | `#0071e3` | Selection, primary buttons. White text on it passes AA (4.7:1). `#0A84FF` gives 3.65:1, so it is for rings only | `colors`: `[Colors:Selection] BackgroundNormal`; Kvantum `highlight.color`, `menuitem` |
 | Accent presets | Indigo `#5E5CE6`, Purple `#BF5AF2`, Pink `#FF375F`, Orange `#FF9F0A`, Green `#30D158`, Cyan `#64D2FF` | Tweaks panel | Same keys as `--accent`; one `colors` file per variant |
 | `--glass-rgb` | `#16161A` (rgb 22,22,26) | Fill of every glass surface | `colors`: `[Colors:Window] BackgroundNormal`, `[Colors:Tooltip] BackgroundNormal`, `[Colors:View] BackgroundNormal`; SVG `fill` in all background SVGs |
 | `--glass-a` | `0.62` | Dialogs, notifications, OSD, tooltip | `fill-opacity="0.62"` in `dialogs/background.svg`, `translucent/dialogs/background.svg`, `widgets/tooltip.svg`, `translucent/widgets/tooltip.svg` |
@@ -24,7 +25,7 @@ Plasma file paths are relative to the theme folder (`~/.local/share/plasma/deskt
 | `--control-hover` | `rgba(255,255,255,.17)` | Hovered controls | `widgets/button.svg` `hover-*` elements |
 | `--ink` | `#FFFFFF` | Primary text | `colors`: `ForegroundNormal` in Window, View, Button, Tooltip, Complementary |
 | `--ink-2` | `rgba(255,255,255,.60)` = `#A2A2A3` flattened | Subtitles, captions | `colors`: `ForegroundInactive` |
-| `--ink-3` | `rgba(255,255,255,.40)` = `#737376` flattened | Timestamps, close glyphs, section headers | `colors`: `[Colors:View] ForegroundInactive` alt; QML `opacity: 0.4` |
+| `--ink-3` | `rgba(255,255,255,.40)` = `#737376` flattened for glyphs; text uses `#8E8E93` (AA on glass) | Timestamps, close glyphs, section headers | `colors`: `[Colors:View] ForegroundInactive` alt; QML `opacity: 0.4` |
 | `--track` | `rgba(255,255,255,.15)` | Ring and bar tracks | `widgets/slider.svg` groove, `widgets/bar_meter_horizontal.svg` bar-inactive |
 | `--red` | `#FF3B30` | Clock band, storage, destructive | `colors`: `ForegroundNegative`; `ClockModule.qml` |
 | `--green` | `#30D158` | Positive deltas | `colors`: `ForegroundPositive` |
@@ -97,3 +98,23 @@ Numbers always use tabular figures (`font-feature-settings: "tnum"` / QML `font.
 3. Add `widgets/tooltip.svg` with fill opacity `0.62` and radius 10.
 4. Write `colors` with the keys listed under Color (flatten alpha values over `#16161A` where a solid color is required).
 5. Keep the `mask-*` elements in every SVG so KWin blurs behind them.
+
+## Kvantum, Aurorae and look-and-feel
+
+`theme/gen.py` writes these from the same values as the Plasma theme and the color scheme:
+
+| Output | Path | Notes |
+| --- | --- | --- |
+| KDE color scheme | `theme/color-schemes/Dockyard.colors` | Plasma `colors` groups plus `[WM]` window colors |
+| Kvantum, solid windows | `theme/kvantum/Dockyard/` | Default app style. Menus and tooltips are glass (`popup_blurring`) |
+| Kvantum, translucent windows | `theme/kvantum/DockyardGlass/` | Same widgets, `translucent_windows=true`, `reduce_window_opacity=40` |
+| Aurorae decoration | `theme/aurorae/Dockyard/` | 34 px titlebar, `#1e1e23`, inactive `#1a1a1f`, monochrome buttons, close hover red, shadow in the padding |
+| Look-and-feel | `theme/look-and-feel/dev.aryan.dockyard/` | Defaults select the color scheme, Kvantum style, Aurorae and the glass Plasma theme. Own splash. No icons, cursor, font or layout |
+
+Install and apply with `./install-all.sh --apply-global`. The first run saves your style, color scheme, decoration, look-and-feel, icons, cursor, Kvantum theme, Plasma theme and `~/.config/kdedefaults` to `~/.local/state/dockyard/baseline`. Later runs keep that baseline. `theme/restore-global.sh` puts it all back without running `plasma-apply-lookandfeel`, which would also reset icons, cursor and wallpaper.
+
+Use `library=org.kde.kwin.aurorae`, not `.v2`. The v2 plugin draws this theme offset from the client. KWin keeps a loaded Aurorae theme until the decoration changes, so the installer steps through Breeze to reload it.
+
+The look-and-feel ships its own splash. Lock screen, logout and OSD fall back to Breeze. It cannot select a Kvantum theme, so install through the script.
+
+The Opaque dock bar switch also swaps the Kvantum theme, between `Dockyard` (opaque) and `DockyardGlass` (frosted), but only while Dockyard is the app style.

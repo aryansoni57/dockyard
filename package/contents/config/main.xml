@@ -18,6 +18,10 @@
         <entry name="tilePopups" type="Bool">
             <default>false</default>
         </entry>
+        <!-- Dock bar fill when the dock is a desktop widget: false = frosted glass (55%), true = solid (96%). Panels use the Plasma theme. -->
+        <entry name="barOpaque" type="Bool">
+            <default>false</default>
+        </entry>
         <entry name="showClock" type="Bool">
             <default>true</default>
         </entry>
@@ -40,6 +44,25 @@
         </entry>
         <entry name="showStorage" type="Bool">
             <default>false</default>
+        </entry>
+        <!-- Script tile: shows the output of scriptCommand, run every scriptInterval seconds. -->
+        <entry name="showScript" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="scriptCommand" type="String">
+            <default></default>
+        </entry>
+        <entry name="scriptLabel" type="String">
+            <default></default>
+        </entry>
+        <entry name="scriptIcon" type="String">
+            <default>utilities-terminal</default>
+        </entry>
+        <entry name="scriptInterval" type="Int">
+            <default>60</default>
+        </entry>
+        <entry name="scriptClickCommand" type="String">
+            <default></default>
         </entry>
         <entry name="showBattery" type="Bool">
             <default>true</default>
@@ -80,7 +103,7 @@
         <entry name="showToggles" type="Bool">
             <default>false</default>
         </entry>
-        <!-- Comma-separated keys: wifi, bluetooth, dnd, nightlight, mute. -->
+        <!-- Comma-separated keys: wifi, bluetooth, dnd, nightlight, mute, quickshare. -->
         <entry name="toggleItems" type="String">
             <default>wifi,bluetooth,dnd,nightlight,mute</default>
         </entry>

@@ -54,8 +54,13 @@ PlasmaCore.Dialog {
         return ({});
     }
 
-    // Always the four cards, whatever the tile row is configured to show.
-    readonly property var cards: [
+    // Always the four cards, whatever the tile row is configured to show, plus
+    // Quick Share when rquickshare is installed.
+    readonly property var cards: baseCards.concat(source && source.qsAvailable ? [
+        { key: "quickshare", label: "Quick Share", icon: "share", on: source.qsOn,
+          sub: source.qsOn ? i18n("Open, nearby devices can find you") : i18n("Off"), detail: "" }
+    ] : [])
+    readonly property var baseCards: [
         { key: "wifi", label: "Wi-Fi", icon: source && source.wifiOn ? "wifi" : "wifi-off", on: !!source && source.wifiOn,
           sub: !source ? "" : !source.wifiOn ? i18n("Off") : source.ssid !== "" ? source.ssid : i18n("Not connected"), detail: "wifi" },
         { key: "bluetooth", label: "Bluetooth", icon: source && source.btOn ? "bluetooth" : "bluetooth-off", on: !!source && source.btOn,
@@ -117,7 +122,10 @@ PlasmaCore.Dialog {
                     delegate: Rectangle {
                         id: card
                         required property var modelData
+                        required property int index
                         Layout.fillWidth: true
+                        // An odd last card takes the whole row.
+                        Layout.columnSpan: index === fly.cards.length - 1 && fly.cards.length % 2 === 1 ? 2 : 1
                         Layout.preferredWidth: 1
                         implicitHeight: Math.round(fly.unit * 3.3)
                         radius: Math.round(fly.unit * 0.7)

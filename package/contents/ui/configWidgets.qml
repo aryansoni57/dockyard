@@ -16,6 +16,7 @@ KCM.SimpleKCM {
     property alias cfg_showTemperature: showTemperature.checked
     property alias cfg_showNetwork: showNetwork.checked
     property alias cfg_showStorage: showStorage.checked
+    property alias cfg_showScript: showScript.checked
     property alias cfg_showBattery: showBattery.checked
     property alias cfg_showWeather: showWeather.checked
     property alias cfg_showPomodoro: showPomodoro.checked
@@ -38,10 +39,11 @@ KCM.SimpleKCM {
     property alias cfg_showTray: showTray.checked
     property alias cfg_showCalendar: showCalendar.checked
     property bool cfg_tilePopups
+    property bool cfg_barOpaque
 
     // Every widget switch, for the counter and the presets.
     readonly property var switches: [showStart, showClock, showStats, showMedia, showTemperature, showNetwork,
-        showStorage, showBattery, showWeather, showPomodoro, showTimer, showStopwatch, showWorldClocks,
+        showStorage, showScript, showBattery, showWeather, showPomodoro, showTimer, showStopwatch, showWorldClocks,
         showTodos, showApps, showToggles, showMonthProgress, showDayProgress, showYearProgress,
         showDate, showDayNumber, showClockStyle, showNotes, showVolume, showRecycleBin, showScreenshot, showTray, showCalendar]
     readonly property int enabledCount: switches.filter(c => c.checked).length
@@ -161,6 +163,14 @@ KCM.SimpleKCM {
             }
         }
 
+        QQC2.Switch {
+            text: i18n("Opaque dock bar")
+            checked: page.cfg_barOpaque
+            onToggled: page.cfg_barOpaque = checked
+            QQC2.ToolTip.visible: hovered
+            QQC2.ToolTip.text: i18n("Solid instead of frosted glass. Changes the dock bar when it is a desktop widget, and switches the Glass Plasma theme to Glass (opaque) if that is your theme. Run install-all.sh once to install both.")
+        }
+
         Kirigami.PlaceholderMessage {
             visible: page.matchCount === 0
             Layout.fillWidth: true
@@ -199,6 +209,7 @@ KCM.SimpleKCM {
             WidgetCheck { id: showTemperature; text: i18n("CPU temperature"); optionsPage: i18n("System") }
             WidgetCheck { id: showNetwork; text: i18n("Network speed"); keywords: "download upload"; optionsPage: i18n("System") }
             WidgetCheck { id: showStorage; text: i18n("Disk usage"); keywords: "storage" }
+            WidgetCheck { id: showScript; text: i18n("Script output"); keywords: "custom command shell"; optionsPage: i18n("System") }
             WidgetCheck { id: showBattery; text: i18n("Battery"); keywords: "power"; optionsPage: i18n("System") }
             WidgetCheck { id: showVolume; text: i18n("Volume slider"); keywords: "sound audio" }
             WidgetCheck { id: showToggles; text: i18n("Quick toggles"); keywords: "wifi bluetooth dnd night"; optionsPage: i18n("System") }
@@ -214,29 +225,6 @@ KCM.SimpleKCM {
             WidgetCheck { id: showWeather; text: i18n("Weather"); optionsPage: i18n("Weather") }
             WidgetCheck { id: showRecycleBin; text: i18n("Recycle bin"); keywords: "trash" }
             WidgetCheck { id: showScreenshot; text: i18n("Screenshot capture") }
-        }
-
-        Card {
-            title: i18n("Popups")
-            visible: page.query === ""
-
-            QQC2.RadioButton {
-                text: i18n("Open above the tile that was clicked")
-                checked: page.cfg_tilePopups
-                onToggled: if (checked) page.cfg_tilePopups = true
-            }
-            QQC2.RadioButton {
-                text: i18n("Open centred over the dock")
-                checked: !page.cfg_tilePopups
-                onToggled: if (checked) page.cfg_tilePopups = false
-            }
-            QQC2.Label {
-                text: i18n("Applies to the launcher, clock, calendar, world clocks, progress, media, notes and todos popups.")
-                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                opacity: 0.6
-                wrapMode: Text.Wrap
-                Layout.fillWidth: true
-            }
         }
     }
 }
