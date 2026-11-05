@@ -664,7 +664,7 @@ Item {
                                         iconSource: model.decoration
                                         label: model.display
                                         note: model.description || ""
-                                        onLaunched: { favs.trigger(index, "", null); panel.closeRequested(); }
+                                        onLaunched: { if (!panel.applet.launchPinned(panel.favList[index] ?? "")) favs.trigger(index, "", null); panel.closeRequested(); }
                                         onMenuRequested: panel.showMenu(panel.favList[index] ?? "", 0, 0)
                                     }
                                 }
@@ -741,7 +741,7 @@ Item {
                                             iconSource: model.decoration
                                             label: model.display
                                             note: model.description || ""
-                                            onLaunched: { section.apps.trigger(index, "", null); panel.closeRequested(); }
+                                            onLaunched: { if (!panel.applet.launchPinned(model.favoriteId ?? "")) section.apps.trigger(index, "", null); panel.closeRequested(); }
                                             onMenuRequested: panel.showMenu(model.favoriteId ?? "", 0, 0)
                                         }
                                     }

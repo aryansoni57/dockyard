@@ -1,0 +1,12 @@
+[kdeglobals][General]
+ColorScheme=Dockyard
+
+[kdeglobals][KDE]
+widgetStyle=kvantum
+
+[kwinrc][org.kde.kdecoration2]
+library=org.kde.kwin.aurorae
+theme=__aurorae__svg__Dockyard
+
+[plasmarc][Theme]
+name=glass

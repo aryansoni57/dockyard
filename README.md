@@ -24,6 +24,7 @@
 | Info | weather, todos |
 | Apps | pinned apps with running dots; Meta+1 to Meta+9 open or switch to them |
 | Quick toggles | Wi-Fi, Bluetooth, Do Not Disturb, Night Light, mute |
+| Script | output of your own shell command, refreshed on a timer |
 
 Click the dock to open the detail popup.
 
@@ -42,8 +43,8 @@ Install, then add "Dock" to a panel via Add Widgets:
 It clears those keys from the stock Task Manager's plasmashell entries. If you add a Task Manager to a panel later,
 set its keys again in System Settings > Shortcuts.
 
-Or install the plasmoid and the glass desktop theme together, then restart plasmashell
-(`--apply-theme` also activates the theme, `--no-restart` skips the restart):
+Or install the plasmoid and both glass desktop themes (Glass and Glass (opaque)) together, then restart plasmashell
+(`--apply-theme` also activates the theme, `--apply-global` also installs and activates the Dockyard Kvantum, color scheme, Aurorae and look-and-feel set, and `--no-restart` skips the restart). `--apply-global` saves your current choices first; run `theme/restore-global.sh` to undo it:
 
 ```bash
 ./install-all.sh
@@ -96,3 +97,5 @@ Quick toggles run shell commands: `nmcli`, `bluetoothctl`, `rfkill`, `wpctl`, an
 **Performance**
 
 Hidden modules stop their sensors and timers, so they cost nothing.
+
+**Opaque dock bar.** A switch on the Widgets settings page makes the dock bar solid and swaps the Plasma theme between `glass` and `glass-opaque`. It leaves any other theme alone.

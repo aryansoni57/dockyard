@@ -20,6 +20,9 @@ Item {
     property bool muteAvailable: false
     property bool muted: false
     property bool nightAvailable: false
+    // Quick Share (rquickshare): available when installed, on while it is running.
+    property bool qsAvailable: false
+    property bool qsOn: false
 
     // Extra state for the quick settings flyout.
     property string ssid: ""
@@ -38,7 +41,7 @@ Item {
     // Refreshed on each poll; DND compares its expiry against this.
     property date clock: new Date()
 
-    readonly property string pollCmd: "echo wifi=$(timeout 2 nmcli radio wifi 2>/dev/null); echo bt=$(timeout 2 bluetoothctl show 2>/dev/null | grep -m1 Powered); echo vol=$(timeout 2 wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null); echo night=$(timeout 2 busctl --user get-property org.kde.KWin /org/kde/KWin/NightLight org.kde.KWin.NightLight enabled 2>/dev/null); echo ssid=$(timeout 2 nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null | grep -m1 '^yes:' | cut -d: -f2-); echo btdev=$(timeout 2 bluetoothctl devices Connected 2>/dev/null | head -1 | cut -d' ' -f3-); for d in $(timeout 2 busctl --user get-property org.kde.ScreenBrightness /org/kde/ScreenBrightness org.kde.ScreenBrightness DisplaysDBusNames 2>/dev/null | cut -d' ' -f3- | tr -d '\"'); do p=/org/kde/ScreenBrightness/$d; i=org.kde.ScreenBrightness.Display; g() { timeout 2 busctl --user get-property org.kde.ScreenBrightness $p $i $1 2>/dev/null | cut -d' ' -f2- | tr -d '\"'; }; echo disp=$d~$(g Label)~$(g Brightness)~$(g MaxBrightness)~$(g IsInternal); done"
+    readonly property string pollCmd: "echo wifi=$(timeout 2 nmcli radio wifi 2>/dev/null); echo bt=$(timeout 2 bluetoothctl show 2>/dev/null | grep -m1 Powered); echo vol=$(timeout 2 wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null); echo qs=$(if pgrep -x rquickshare >/dev/null; then echo on; elif command -v rquickshare >/dev/null; then echo off; fi); echo night=$(timeout 2 busctl --user get-property org.kde.KWin /org/kde/KWin/NightLight org.kde.KWin.NightLight enabled 2>/dev/null); echo ssid=$(timeout 2 nmcli -t -f ACTIVE,SSID dev wifi 2>/dev/null | grep -m1 '^yes:' | cut -d: -f2-); echo btdev=$(timeout 2 bluetoothctl devices Connected 2>/dev/null | head -1 | cut -d' ' -f3-); for d in $(timeout 2 busctl --user get-property org.kde.ScreenBrightness /org/kde/ScreenBrightness org.kde.ScreenBrightness DisplaysDBusNames 2>/dev/null | cut -d' ' -f3- | tr -d '\"'); do p=/org/kde/ScreenBrightness/$d; i=org.kde.ScreenBrightness.Display; g() { timeout 2 busctl --user get-property org.kde.ScreenBrightness $p $i $1 2>/dev/null | cut -d' ' -f2- | tr -d '\"'; }; echo disp=$d~$(g Label)~$(g Brightness)~$(g MaxBrightness)~$(g IsInternal); done"
 
     property bool dragging: false
 
@@ -64,6 +67,9 @@ Item {
                 const m = v.match(/([0-9.]+)/);
                 if (m !== null && !dragging)
                     volume = Math.round(parseFloat(m[1]) * 100);
+            } else if (k === "qs") {
+                qsAvailable = v !== "";
+                qsOn = v === "on";
             } else if (k === "night") {
                 nightAvailable = v.indexOf("true") >= 0;
             } else if (k === "ssid") {
@@ -150,6 +156,11 @@ Item {
             run("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle");
             muted = !muted;
             schedulePoll(800);
+        } else if (key === "quickshare") {
+            // On opens the app so this device can be found; off quits it.
+            run(qsOn ? "pkill -x rquickshare" : "(rquickshare >/dev/null 2>&1 &)");
+            qsOn = !qsOn;
+            schedulePoll(1500);
         } else if (key === "dnd") {
             if (dndOn) {
                 notif.notificationsInhibitedUntil = undefined;
@@ -176,6 +187,8 @@ Item {
             return { key: k, label: "Do Not Disturb", icon: "moon-dnd", on: dndOn, available: active };
         if (k === "nightlight")
             return { key: k, label: "Night Light", icon: "night-light", on: nightOn, available: nightAvailable };
+        if (k === "quickshare")
+            return { key: k, label: "Quick Share", icon: "share", on: qsOn, available: qsAvailable };
         if (k === "mute")
             return { key: k, label: "Mute", icon: muted ? "speaker-muted" : "speaker", on: muted, available: muteAvailable };
         return null;

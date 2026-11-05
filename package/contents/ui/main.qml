@@ -9,6 +9,7 @@ import org.kde.ksysguard.sensors as Sensors
 import org.kde.plasma.private.mpris as Mpris
 import org.kde.taskmanager as TaskManager
 import "modules" as Modules
+import "popups" as Popups
 import "components"
 import "launcher" as Launcher
 import "components/progress.js" as Progress
@@ -121,6 +122,13 @@ PlasmoidItem {
         list[i].done = !list[i].done;
         Plasmoid.configuration.todosJson = JSON.stringify(list);
     }
+    function editTodo(i, text) {
+        const list = todoItems();
+        const t = text.trim();
+        if (!list[i] || t === "") return;
+        list[i].text = t;
+        Plasmoid.configuration.todosJson = JSON.stringify(list);
+    }
     function deleteTodo(i) {
         const list = todoItems();
         list.splice(i, 1);
@@ -152,8 +160,22 @@ PlasmoidItem {
         saveNotes(list, noteIndex);
     }
     function addNote() {
+        // A blank note is already waiting: reuse it.
+        const blank = notes.findIndex(n => n.text.trim() === "");
+        if (blank >= 0) {
+            selectNote(blank);
+            return;
+        }
         const list = notes.concat([{ text: "" }]);
         saveNotes(list, list.length - 1);
+    }
+    function restoreNote(i, note) {
+        const list = notes.slice();
+        // The last note is cleared on delete, not removed, so put it back in place.
+        if (list.length === 1 && list[0].text === "")
+            list.splice(0, 1);
+        list.splice(i, 0, note);
+        saveNotes(list, i);
     }
     function selectNote(i) {
         Plasmoid.configuration.notesCurrent = i;
@@ -180,8 +202,10 @@ PlasmoidItem {
     // otherwise from the appLaunchers setting.
     property string taskManagerLaunchers: ""
     readonly property bool followTaskManager: cfg.showApps && cfg.appsFromTaskManager
-    readonly property var appLaunchers: (followTaskManager && taskManagerLaunchers !== ""
-        ? taskManagerLaunchers : cfg.appLaunchers).split(",").map(s => s.trim()).filter(s => s !== "")
+    // True only when a Task Manager applet was found and its list is in use. With none
+    // found the dock falls back to appLaunchers, which is then ours to write.
+    readonly property bool launchersFromTaskManager: followTaskManager && taskManagerLaunchers !== ""
+    readonly property var appLaunchers: (launchersFromTaskManager ? taskManagerLaunchers : cfg.appLaunchers).split(",").map(s => s.trim()).filter(s => s !== "")
 
     ShellRunner {
         id: launcherReader
@@ -202,16 +226,21 @@ PlasmoidItem {
         id: tasksLoader
         active: root.cfg.showApps
         sourceComponent: Component {
+            // Same setup as the icons-only Task Manager: launchers are kept separate
+            // and a running pinned app is sorted at its launcher's position (launchInPlace),
+            // so it keeps its pin slot. With separateLaunchers off, libtaskmanager only
+            // places a new window next to its launcher by a one-time guess at insert time,
+            // which misses and leaves it at the end. Unpinned windows sort after the pins.
             TaskManager.TasksModel {
                 launcherList: root.appLaunchers
                 groupMode: TaskManager.TasksModel.GroupApplications
-                sortMode: TaskManager.TasksModel.SortManual
-                separateLaunchers: false
+                separateLaunchers: true
                 launchInPlace: true
                 hideActivatedLaunchers: true
                 filterByVirtualDesktop: false
                 filterByScreen: false
                 filterByActivity: false
+                sortMode: TaskManager.TasksModel.SortManual
             }
         }
     }
@@ -252,6 +281,16 @@ PlasmoidItem {
         id: shell
     }
 
+    // The Opaque dock bar switch also swaps the Plasma theme between glass and
+    // glass-opaque, but only when one of those is the active theme.
+    Connections {
+        target: root.cfg
+        function onBarOpaqueChanged() {
+            shell.run("sh '" + Qt.resolvedUrl("../scripts/glass-theme.sh").toString().replace("file://", "") + "' "
+                      + (root.cfg.barOpaque ? "opaque" : "frosted"));
+        }
+    }
+
     // Run a command detached, so a long-lived app never blocks the runner.
     function launch(cmd) {
         shell.run("(" + cmd + ") >/dev/null 2>&1 &");
@@ -275,7 +314,7 @@ PlasmoidItem {
     // GridLayout row and each takes its column from its place in this list;
     // keys missing from the list keep their natural order after the listed ones.
     readonly property var tileKeys: ["start", "stats", "media", "apps", "weather", "pomodoro", "timer",
-        "stopwatch", "worldclocks", "todos", "temperature", "network", "storage", "quicktoggles",
+        "stopwatch", "worldclocks", "todos", "temperature", "network", "storage", "script", "quicktoggles",
         "volume", "recyclebin", "screenshot", "notes", "monthprogress", "dayprogress",
         "yearprogress", "date", "daynumber", "battery", "tray", "calendar", "clockstyle", "clock"]
     property var dragOrder: null // full order while a tile is being dragged
@@ -300,9 +339,7 @@ PlasmoidItem {
         calendar: i18n("Calendar"),
         worldclocks: i18n("World clocks"),
         progress: i18n("Progress"),
-        media: i18n("Now playing"),
-        notes: i18n("Notes"),
-        todos: i18n("Todos")
+        media: i18n("Now playing")
     })
     function inMode(...modes) {
         return modes.indexOf(popupMode) >= 0;
@@ -313,11 +350,9 @@ PlasmoidItem {
     activationTogglesExpanded: false
     Plasmoid.onActivated: togglePopup("launcher", root.startTile)
 
-    // Plasma still expands the applet after an activation. When the tile popup took
-    // the press, that would open a second, centred launcher, so undo it.
-    property double tilePopupAt: 0
+    // Only tile popups exist: Plasma's own centred popup is never wanted, so undo any expand.
     onExpandedChanged: function () {
-        if (root.expanded && Date.now() - tilePopupAt < 500)
+        if (root.expanded)
             collapseLater.restart();
     }
     // Plasma ignores a reset made inside its own expanded change, so do it next tick.
@@ -327,7 +362,7 @@ PlasmoidItem {
         onTriggered: root.expanded = false
     }
 
-    // Tile popups (cfg.tilePopups): the dock owns the popup window and sets dockItem.
+    // Tile popups: the dock owns the popup window and sets dockItem.
     property Item dockItem: null
     property Item startTile: null
     readonly property var tilePopupModes: ["launcher", "clock", "calendar", "worldclocks", "progress", "media", "notes", "todos"]
@@ -336,24 +371,31 @@ PlasmoidItem {
         const tileOpen = dockItem !== null && dockItem.popup !== null && dockItem.popup.visible;
         if (tileOpen) {
             dockItem.hide();
-            if (popupMode === mode) {
-                tilePopupAt = Date.now();
+            if (popupMode === mode)
                 return;
+        }
+        if (tile && tile.visible && dockItem)
+            dockItem.show(mode, tile);
+    }
+
+    // Starts a pinned app that is not running through the dock's own model, so its
+    // window opens in the pin's slot instead of at the end. False when it does not apply.
+    function launchPinned(id) {
+        const tasks = tasksLoader.item;
+        if (!tasks || id === "")
+            return false;
+        const R = TaskManager.AbstractTasksModel;
+        const pinned = tasks.launcherPosition(id) >= 0;
+        if (!pinned)
+            return false;
+        for (let i = 0; i < tasks.count; ++i) {
+            const idx = tasks.makeModelIndex(i);
+            if (tasks.data(idx, R.IsLauncher) && tasks.launcherPosition(tasks.data(idx, R.LauncherUrlWithoutIcon)) === tasks.launcherPosition(id)) {
+                tasks.requestNewInstance(idx);
+                return true;
             }
         }
-        if (cfg.tilePopups && tilePopupModes.indexOf(mode) >= 0 && tile && tile.visible && dockItem) {
-            // Stamp first: Plasma's expand can land while show() builds the window.
-            tilePopupAt = Date.now();
-            if (dockItem.show(mode, tile))
-                return;
-            tilePopupAt = 0;
-        }
-        if (expanded && popupMode === mode) {
-            expanded = false;
-            return;
-        }
-        popupMode = mode;
-        expanded = true;
+        return false;
     }
 
     // Meta+1..9: the KWin script in kwin-script/ writes "<index>:<time>" to
@@ -398,8 +440,9 @@ PlasmoidItem {
     }
 
     Plasmoid.icon: "preferences-desktop-panel"
-    toolTipMainText: Qt.formatDate(root.now, Qt.locale().dateFormat(Locale.LongFormat))
-    toolTipSubText: root.playing ? i18n("Playing: %1", root.player.track) : ""
+    // The dock has no tooltip of its own: the Apps module shows a card above the hovered icon.
+    toolTipMainText: ""
+    toolTipSubText: ""
 
     compactRepresentation: Item {
         id: dock
@@ -428,7 +471,7 @@ PlasmoidItem {
                 visible: root.onDesktop
                 anchors.fill: parent
                 radius: height * 0.25
-                color: Qt.alpha(Kirigami.Theme.backgroundColor, 0.55)
+                color: Qt.alpha(Kirigami.Theme.backgroundColor, root.cfg.barOpaque ? 0.96 : 0.55)
                 border.width: 1
                 border.color: Qt.alpha(Kirigami.Theme.textColor, 0.12)
             }
@@ -523,9 +566,19 @@ PlasmoidItem {
                     Layout.fillHeight: true
                     visible: root.cfg.showApps
                     tasks: tasksLoader.item
+                    onPinChanged: (id, pinned) => {
+                        if (root.launchersFromTaskManager || id === "")
+                            return;
+                        const docked = tasksLoader.item.launcherList;
+                        Plasmoid.configuration.appLaunchers = docked.join(",");
+                        const favs = root.cfg.launcherFavorites.split(",").map(s => s.trim()).filter(s => s !== "");
+                        Plasmoid.configuration.launcherFavorites = pinned
+                            ? (favs.indexOf(id) >= 0 ? favs : favs.concat([id])).join(",")
+                            : favs.filter(f => f !== id).join(",");
+                    }
                     onMoved: {
                         // A drag only sticks when the list is ours; the Task Manager owns its own.
-                        if (!root.followTaskManager) {
+                        if (!root.launchersFromTaskManager) {
                             const docked = tasksLoader.item.launcherList;
                             Plasmoid.configuration.appLaunchers = docked.join(",");
                             // Same order in the launcher's pins; pins not on the dock keep their place after.
@@ -621,6 +674,21 @@ PlasmoidItem {
                     used: diskUsedSensor.value ?? 0
                     total: diskTotalSensor.value ?? 0
                     onClicked: root.launch("filelight / || xdg-open /")
+                }
+                Modules.ScriptModule {
+                    id: scriptTile
+                    objectName: "script"
+                    Layout.column: root.colOf("script")
+                    Layout.fillHeight: true
+                    visible: root.cfg.showScript
+                    active: root.cfg.showScript
+                    command: root.cfg.scriptCommand
+                    label: root.cfg.scriptLabel
+                    iconName: root.cfg.scriptIcon
+                    intervalSeconds: root.cfg.scriptInterval
+                    // Without a click command, a click runs the script again now.
+                    onClicked: root.cfg.scriptClickCommand.trim() !== ""
+                        ? root.launch(root.cfg.scriptClickCommand) : scriptTile.refresh()
                 }
                 Modules.QuickTogglesModule {
                     objectName: "quicktoggles"
@@ -941,8 +1009,12 @@ PlasmoidItem {
 
                 mainItem: FocusScope {
                     readonly property bool launcher: root.popupMode === "launcher"
-                    implicitWidth: launcher ? root.launcherWidth : Kirigami.Units.gridUnit * 17
+                    readonly property bool notes: root.popupMode === "notes"
+                    readonly property bool todos: root.popupMode === "todos"
+                    implicitWidth: launcher ? root.launcherWidth
+                        : Kirigami.Units.gridUnit * (notes ? 30 : todos ? 20 : 17)
                     implicitHeight: launcher ? Kirigami.Units.gridUnit * 24
+                        : notes ? Kirigami.Units.gridUnit * 18
                         : (content.item ? content.item.implicitHeight : Kirigami.Units.gridUnit * 10)
                     Keys.onEscapePressed: dock.hide()
 
@@ -951,24 +1023,22 @@ PlasmoidItem {
                         id: content
                         anchors.fill: parent
                         active: popupWindow.visible
-                        sourceComponent: parent.launcher ? launcherComp : infoComp
+                        sourceComponent: parent.launcher ? launcherComp
+                            : parent.notes ? notesComp
+                            : parent.todos ? todosComp : infoComp
                     }
                 }
             }
         }
     }
 
-    fullRepresentation: Loader {
-        // Sizes come from the mode, not the loaded item, so the popup opens at its
-        // final size and sits clear of the dock.
-        readonly property bool launcher: root.popupMode === "launcher"
-        sourceComponent: launcher ? launcherComp : infoComp
-        Layout.minimumWidth: launcher ? root.launcherWidth : Kirigami.Units.gridUnit * 17
-        Layout.preferredWidth: launcher ? root.launcherWidth : Kirigami.Units.gridUnit * 17
-        Layout.maximumWidth: launcher ? root.launcherWidth : Kirigami.Units.gridUnit * 17
-        Layout.minimumHeight: launcher ? Kirigami.Units.gridUnit * 24 : (item ? item.Layout.minimumHeight : 0)
-        Layout.preferredHeight: launcher ? Kirigami.Units.gridUnit * 24 : -1
-        Layout.maximumHeight: launcher ? Kirigami.Units.gridUnit * 24 : -1
+    // Popups are all tile popups. Plasma expands the applet after a Meta press anyway,
+    // so keep that expanded view empty: a real window would steal focus and close the tile popup.
+    fullRepresentation: Item {
+        Layout.minimumWidth: 1
+        Layout.maximumWidth: 1
+        Layout.minimumHeight: 1
+        Layout.maximumHeight: 1
     }
 
     Component {
@@ -981,6 +1051,19 @@ PlasmoidItem {
                 if (root.dockItem)
                     root.dockItem.hide();
             }
+        }
+    }
+
+    Component {
+        id: notesComp
+        Popups.NotesPanel {
+            applet: root
+        }
+    }
+    Component {
+        id: todosComp
+        Popups.TodosPanel {
+            applet: root
         }
     }
 
@@ -1103,262 +1186,6 @@ PlasmoidItem {
             Layout.preferredHeight: Kirigami.Units.gridUnit * 3
             player: root.player
             playing: root.playing
-        }
-
-        SectionHeader {
-            visible: root.inMode("notes") && root.cfg.showNotes
-            text: i18n("Notes")
-        }
-        // One chip per note, plus a button for a new one.
-        Flow {
-            visible: root.inMode("notes") && root.cfg.showNotes
-            Layout.fillWidth: true
-            Layout.leftMargin: Kirigami.Units.largeSpacing
-            Layout.rightMargin: Kirigami.Units.largeSpacing
-            spacing: Kirigami.Units.smallSpacing
-
-            Repeater {
-                model: root.inMode("notes") ? root.notes : []
-
-                delegate: Rectangle {
-                    id: chip
-                    required property var modelData
-                    required property int index
-                    readonly property bool picked: index === root.noteIndex
-
-                    implicitWidth: Math.min(Kirigami.Units.gridUnit * 7, chipLabel.implicitWidth + Kirigami.Units.largeSpacing * 2)
-                    implicitHeight: chipLabel.implicitHeight + Kirigami.Units.smallSpacing * 2
-                    radius: height / 2
-                    color: picked ? Qt.alpha(Kirigami.Theme.highlightColor, 0.22)
-                        : Qt.alpha(Kirigami.Theme.textColor, chipTap.hovered ? 0.1 : 0.06)
-                    border.width: 1
-                    border.color: picked ? Kirigami.Theme.highlightColor : Qt.alpha(Kirigami.Theme.textColor, 0.12)
-
-                    PlasmaComponents.Label {
-                        id: chipLabel
-                        anchors.fill: parent
-                        anchors.leftMargin: Kirigami.Units.largeSpacing
-                        anchors.rightMargin: Kirigami.Units.largeSpacing
-                        verticalAlignment: Text.AlignVCenter
-                        text: root.noteTitle(chip.modelData)
-                        elide: Text.ElideRight
-                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                        font.weight: chip.picked ? Font.DemiBold : Font.Normal
-                        color: chip.picked ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                    }
-                    HoverHandler { id: chipTap }
-                    TapHandler {
-                        onTapped: root.selectNote(chip.index)
-                    }
-                }
-            }
-            PlasmaComponents.ToolButton {
-                icon.name: "list-add"
-                text: i18n("New note")
-                display: PlasmaComponents.AbstractButton.IconOnly
-                onClicked: root.addNote()
-
-                PlasmaComponents.ToolTip {
-                    text: i18n("New note")
-                }
-            }
-        }
-        PlasmaComponents.TextArea {
-            id: noteEditor
-            visible: root.inMode("notes") && root.cfg.showNotes
-            Layout.fillWidth: true
-            Layout.margins: Kirigami.Units.largeSpacing
-            Layout.preferredHeight: Kirigami.Units.gridUnit * 7
-            placeholderText: i18n("Write a note")
-            wrapMode: TextEdit.Wrap
-            // Shows the current note; typing writes it back.
-            function sync() {
-                const t = root.notes[root.noteIndex].text;
-                if (text !== t)
-                    text = t;
-            }
-            Component.onCompleted: sync()
-            Connections {
-                target: root
-                function onNoteIndexChanged() { noteEditor.sync(); }
-                function onNotesChanged() { if (!noteEditor.activeFocus) noteEditor.sync(); }
-            }
-            onTextChanged: {
-                if (text !== root.notes[root.noteIndex].text)
-                    root.setNoteText(root.noteIndex, text);
-            }
-        }
-        RowLayout {
-            visible: root.inMode("notes") && root.cfg.showNotes
-            Layout.fillWidth: true
-            Layout.leftMargin: Kirigami.Units.largeSpacing
-            Layout.rightMargin: Kirigami.Units.largeSpacing
-            Layout.bottomMargin: Kirigami.Units.largeSpacing
-
-            PlasmaComponents.Label {
-                Layout.fillWidth: true
-                text: i18n("Note %1 of %2", root.noteIndex + 1, root.notes.length)
-                opacity: 0.6
-                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-            }
-            PlasmaComponents.Button {
-                icon.name: "edit-delete"
-                text: root.notes.length > 1 ? i18n("Delete note") : i18n("Clear note")
-                onClicked: root.deleteNote(root.noteIndex)
-            }
-        }
-
-        SectionHeader {
-            visible: root.inMode("todos") && root.cfg.showTodos
-            text: i18n("Todos")
-        }
-        // Open todos first, then the completed ones. Tap the circle to complete or
-        // restore, the trash button to delete. Scrolls when the list is long.
-        QQC2.ScrollView {
-            id: todoScroll
-            visible: root.inMode("todos") && root.cfg.showTodos
-            Layout.fillWidth: true
-            Layout.preferredHeight: Math.min(todoList.implicitHeight, Kirigami.Units.gridUnit * 14)
-            contentWidth: availableWidth
-            QQC2.ScrollBar.horizontal.policy: QQC2.ScrollBar.AlwaysOff
-            clip: true
-
-            ColumnLayout {
-                id: todoList
-                width: todoScroll.availableWidth
-                spacing: 0
-
-                PlasmaComponents.Label {
-                    visible: root.inMode("todos") && root.todoItems().length === 0
-                    Layout.fillWidth: true
-                    Layout.margins: Kirigami.Units.largeSpacing
-                    text: i18n("Nothing to do. Add a todo below.")
-                    opacity: 0.6
-                }
-
-                // Pass 0 lists open todos, pass 1 the completed ones.
-                Repeater {
-                    model: root.inMode("todos") && root.cfg.showTodos ? [0, 1] : []
-
-                    delegate: ColumnLayout {
-                        id: pass
-                        required property int modelData
-                        readonly property bool doneList: modelData === 1
-                        readonly property var rows: {
-                            const out = [];
-                            const all = root.todoItems();
-                            for (let i = 0; i < all.length; ++i) {
-                                if (!!all[i].done === doneList)
-                                    out.push({ index: i, text: all[i].text, done: !!all[i].done });
-                            }
-                            return out;
-                        }
-                        Layout.fillWidth: true
-                        spacing: 0
-                        visible: rows.length > 0
-
-                        PlasmaComponents.Label {
-                            visible: pass.doneList
-                            Layout.fillWidth: true
-                            Layout.topMargin: Kirigami.Units.smallSpacing
-                            Layout.leftMargin: Kirigami.Units.largeSpacing
-                            text: i18n("Completed (%1)", pass.rows.length)
-                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                            font.weight: Font.DemiBold
-                            opacity: 0.55
-                        }
-
-                        Repeater {
-                            model: pass.rows
-
-                            delegate: Item {
-                                id: todoRow
-                                required property var modelData
-                                Layout.fillWidth: true
-                                implicitHeight: Kirigami.Units.gridUnit * 2
-
-                                HoverHandler { id: rowHover }
-                                Rectangle {
-                                    anchors.fill: parent
-                                    color: Qt.alpha(Kirigami.Theme.textColor, rowHover.hovered ? 0.05 : 0)
-                                }
-
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: Kirigami.Units.largeSpacing
-                                    anchors.rightMargin: Kirigami.Units.smallSpacing
-                                    spacing: Kirigami.Units.largeSpacing
-
-                                    // Round checkbox.
-                                    Rectangle {
-                                        Layout.preferredWidth: Kirigami.Units.gridUnit * 1.1
-                                        Layout.preferredHeight: Layout.preferredWidth
-                                        radius: width / 2
-                                        color: todoRow.modelData.done ? Kirigami.Theme.highlightColor : "transparent"
-                                        border.width: 1.5
-                                        border.color: todoRow.modelData.done ? Kirigami.Theme.highlightColor
-                                            : Qt.alpha(Kirigami.Theme.textColor, 0.55)
-
-                                        Kirigami.Icon {
-                                            anchors.centerIn: parent
-                                            width: parent.width * 0.7
-                                            height: width
-                                            visible: todoRow.modelData.done
-                                            source: "checkmark-symbolic"
-                                            isMask: true
-                                            color: Kirigami.Theme.highlightedTextColor
-                                        }
-                                        TapHandler {
-                                            onTapped: root.toggleTodo(todoRow.modelData.index)
-                                        }
-                                    }
-                                    PlasmaComponents.Label {
-                                        Layout.fillWidth: true
-                                        text: todoRow.modelData.text
-                                        elide: Text.ElideRight
-                                        font.strikeout: todoRow.modelData.done
-                                        opacity: todoRow.modelData.done ? 0.5 : 1
-
-                                        TapHandler {
-                                            onTapped: root.toggleTodo(todoRow.modelData.index)
-                                        }
-                                    }
-                                    PlasmaComponents.ToolButton {
-                                        icon.name: "edit-delete"
-                                        display: PlasmaComponents.AbstractButton.IconOnly
-                                        opacity: rowHover.hovered ? 1 : 0.5
-                                        onClicked: root.deleteTodo(todoRow.modelData.index)
-
-                                        PlasmaComponents.ToolTip {
-                                            text: i18n("Delete")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        RowLayout {
-            visible: root.inMode("todos") && root.cfg.showTodos
-            Layout.fillWidth: true
-            Layout.margins: Kirigami.Units.largeSpacing
-            spacing: Kirigami.Units.smallSpacing
-
-            PlasmaComponents.TextField {
-                id: todoInput
-                Layout.fillWidth: true
-                placeholderText: i18n("New todo")
-                onAccepted: {
-                    root.addTodo(text);
-                    text = "";
-                }
-            }
-            PlasmaComponents.Button {
-                text: i18n("Clear completed")
-                onClicked: root.clearDoneTodos()
-            }
         }
     }
     }

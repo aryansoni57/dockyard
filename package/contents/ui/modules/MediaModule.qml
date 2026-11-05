@@ -26,7 +26,6 @@ Tile {
         Kirigami.ShadowedImage {
             Layout.preferredWidth: media.inner
             Layout.preferredHeight: media.inner
-            visible: source.toString() !== ""
             source: media.player?.artUrl ?? ""
             fillMode: Image.PreserveAspectCrop
             radius: media.inner * 0.22
