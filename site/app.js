@@ -25,7 +25,7 @@ $$('.dock > *').forEach((el, i) => el.style.setProperty('--i', i));
 
 // Feature list: advances by itself until someone picks a row.
 const rows = $$('.row'), panes = $$('.pane');
-let cur = 0, auto = !calm, started = 0, seen = false;
+let cur = 0, auto = !calm, started = 0, seen = false, hold = false;
 const HOLD = 6500;
 function show(i) {
     cur = i;
@@ -42,9 +42,17 @@ $('.list').addEventListener('keydown', e => {
     auto = false; show(n); rows[n].focus();
 });
 $('.stage').addEventListener('pointerdown', () => { auto = false; rows[cur].style.removeProperty('--t'); });
-new IntersectionObserver(es => { seen = es[0].isIntersecting; if (seen) started = performance.now(); }, { threshold: .4 }).observe($('.split'));
+// Hovering or focusing the feature section holds the rotation, and restarts the hold timer on release.
+const split = $('.split');
+const holdOn = () => { hold = true; };
+const holdOff = () => { hold = false; started = performance.now(); };
+split.addEventListener('pointerenter', holdOn);
+split.addEventListener('pointerleave', holdOff);
+split.addEventListener('focusin', holdOn);
+split.addEventListener('focusout', holdOff);
+new IntersectionObserver(es => { seen = es[0].isIntersecting; if (seen) started = performance.now(); }, { threshold: .4 }).observe(split);
 (function loop(t) {
-    if (auto && seen && !document.hidden) {
+    if (auto && seen && !hold && !document.hidden) {
         const p = (t - started) / HOLD;
         if (p >= 1) show((cur + 1) % rows.length);
         else rows[cur].style.setProperty('--t', p.toFixed(3));
@@ -119,7 +127,7 @@ function key() {
     k = (k + 1) % keyApps.length;
 }
 key();
-if (!calm) setInterval(key, 1100);
+if (!calm) setInterval(() => { if (seen && !panes[2].hidden) key(); }, 1100);
 
 $$('.tg').forEach(b => b.addEventListener('click', () => b.setAttribute('aria-pressed', b.classList.toggle('on'))));
 
@@ -175,7 +183,7 @@ new IntersectionObserver(es => {
 
 $('#copy').addEventListener('click', e => {
     const b = e.currentTarget;
-    navigator.clipboard?.writeText($('.term code').textContent).catch(() => {});
+    navigator.clipboard?.writeText($('#install .term code').textContent).catch(() => {});
     b.textContent = 'Copied';
     setTimeout(() => { b.textContent = 'Copy'; }, 1600);
 });
