@@ -705,7 +705,6 @@ PlasmoidItem {
                 }
                 Modules.TrayModule {
                     objectName: "tray"
-                    hoverName: i18n("System Tray")
                     Layout.column: root.colOf("tray")
                     Layout.fillHeight: true
                     visible: root.cfg.showTray
