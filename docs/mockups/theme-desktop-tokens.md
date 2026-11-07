@@ -33,6 +33,19 @@ Plasma file paths are relative to the theme folder (`~/.local/share/plasma/deskt
 | `--yellow` | `#FFCC00` | Notes stripe | `NotesModule.qml` only |
 | `--black-tile` | `#000000` | Clock tile lower half | `ClockModule.qml` only |
 
+## App palette
+
+The color scheme and Kvantum use these. Plasma surfaces keep `--glass-rgb` and `--ink`.
+
+| Role | Value | Target |
+| --- | --- | --- |
+| Sidebars, lists | `#131317` | `[Colors:View] BackgroundNormal`, Kvantum `base.color` |
+| Pages, panels | `#1B1B21` | `[Colors:Window] BackgroundNormal`, Kvantum `window.color` |
+| Title bar | `#212128` | `[Colors:Header] BackgroundNormal`, Aurorae `decoration.svg` |
+| Buttons | `#2B2B33` | `[Colors:Button] BackgroundNormal`, Kvantum `button.color` |
+| Primary text | `#ECEDF2` | `ForegroundNormal`, Kvantum text colors, Aurorae title |
+| Secondary text | `#A8A9B3` | `ForegroundInactive` |
+
 ## Material
 
 | Token | Value | Plasma target |

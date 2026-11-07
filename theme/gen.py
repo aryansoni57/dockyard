@@ -20,13 +20,22 @@ NAME = os.environ.get("GLASS_THEME", "glass")
 SOLID = NAME == "glass-opaque"
 OUT = os.path.join(BASE, NAME)
 GLASS = "#16161a"
-HEADER = "#1e1e23"
+HEADER = "#212128"
+# App palette, for the color scheme and Kvantum. Plasma surfaces keep GLASS and white text.
+VIEW = "#131317"     # sidebars and lists, the deepest level
+VIEW_ALT = "#18181d"
+WINDOW = "#1b1b21"   # pages and panels
+BUTTON = "#2b2b33"
+BUTTON_ALT = "#363640"
+LINE = "#2e2e37"
+APP_INK = "#ecedf2"      # softer than white, which glows on a dark ground
+APP_INK_2 = "#a8a9b3"
 SELECT = "#0071e3"  # selection and primary buttons; white text on it passes AA
 RIM = 'fill="#ffffff" fill-opacity="0.14"'
 RIM_TOP = 'fill="#ffffff" fill-opacity="0.08"'
 
 
-def frame(R, alpha, margin, top_lit=False, rim=True):
+def frame(R, alpha, margin, top_lit=False, rim=True, shadow=False):
     """9-slice rounded frame: fill + 1px rim, mask-* copy for KWin blur, margin hints.
 
     Rims are filled shapes, never strokes: a stroke widens the element's bounds, so
@@ -67,6 +76,10 @@ def frame(R, alpha, margin, top_lit=False, rim=True):
         f'<rect id="hint-top-margin" x="0" y="0" width="1" height="{m}" fill="none"/>'
         f'<rect id="hint-bottom-margin" x="0" y="0" width="1" height="{m}" fill="none"/>'
     )
+    # Plasma's QML ToolTip draws a "shadow" frame under the tooltip. Without shadow-*
+    # elements KSvg falls back to the plain frame, so the tooltip shows twice.
+    if shadow:
+        hints += "".join(f'<g id="shadow-{k}"><rect width="1" height="1" fill="none"/></g>' for k in parts)
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{S}" height="{S}" viewBox="0 0 {S} {S}">'
             f'{body}{mask}{hints}</svg>')
 
@@ -88,21 +101,27 @@ def put(path, text):
 SURFACES = [
     ("dialogs/background.svg", 20, 0.62, 12, False),
     ("widgets/background.svg", 16, 0.62, 12, False),
-    ("widgets/tooltip.svg", 10, 0.62, 8, False),
+    ("widgets/tooltip.svg", 10, 0.10, 8, False),
     ("widgets/panel-background.svg", 12, 0.55, 8, False),
 ]
 
 for path, R, alpha, margin, lit in SURFACES:
     panel = "panel" in path
+    tip = "tooltip" in path
     if SOLID:
         alpha = 0.96
-    svg = frame(R, alpha, margin, lit, rim=not panel)
+    kw = dict(rim=not panel, shadow=tip)
+    svg = frame(R, alpha, margin, lit, **kw)
     write("translucent/" + path, svg)
     # base: compositing without blur, so keep text readable on the wallpaper
-    write(path, frame(R, 0.96 if SOLID else 0.90, margin, lit, rim=not panel))
-    # opaque/ (no compositing) and solid/ (adaptive panel under a window, tooltips, menus)
-    write("opaque/" + path, frame(R, 0.96, margin, lit, rim=not panel))
-    write("solid/" + path, frame(R, 0.96, margin, lit, rim=not panel))
+    # tooltips are nearly clear; the base fallback (no blur) stays more readable
+    base = 0.40 if tip else 0.90
+    write(path, frame(R, 0.96 if SOLID else base, margin, lit, **kw))
+    # opaque/ (no compositing) and solid/ (adaptive panel under a window, menus)
+    write("opaque/" + path, frame(R, 0.96, margin, lit, **kw))
+    # Plasma's QML ToolTip always loads solid/widgets/tooltip and draws it inside the
+    # applet's window, with no blur behind it: same alpha as the unblurred base
+    write("solid/" + path, frame(R, 0.96 if SOLID or not tip else base, margin, lit, **kw))
 
 
 def rgb(h):
@@ -110,24 +129,24 @@ def rgb(h):
     return ",".join(str(int(h[i:i + 2], 16)) for i in (0, 2, 4))
 
 
-def group(name, bg, alt, accent="#0A84FF"):
+def group(name, bg, alt, accent="#0A84FF", ink="#ffffff", ink_2="#a2a2a3"):
     return f"""[Colors:{name}]
 BackgroundAlternate={rgb(alt)}
 BackgroundNormal={rgb(bg)}
 DecorationFocus={rgb(accent)}
 DecorationHover={rgb(accent)}
 ForegroundActive={rgb(accent)}
-ForegroundInactive=162,162,163
+ForegroundInactive={rgb(ink_2)}
 ForegroundLink=100,210,255
 ForegroundNegative=255,59,48
 ForegroundNeutral=255,159,10
-ForegroundNormal=255,255,255
+ForegroundNormal={rgb(ink)}
 ForegroundPositive=48,209,88
 ForegroundVisited=191,90,242
 """
 
 
-colors = """[ColorEffects:Disabled]
+effects = """[ColorEffects:Disabled]
 Color=56,56,56
 ColorAmount=0
 ColorEffect=0
@@ -148,7 +167,7 @@ IntensityAmount=0
 IntensityEffect=0
 
 """
-colors += group("Button", "#3d3d40", "#4a4a4e")
+colors = effects + group("Button", "#3d3d40", "#4a4a4e")
 colors += group("Complementary", "#16161a", "#1e1e23")
 colors += group("Header", "#1e1e23", "#16161a")
 colors += group("Selection", "#0071e3", "#0071e3", "#ffffff").replace(
@@ -158,6 +177,17 @@ colors += group("Tooltip", "#16161a", "#1e1e23")
 colors += group("View", "#16161a", "#1e1e23")
 colors += group("Window", "#16161a", "#1e1e23")
 write("colors", colors)
+
+app = lambda name, bg, alt: group(name, bg, alt, ink=APP_INK, ink_2=APP_INK_2)
+app_colors = effects + app("Button", BUTTON, BUTTON_ALT)
+app_colors += app("Complementary", "#16161a", "#1e1e23")
+app_colors += app("Header", HEADER, WINDOW)
+app_colors += group("Selection", SELECT, SELECT, "#ffffff").replace(
+    "ForegroundInactive=162,162,163", "ForegroundInactive=230,230,235").replace(
+    "ForegroundLink=100,210,255", "ForegroundLink=255,255,255")
+app_colors += app("Tooltip", "#16161a", "#1e1e23")
+app_colors += app("View", VIEW, VIEW_ALT)
+app_colors += app("Window", WINDOW, HEADER)
 
 write("metadata.json", json.dumps({
     "KPackageStructure": "Plasma/Theme",
@@ -186,8 +216,8 @@ if NAME == "glass":
 
 WHITE = (255, 255, 255)
 PANEL = (22, 22, 26)           # GLASS as rgb
-HEADER_RGB = (30, 30, 35)      # HEADER as rgb
-HEADER_DIM = "#1a1a1f"         # inactive titlebar
+HEADER_RGB = (33, 33, 40)      # HEADER as rgb
+HEADER_DIM = "#1b1b21"         # inactive titlebar
 RIM_SOLID = "#37373a"          # rim flattened over GLASS, for window edges
 ACC = (10, 132, 255)           # focus rings, slider fill, checked controls
 SEL = (0, 113, 227)            # SELECT: selection and primary buttons
@@ -226,7 +256,7 @@ KV = {
     "tabframe": (12, same(S(WHITE, 0, WHITE, .08))),
     "common": (12, same(S(WHITE, 0, WHITE, .08))),
     "menu": (12, same(S(PANEL, .62, WHITE, .14))),
-    "tooltip": (10, same(S(PANEL, .62, WHITE, .14))),
+    "tooltip": (10, same(S(PANEL, .10, WHITE, .14))),
     "dock": (14, same(S(PANEL, .55, WHITE, .14))),
     "header": (2, same(S(HEADER_RGB, 1, WHITE, .08))),
     "itemview": (6, {"normal": S(WHITE, 0, WHITE, 0), "focused": S(WHITE, .06, WHITE, 0),
@@ -246,8 +276,8 @@ KV = {
     "progress": (4, same(S(ACC, 1, ACC, 0))),
 }
 
-TEXT = ["text.normal.color=#ffffff", "text.focus.color=#ffffff",
-        "text.press.color=#ffffff", "text.toggle.color=#ffffff"]
+TEXT = [f"text.normal.color={APP_INK}", f"text.focus.color={APP_INK}",
+        f"text.press.color={APP_INK}", f"text.toggle.color={APP_INK}"]
 MARGINS = ["text.margin.top=2", "text.margin.bottom=2", "text.margin.left=6", "text.margin.right=6"]
 
 # Kvantum section -> element it draws with, and its own keys
@@ -407,7 +437,7 @@ def kv_glyphs(oy):
         cell(f"resize-grip-{state}", 12, line(grip, INK[state], 1.1))
     for state in ("normal", "focused", "pressed"):
         cell(f"splitter-grip-{state}", 12, line("M6,2 V10", INK[state], 1.4))
-    cell("window-normal", 20, f'<rect width="20" height="20" fill="{GLASS}"/>')
+    cell("window-normal", 20, f'<rect width="20" height="20" fill="{WINDOW}"/>')
     return "".join(cells), y + step
 
 
@@ -462,7 +492,7 @@ def kv_config(translucent):
         "toolbutton_style=0",
         "double_click=false",
         f"translucent_windows={'true' if translucent else 'false'}",
-        f"reduce_window_opacity={'40' if translucent else '0'}",
+        f"reduce_window_opacity={'12' if translucent else '0'}",  # higher lets other windows' text show through bars
         "reduce_menu_opacity=0",
         "blurring=true",
         "popup_blurring=true",
@@ -496,20 +526,20 @@ def kv_config(translucent):
         "opaque=QMPlay2,kaffeine,kmplayer,subtitlecomposer,kdenlive,vlc,avidemux,kamoso,QtCreator,VirtualBox,dragon,digikam,virtualboxvm",
         "",
         "[GeneralColors]",
-        "window.color=#16161a",
-        "base.color=#16161a",
-        "alt.base.color=#1e1e23",
-        "button.color=#3d3d40",
-        "light.color=#4a4a4e",
-        "mid.color=#2a2a2e",
+        f"window.color={WINDOW}",
+        f"base.color={VIEW}",
+        f"alt.base.color={VIEW_ALT}",
+        f"button.color={BUTTON}",
+        f"light.color={BUTTON_ALT}",
+        f"mid.color={LINE}",
         "dark.color=#0e0e10",
         "highlight.color=#0071e3",
-        "text.color=#ffffff",
-        "window.text.color=#ffffff",
-        "button.text.color=#ffffff",
+        f"text.color={APP_INK}",
+        f"window.text.color={APP_INK}",
+        f"button.text.color={APP_INK}",
         "disabled.text.color=#8e8e93",
         "tooltip.base.color=#16161a",
-        "tooltip.text.color=#ffffff",
+        f"tooltip.text.color={APP_INK}",
         "link.color=#64d2ff",
         "link.visited.color=#bf5af2",
         "highlight.text.color=#ffffff",
@@ -555,10 +585,10 @@ def kv_config(translucent):
 def color_scheme():
     head = ("[General]\nName=Dockyard\nColorScheme=Dockyard\n\n"
             "[KDE]\ncontrast=4\n\n"
-            "[WM]\nactiveBackground=30,30,35\nactiveBlend=30,30,35\nactiveForeground=255,255,255\n"
-            "inactiveBackground=26,26,31\ninactiveBlend=26,26,31\ninactiveForeground=162,162,163\n\n")
-    dim = group("Header", HEADER_DIM, "#16161a").replace("[Colors:Header]", "[Colors:Header][Inactive]")
-    return head + colors + dim
+            f"[WM]\nactiveBackground={rgb(HEADER)}\nactiveBlend={rgb(HEADER)}\nactiveForeground={rgb(APP_INK)}\n"
+            f"inactiveBackground={rgb(HEADER_DIM)}\ninactiveBlend={rgb(HEADER_DIM)}\ninactiveForeground={rgb(APP_INK_2)}\n\n")
+    dim = app("Header", HEADER_DIM, VIEW).replace("[Colors:Header]", "[Colors:Header][Inactive]")
+    return head + app_colors + dim
 
 
 def png(w, h, rgba):
@@ -697,20 +727,28 @@ def aurorae_button(glyph):
         "deactivated": (None, .25), "deactivated-inactive": (None, .15),
     }
     d = GLYPHS[glyph]
-    box = '<rect width="34" height="26" fill="#ffffff" fill-opacity="0"/>'
+    box = '<rect width="34" height="34" fill="#ffffff" fill-opacity="0"/>'
     groups = ""
     for prefix, (bg, a) in states.items():
-        back = f'<rect x="2" y="1" width="30" height="24" rx="6" {bg}/>' if bg else ""
+        # The button fills the title height and sits in the window corner, so the close
+        # hover reaches the top right edge. Square, because KWin gives buttons no maximized
+        # state, so a rounded corner would show when the window is maximized.
+        if not bg:
+            back = ""
+        elif close:
+            back = f'<rect width="34" height="34" {bg}/>'
+        else:
+            back = f'<rect x="2" y="5" width="30" height="24" rx="6" {bg}/>'
         icon = (f'<path d="{d}" fill="none" stroke="#ffffff" stroke-opacity="{a}" stroke-width="1.2" '
                 'stroke-linecap="round" stroke-linejoin="round"/>')
-        groups += f'<g id="{prefix}-center">{box}{back}{icon}</g>'
-    return f'<svg xmlns="http://www.w3.org/2000/svg" width="34" height="26" viewBox="0 0 34 26">{groups}</svg>'
+        groups += f'<g id="{prefix}-center">{box}{back}<g transform="translate(0,4)">{icon}</g></g>'
+    return f'<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">{groups}</svg>'
 
 
 def aurorae_rc():
     return f"""[General]
-ActiveTextColor=255,255,255,255
-InactiveTextColor=162,162,163,255
+ActiveTextColor={rgb(APP_INK)},255
+InactiveTextColor={rgb(APP_INK_2)},255
 TitleAlignment=Left
 TitleVerticalAlignment=Center
 Animation=120
@@ -723,7 +761,7 @@ BorderBottom=1
 TitleEdgeTop=0
 TitleEdgeBottom=0
 TitleEdgeLeft=6
-TitleEdgeRight=6
+TitleEdgeRight=0
 TitleBorderLeft=8
 TitleBorderRight=8
 TitleHeight={TITLE}
@@ -737,10 +775,10 @@ ButtonWidthHelp=34
 ButtonWidthAlldesktops=34
 ButtonWidthShade=34
 ButtonWidthAppMenu=34
-ButtonHeight=26
+ButtonHeight=34
 ButtonSpacing=2
-ButtonMarginTop=4
-ButtonMarginTopMaximized=4
+ButtonMarginTop=0
+ButtonMarginTopMaximized=0
 ExplicitButtonSpacer=6
 PaddingTop={PAD_T}
 PaddingBottom={PAD_B}
@@ -750,7 +788,7 @@ TitleHeightMaximized={TITLE}
 TitleEdgeTopMaximized=0
 TitleEdgeBottomMaximized=0
 TitleEdgeLeftMaximized=6
-TitleEdgeRightMaximized=6
+TitleEdgeRightMaximized=0
 """
 
 

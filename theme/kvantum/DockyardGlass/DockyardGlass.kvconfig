@@ -26,7 +26,7 @@ menubar_mouse_tracking=true
 toolbutton_style=0
 double_click=false
 translucent_windows=true
-reduce_window_opacity=40
+reduce_window_opacity=12
 reduce_menu_opacity=0
 blurring=true
 popup_blurring=true
@@ -60,20 +60,20 @@ respect_DE=true
 opaque=QMPlay2,kaffeine,kmplayer,subtitlecomposer,kdenlive,vlc,avidemux,kamoso,QtCreator,VirtualBox,dragon,digikam,virtualboxvm
 
 [GeneralColors]
-window.color=#16161a
-base.color=#16161a
-alt.base.color=#1e1e23
-button.color=#3d3d40
-light.color=#4a4a4e
-mid.color=#2a2a2e
+window.color=#1b1b21
+base.color=#131317
+alt.base.color=#18181d
+button.color={'normal': ((255, 255, 255), 0.12, (255, 255, 255), 0.14), 'focused': ((255, 255, 255), 0.17, (255, 255, 255), 0.14), 'pressed': ((255, 255, 255), 0.22, (255, 255, 255), 0.14), 'toggled': ((10, 132, 255), 0.35, (10, 132, 255), 0.5), 'disabled': ((255, 255, 255), 0.06, (255, 255, 255), 0.08)}
+light.color=#363640
+mid.color=#2e2e37
 dark.color=#0e0e10
 highlight.color=#0071e3
-text.color=#ffffff
-window.text.color=#ffffff
-button.text.color=#ffffff
+text.color=#ecedf2
+window.text.color=#ecedf2
+button.text.color=#ecedf2
 disabled.text.color=#8e8e93
 tooltip.base.color=#16161a
-tooltip.text.color=#ffffff
+tooltip.text.color=#ecedf2
 link.color=#64d2ff
 link.visited.color=#bf5af2
 highlight.text.color=#ffffff
@@ -114,10 +114,10 @@ text.margin.top=2
 text.margin.bottom=2
 text.margin.left=6
 text.margin.right=6
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [PanelButtonTool]
 frame=true
@@ -134,10 +134,10 @@ text.margin.top=2
 text.margin.bottom=2
 text.margin.left=6
 text.margin.right=6
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [ToolbarButton]
 frame=true
@@ -154,10 +154,10 @@ text.margin.top=2
 text.margin.bottom=2
 text.margin.left=6
 text.margin.right=6
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [ToolboxTab]
 frame=true
@@ -172,10 +172,10 @@ text.margin.top=2
 text.margin.bottom=2
 text.margin.left=6
 text.margin.right=6
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [DropDownButton]
 frame=true
@@ -188,10 +188,10 @@ interior=true
 interior.element=button
 indicator.element=arrow-down
 indicator.size=9
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [IndicatorSpinBox]
 frame=true
@@ -204,10 +204,10 @@ interior=true
 interior.element=button
 indicator.element=spin
 indicator.size=9
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [ComboBox]
 frame=true
@@ -224,10 +224,10 @@ text.margin.top=2
 text.margin.bottom=2
 text.margin.left=6
 text.margin.right=6
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [LineEdit]
 frame=true
@@ -242,10 +242,10 @@ text.margin.top=2
 text.margin.bottom=2
 text.margin.left=6
 text.margin.right=6
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [Tab]
 frame=true
@@ -262,10 +262,10 @@ text.margin.top=3
 text.margin.bottom=3
 text.margin.left=8
 text.margin.right=8
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [TabFrame]
 frame=true
@@ -276,10 +276,10 @@ frame.left=12
 frame.right=12
 interior=true
 interior.element=tabframe
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [GenericFrame]
 frame=true
@@ -290,10 +290,10 @@ frame.left=12
 frame.right=12
 interior=true
 interior.element=common
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [GroupBox]
 frame=true
@@ -304,10 +304,10 @@ frame.left=12
 frame.right=12
 interior=true
 interior.element=common
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [Menu]
 frame=true
@@ -319,10 +319,10 @@ frame.right=12
 interior=true
 interior.element=menu
 text.margin=4
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [MenuItem]
 frame=true
@@ -339,10 +339,10 @@ text.margin.top=2
 text.margin.bottom=2
 text.margin.left=6
 text.margin.right=6
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [MenuBarItem]
 frame=true
@@ -357,10 +357,10 @@ text.margin.top=2
 text.margin.bottom=2
 text.margin.left=6
 text.margin.right=6
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [ToolTip]
 frame=true
@@ -372,10 +372,10 @@ frame.right=10
 interior=true
 interior.element=tooltip
 text.margin=6
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [Dock]
 frame=true
@@ -386,10 +386,10 @@ frame.left=14
 frame.right=14
 interior=true
 interior.element=dock
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [HeaderSection]
 frame=true
@@ -402,10 +402,10 @@ interior=true
 interior.element=header
 text.margin.left=6
 text.margin.right=6
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [ItemView]
 frame=true
@@ -417,10 +417,10 @@ frame.right=6
 interior=true
 interior.element=itemview
 text.margin=2
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [Slider]
 frame=true
@@ -431,10 +431,10 @@ frame.left=2
 frame.right=2
 interior=true
 interior.element=slider
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [Progressbar]
 frame=true
@@ -446,10 +446,10 @@ frame.right=4
 interior=true
 interior.element=progressbar
 text.margin=0
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [ProgressbarContents]
 frame=true
@@ -460,10 +460,10 @@ frame.left=4
 frame.right=4
 interior=true
 interior.element=progress
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [ScrollbarSlider]
 frame=true
@@ -474,10 +474,10 @@ frame.left=4
 frame.right=4
 interior=true
 interior.element=scrollbarslider
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [Focus]
 frame=true
@@ -486,78 +486,78 @@ frame.top=6
 frame.bottom=6
 frame.left=6
 frame.right=6
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [Toolbar]
 frame=false
 interior=false
 indicator.element=toolbar
 indicator.size=5
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [MenuBar]
 frame=false
 interior=false
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [StatusBar]
 frame=false
 interior=false
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [DockTitle]
 frame=false
 interior=false
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [TabBarFrame]
 frame=false
 interior=false
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [ScrollbarGroove]
 frame=false
 interior=false
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [Scrollbar]
 frame=false
 interior=false
 indicator.element=arrow
 indicator.size=9
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [Window]
 interior=true
 interior.element=window
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [TitleBar]
 frame=false
@@ -566,65 +566,65 @@ interior.element=header-normal
 indicator.element=mdi
 indicator.size=16
 text.bold=true
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [CheckBox]
 frame=false
 interior=true
 interior.element=checkbox
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [RadioButton]
 frame=false
 interior=true
 interior.element=radio
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [SliderCursor]
 frame=false
 interior=true
 interior.element=slidercursor
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [IndicatorArrow]
 indicator.element=arrow
 indicator.size=9
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [TreeExpander]
 indicator.element=tree
 indicator.size=12
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [SizeGrip]
 indicator.element=resize-grip
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
 
 [Splitter]
 indicator.element=splitter-grip
 indicator.size=48
-text.normal.color=#ffffff
-text.focus.color=#ffffff
-text.press.color=#ffffff
-text.toggle.color=#ffffff
+text.normal.color=#ecedf2
+text.focus.color=#ecedf2
+text.press.color=#ecedf2
+text.toggle.color=#ecedf2
