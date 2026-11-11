@@ -1,5 +1,6 @@
 import QtQuick
 import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.plasmoid
 import org.kde.kirigami as Kirigami
 import "../components"
 
@@ -27,6 +28,7 @@ Tile {
 
     PowerFlyout {
         id: flyout
+        accent: Plasmoid.configuration.accentColor !== "" ? Plasmoid.configuration.accentColor : "#0A84FF"
         visualParent: root
         location: root.edge
         percent: root.percent

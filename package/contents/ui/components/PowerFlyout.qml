@@ -16,7 +16,8 @@ PlasmaCore.Dialog {
     signal settingsRequested()
 
     readonly property real unit: Kirigami.Units.gridUnit
-    readonly property color accent: "#0A84FF"
+    // Set by the host tile to follow the dock accent.
+    property color accent: "#0A84FF"
     readonly property real panelWidth: Math.round(unit * 20)
 
     // Profiles in slider order, filtered to what the machine offers.

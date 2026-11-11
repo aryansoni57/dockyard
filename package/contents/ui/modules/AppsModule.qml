@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasmoid
 import org.kde.taskmanager as TaskManager
 import org.kde.pipewire as PipeWire
@@ -15,6 +16,10 @@ Item {
     id: apps
 
     property var tasks: null
+    // Icons near the pointer grow, largest under it.
+    property bool magnify: false
+    // Hovering a window preview fades every other window out (KWin's highlight effect).
+    property bool peek: false
 
     // Emitted when an icon was dragged to a new place, after the model has moved.
     signal moved()
@@ -22,6 +27,29 @@ Item {
     signal pinChanged(string id, bool pinned)
 
     property var menuApp: null
+    // The dock's own right-click actions (Plasmoid.contextualActions), shown at the
+    // bottom of the app menu so it carries everything the dock menu has.
+    property var dockActions: []
+
+    // Pins every dropped .desktop file. True when the drop held one, so the
+    // caller does not also open the files in an app.
+    function pinUrls(urls) {
+        let pinned = false;
+        for (const u of urls) {
+            const url = u.toString();
+            if (!url.endsWith(".desktop"))
+                continue;
+            pinned = true;
+            if (launcherIdFor(url) !== "")
+                continue;
+            tasks.requestAddLauncher(url);
+            pinChanged(launcherIdFor(url), true);
+        }
+        return pinned;
+    }
+
+    // Pointer x over the icon row, for the magnify effect; NaN when away.
+    property real pointerX: NaN
     function launcherIdFor(url) {
         // The launcherList entry that matches this app, or "" when it is not pinned.
         const pos = tasks.launcherPosition(url);
@@ -88,36 +116,70 @@ Item {
         }
     }
 
-    // .desktop actions (jump list) of the app under the right-click menu.
+    // .desktop actions (jump list) and recent files of the app under the right-click menu.
+    // One run prints both lists, split by a "#recent" line.
     ListModel { id: actionModel }
+    ListModel { id: recentModel }
     ShellRunner {
         id: lister
         onFinished: (cmd, out) => {
             actionModel.clear();
+            recentModel.clear();
+            let recent = false;
             for (const line of out.split("\n")) {
+                if (line === "#recent") {
+                    recent = true;
+                    continue;
+                }
                 const f = line.split("\t");
-                if (f.length >= 3 && f[0] !== "" && f[0] !== "New Window")
+                if (recent && f.length >= 2 && f[0] !== "")
+                    recentModel.append({ label: f[0], url: f[1] });
+                else if (!recent && f.length >= 3 && f[0] !== "" && f[0] !== "New Window")
                     actionModel.append({ label: f[0], iconName: f[1], exec: f.slice(2).join("\t") });
             }
-            // Popup only now, so the menu is sized for the final item list.
-            appMenu.popup();
+            // Open only now, so the menu is sized for the final item list.
+            appMenu.visualParent = apps.menuApp;
+            appMenu.placement = apps.menuPlacement();
+            appMenu.openRelative();
         }
     }
     ShellRunner { id: launcherRunner }
     readonly property string actionsScript: Qt.resolvedUrl("../../scripts/desktop-actions.sh").toString().replace("file://", "")
-    Instantiator {
-        model: actionModel
-        delegate: QQC2.MenuItem {
-            required property string label
-            required property string iconName
-            required property string exec
-            text: label
-            icon.name: iconName
-            onTriggered: launcherRunner.run("setsid -f " + exec.replace(/%[a-zA-Z%]/g, "").trim() + " >/dev/null 2>&1")
-        }
-        onObjectAdded: (i, o) => appMenu.insertItem(1 + i, o)
-        onObjectRemoved: (i, o) => appMenu.removeItem(o)
+    readonly property string recentScript: Qt.resolvedUrl("../../scripts/recent-files.sh").toString().replace("file://", "")
+    function openMenu(app) {
+        menuApp = app;
+        tipVisible = false;
+        hoveredApp = null;
+        const url = "'" + String(app.model.LauncherUrlWithoutIcon).replace(/'/g, "") + "'";
+        lister.run("sh '" + actionsScript + "' " + url + "; echo '#recent'; sh '" + recentScript + "' " + url);
     }
+    // The menu opens away from the screen edge the dock sits on.
+    function menuPlacement() {
+        switch (Plasmoid.location) {
+        case PlasmaCore.Types.TopEdge:
+            return PlasmaExtras.Menu.BottomPosedLeftAlignedPopup;
+        case PlasmaCore.Types.LeftEdge:
+            return PlasmaExtras.Menu.RightPosedTopAlignedPopup;
+        case PlasmaCore.Types.RightEdge:
+            return PlasmaExtras.Menu.LeftPosedTopAlignedPopup;
+        default:
+            return PlasmaExtras.Menu.TopPosedLeftAlignedPopup;
+        }
+    }
+    // The launcher's desktop file id, as "org.kde.kate.desktop"; "" for other urls.
+    function desktopId(url) {
+        const u = String(url);
+        return u.startsWith("applications:") ? u.substring(13) : "";
+    }
+    function menuIdx() {
+        return tasks.makeModelIndex(menuApp.index);
+    }
+    // The click that dismisses the menu can land on an icon below it; that click must not activate.
+    property double menuClosedAt: 0
+    readonly property bool menuOpen: appMenu.status !== PlasmaExtras.Menu.Closed
+    readonly property bool menuRunning: menuApp !== null && !menuApp.model.IsLauncher
+
+    TaskManager.VirtualDesktopInfo { id: desktops }
 
     // Hover card: app name plus a live thumbnail of each window.
     component TipCard: Item {
@@ -176,7 +238,10 @@ Item {
                     implicitWidth: col.implicitWidth
                     implicitHeight: col.implicitHeight
 
-                    HoverHandler { id: winHover }
+                    HoverHandler {
+                        id: winHover
+                        onHoveredChanged: apps.peekWindow(hovered ? win.modelData.wid : "")
+                    }
                     Rectangle {
                         z: -1
                         anchors.fill: parent
@@ -259,7 +324,18 @@ Item {
     // icons does not close and reopen the card.
     property var hoveredApp: null
     property bool tipVisible: false
+    onTipVisibleChanged: if (!tipVisible) peekWindow("")
+    ShellRunner { id: peekRunner }
+    property string peekedWid: ""
+    function peekWindow(wid) {
+        if (wid === peekedWid || (!peek && wid !== ""))
+            return;
+        peekedWid = wid;
+        peekRunner.run("busctl --user call org.kde.KWin /org/kde/KWin/HighlightWindow org.kde.KWin.HighlightWindow highlightWindows as "
+                       + (wid !== "" ? "1 '" + wid.replace(/'/g, "") + "'" : "0"));
+    }
     function hideTip() {
+        peekWindow("");
         tipOpen.stop();
         hoverClear.stop();
         tipVisible = false;
@@ -295,7 +371,7 @@ Item {
     Timer {
         id: tipOpen
         interval: Kirigami.Units.toolTipDelay
-        onTriggered: apps.tipVisible = apps.hoveredApp !== null && !appMenu.visible
+        onTriggered: apps.tipVisible = apps.hoveredApp !== null && appMenu.status === PlasmaExtras.Menu.Closed
     }
     Timer {
         id: hoverClear
@@ -322,29 +398,35 @@ Item {
         mainItem: card
     }
 
-    QQC2.Menu {
+    // The app menu is a native Plasma menu (PlasmaExtras.Menu, a QMenu), so it looks
+    // exactly like the dock's own right-click menu and the stock Task Manager's.
+    PlasmaExtras.Menu {
         id: appMenu
-        popupType: QQC2.Popup.Window
+        onStatusChanged: if (status === PlasmaExtras.Menu.Closed) apps.menuClosedAt = Date.now()
 
-        QQC2.MenuItem {
+        PlasmaExtras.MenuItem {
             text: i18n("New Window")
-            icon.name: "window-new"
-            onTriggered: apps.tasks.requestNewInstance(apps.tasks.makeModelIndex(apps.menuApp.index))
+            icon: "window-new"
+            onClicked: apps.tasks.requestNewInstance(apps.menuIdx())
         }
-        QQC2.MenuSeparator {}
-
-        QQC2.MenuItem {
-            id: pinItem
-            property bool pinned: false
-            Connections {
-                target: appMenu
-                function onAboutToShow() {
-                    pinItem.pinned = apps.menuApp !== null && apps.launcherIdFor(apps.menuApp.model.LauncherUrlWithoutIcon) !== "";
-                }
+        // Jump list actions go here.
+        PlasmaExtras.MenuItem {
+            id: recentItem
+            text: i18n("Recent Files")
+            icon: "document-open-recent"
+            visible: recentModel.count > 0
+            readonly property PlasmaExtras.Menu sub: PlasmaExtras.Menu {
+                visualParent: recentItem.action
             }
+        }
+        PlasmaExtras.MenuItem { id: actionsEnd; separator: true }
+
+        PlasmaExtras.MenuItem {
+            readonly property bool pinned: appMenu.status !== PlasmaExtras.Menu.Closed && apps.menuApp !== null
+                && apps.launcherIdFor(apps.menuApp.model.LauncherUrlWithoutIcon) !== ""
             text: pinned ? i18n("Unpin from dock") : i18n("Pin to dock")
-            icon.name: pinned ? "window-unpin" : "pin"
-            onTriggered: {
+            icon: pinned ? "window-unpin" : "pin"
+            onClicked: {
                 const url = apps.menuApp.model.LauncherUrlWithoutIcon;
                 if (pinned) {
                     const id = apps.launcherIdFor(url);
@@ -356,43 +438,189 @@ Item {
                 }
             }
         }
-        QQC2.MenuSeparator {
-            visible: apps.menuApp !== null && !apps.menuApp.model.IsLauncher
-            height: visible ? implicitHeight : 0
+        PlasmaExtras.MenuItem {
+            text: i18n("Edit Application…")
+            icon: "kmenuedit"
+            visible: apps.menuApp !== null && apps.desktopId(apps.menuApp.model.LauncherUrlWithoutIcon) !== ""
+            onClicked: launcherRunner.run("setsid -f kmenuedit / '" + apps.desktopId(apps.menuApp.model.LauncherUrlWithoutIcon).replace(/'/g, "") + "' >/dev/null 2>&1")
         }
-        QQC2.MenuItem {
-            readonly property bool on: apps.menuApp !== null && apps.menuApp.model.IsMinimized === true
-            text: on ? i18n("Restore") : i18n("Minimize")
-            icon.name: on ? "window-restore" : "window-minimize"
-            visible: apps.menuApp !== null && !apps.menuApp.model.IsLauncher
-            height: visible ? implicitHeight : 0
-            onTriggered: apps.tasks.requestToggleMinimized(apps.tasks.makeModelIndex(apps.menuApp.index))
+
+        PlasmaExtras.MenuItem {
+            id: desktopItem
+            text: i18n("Move to Desktop")
+            icon: "virtual-desktops"
+            visible: apps.menuRunning && desktops.numberOfDesktops > 1
+            readonly property PlasmaExtras.Menu sub: PlasmaExtras.Menu {
+                id: desktopMenu
+                visualParent: desktopItem.action
+
+                PlasmaExtras.MenuItem {
+                    text: i18n("All Desktops")
+                    checkable: true
+                    checked: apps.menuApp !== null && apps.menuApp.model.IsOnAllVirtualDesktops === true
+                    onClicked: apps.tasks.requestVirtualDesktops(apps.menuIdx(), checked ? [] : [desktops.currentDesktop])
+                }
+                PlasmaExtras.MenuItem { separator: true }
+                PlasmaExtras.MenuItem { id: desktopsEnd; separator: true }
+                PlasmaExtras.MenuItem {
+                    text: i18n("New Desktop")
+                    icon: "list-add"
+                    onClicked: apps.tasks.requestNewVirtualDesktop(apps.menuIdx())
+                }
+            }
         }
-        QQC2.MenuItem {
-            readonly property bool on: apps.menuApp !== null && apps.menuApp.model.IsMaximized === true
-            text: on ? i18n("Unmaximize") : i18n("Maximize")
-            icon.name: on ? "window-restore" : "window-maximize"
-            visible: apps.menuApp !== null && !apps.menuApp.model.IsLauncher
-            height: visible ? implicitHeight : 0
-            onTriggered: apps.tasks.requestToggleMaximized(apps.tasks.makeModelIndex(apps.menuApp.index))
+
+        // Window controls, like the stock Task Manager's More submenu.
+        PlasmaExtras.MenuItem {
+            id: moreItem
+            text: i18n("More")
+            icon: "view-more-symbolic"
+            visible: apps.menuRunning
+            readonly property PlasmaExtras.Menu sub: PlasmaExtras.Menu {
+                visualParent: moreItem.action
+
+                PlasmaExtras.MenuItem {
+                    text: i18n("Move")
+                    icon: "transform-move"
+                    enabled: apps.menuRunning && apps.menuApp.model.IsMovable !== false
+                    onClicked: apps.tasks.requestMove(apps.menuIdx())
+                }
+                PlasmaExtras.MenuItem {
+                    text: i18n("Resize")
+                    icon: "transform-scale"
+                    enabled: apps.menuRunning && apps.menuApp.model.IsResizable !== false
+                    onClicked: apps.tasks.requestResize(apps.menuIdx())
+                }
+                PlasmaExtras.MenuItem {
+                    readonly property bool on: apps.menuRunning && apps.menuApp.model.IsMinimized === true
+                    text: on ? i18n("Restore") : i18n("Minimize")
+                    icon: on ? "window-restore" : "window-minimize"
+                    enabled: apps.menuRunning && apps.menuApp.model.IsMinimizable !== false
+                    onClicked: apps.tasks.requestToggleMinimized(apps.menuIdx())
+                }
+                PlasmaExtras.MenuItem {
+                    text: i18n("Maximize")
+                    icon: "window-maximize"
+                    checkable: true
+                    checked: apps.menuRunning && apps.menuApp.model.IsMaximized === true
+                    enabled: apps.menuRunning && apps.menuApp.model.IsMaximizable !== false
+                    onClicked: apps.tasks.requestToggleMaximized(apps.menuIdx())
+                }
+                PlasmaExtras.MenuItem {
+                    text: i18n("Fullscreen")
+                    icon: "view-fullscreen"
+                    checkable: true
+                    checked: apps.menuRunning && apps.menuApp.model.IsFullScreen === true
+                    enabled: apps.menuRunning && apps.menuApp.model.IsFullScreenable !== false
+                    onClicked: apps.tasks.requestToggleFullScreen(apps.menuIdx())
+                }
+                PlasmaExtras.MenuItem {
+                    text: i18n("Shade")
+                    icon: "window-shade"
+                    checkable: true
+                    checked: apps.menuRunning && apps.menuApp.model.IsShaded === true
+                    enabled: apps.menuRunning && apps.menuApp.model.IsShadeable !== false
+                    onClicked: apps.tasks.requestToggleShaded(apps.menuIdx())
+                }
+                PlasmaExtras.MenuItem { separator: true }
+                PlasmaExtras.MenuItem {
+                    text: i18n("Keep Above Others")
+                    icon: "window-keep-above"
+                    checkable: true
+                    checked: apps.menuRunning && apps.menuApp.model.IsKeepAbove === true
+                    onClicked: apps.tasks.requestToggleKeepAbove(apps.menuIdx())
+                }
+                PlasmaExtras.MenuItem {
+                    text: i18n("Keep Below Others")
+                    icon: "window-keep-below"
+                    checkable: true
+                    checked: apps.menuRunning && apps.menuApp.model.IsKeepBelow === true
+                    onClicked: apps.tasks.requestToggleKeepBelow(apps.menuIdx())
+                }
+            }
         }
-        QQC2.MenuItem {
-            readonly property bool on: apps.menuApp !== null && apps.menuApp.model.IsKeepAbove === true
-            text: i18n("Keep Above Others")
-            icon.name: "window-keep-above"
+        PlasmaExtras.MenuItem {
+            text: apps.menuRunning && apps.menuApp.model.IsGroupParent === true ? i18n("Close All") : i18n("Close")
+            icon: "window-close"
+            visible: apps.menuRunning
+            onClicked: apps.tasks.requestClose(apps.menuIdx())
+        }
+
+        PlasmaExtras.MenuItem { id: dockStart; separator: true }
+        // The dock's own actions go here.
+        PlasmaExtras.MenuItem {
+            id: configureItem
+            readonly property var act: Plasmoid.internalAction("configure")
+            text: act ? act.text : ""
+            icon: "configure"
+            visible: act !== null && act.enabled
+            onClicked: act.trigger()
+        }
+        PlasmaExtras.MenuItem {
+            readonly property var act: Plasmoid.containment ? Plasmoid.containment.internalAction("add widgets") : null
+            text: act ? act.text : ""
+            icon: "view-app-grid-symbolic"
+            visible: act !== null && act.enabled
+            onClicked: act.trigger()
+        }
+        PlasmaExtras.MenuItem {
+            readonly property var act: Plasmoid.containment ? Plasmoid.containment.internalAction("configure") : null
+            text: act ? act.text : ""
+            icon: "document-edit"
+            visible: act !== null && act.enabled
+            onClicked: act.trigger()
+        }
+    }
+
+    // Dynamic entries, each added before its anchor item.
+    Instantiator {
+        model: actionModel
+        delegate: PlasmaExtras.MenuItem {
+            required property string label
+            required property string iconName
+            required property string exec
+            text: label
+            icon: iconName
+            onClicked: launcherRunner.run("setsid -f " + exec.replace(/%[a-zA-Z%]/g, "").trim() + " >/dev/null 2>&1")
+        }
+        onObjectAdded: (i, o) => appMenu.addMenuItem(o, recentItem)
+        onObjectRemoved: (i, o) => appMenu.removeMenuItem(o)
+    }
+    Instantiator {
+        model: recentModel
+        delegate: PlasmaExtras.MenuItem {
+            required property string label
+            required property string url
+            text: label
+            onClicked: apps.tasks.requestOpenUrls(apps.menuIdx(), [url])
+        }
+        onObjectAdded: (i, o) => recentItem.sub.addMenuItem(o)
+        onObjectRemoved: (i, o) => recentItem.sub.removeMenuItem(o)
+    }
+    Instantiator {
+        model: desktops.numberOfDesktops
+        delegate: PlasmaExtras.MenuItem {
+            required property int index
+            readonly property var desktopId: desktops.desktopIds[index]
+            text: (index + 1) + ". " + (desktops.desktopNames[index] || "")
             checkable: true
-            checked: on
-            visible: apps.menuApp !== null && !apps.menuApp.model.IsLauncher
-            height: visible ? implicitHeight : 0
-            onTriggered: apps.tasks.requestToggleKeepAbove(apps.tasks.makeModelIndex(apps.menuApp.index))
+            checked: apps.menuRunning && apps.menuApp.model.IsOnAllVirtualDesktops !== true
+                && (apps.menuApp.model.VirtualDesktops || []).indexOf(desktopId) >= 0
+            onClicked: apps.tasks.requestVirtualDesktops(apps.menuIdx(), [desktopId])
         }
-        QQC2.MenuItem {
-            text: i18n("Close")
-            icon.name: "window-close"
-            visible: apps.menuApp !== null && !apps.menuApp.model.IsLauncher
-            height: visible ? implicitHeight : 0
-            onTriggered: apps.tasks.requestClose(apps.tasks.makeModelIndex(apps.menuApp.index))
+        onObjectAdded: (i, o) => desktopMenu.addMenuItem(o, desktopsEnd)
+        onObjectRemoved: (i, o) => desktopMenu.removeMenuItem(o)
+    }
+    Instantiator {
+        model: apps.dockActions
+        delegate: PlasmaExtras.MenuItem {
+            required property var modelData
+            text: modelData.text
+            icon: modelData.icon && modelData.icon.name ? modelData.icon.name : ""
+            onClicked: modelData.trigger()
         }
+        onObjectAdded: (i, o) => appMenu.addMenuItem(o, configureItem)
+        onObjectRemoved: (i, o) => appMenu.removeMenuItem(o)
     }
 
     SlideOnMove {}
@@ -400,6 +628,22 @@ Item {
     readonly property real iconSize: Math.round(height * 0.72)
 
     implicitWidth: row.implicitWidth
+
+    HoverHandler {
+        enabled: apps.magnify
+        onPointChanged: apps.pointerX = hovered && !apps.dragging ? point.position.x - row.x : NaN
+        onHoveredChanged: if (!hovered) apps.pointerX = NaN
+    }
+
+    // Drops between icons, or on an empty row: pin dropped .desktop files.
+    DropArea {
+        anchors.fill: parent
+        keys: ["text/uri-list"]
+        onDropped: drop => {
+            if (drop.hasUrls && apps.pinUrls(drop.urls))
+                drop.accept(Qt.CopyAction);
+        }
+    }
 
     Row {
         id: row
@@ -418,6 +662,15 @@ Item {
 
                 width: apps.iconSize
                 height: apps.height
+
+                // 1 far from the pointer, up to 1.25 right under it. It grows from the centre,
+                // which keeps it inside the dock height.
+                readonly property real zoom: {
+                    if (!apps.magnify || isNaN(apps.pointerX))
+                        return 1;
+                    const d = Math.abs(apps.pointerX - (x + width / 2)) / (apps.iconSize * 1.6);
+                    return 1 + 0.25 * Math.max(0, 1 - d * d);
+                }
 
                 Rectangle {
                     anchors.fill: parent
@@ -444,7 +697,7 @@ Item {
                     width: apps.iconSize
                     height: apps.iconSize
                     source: app.model.decoration
-                    scale: reorder.active ? 1.12 : tap.pressed ? 0.94 : 1
+                    scale: (reorder.active ? 1.12 : tap.pressed ? 0.94 : 1) * app.zoom
                     opacity: reorder.active ? 0.8 : 1
 
                     Behavior on scale {
@@ -508,6 +761,8 @@ Item {
                     id: tap
                     acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                     onTapped: (eventPoint, button) => {
+                        if (apps.menuOpen || Date.now() - apps.menuClosedAt < 400)
+                            return;
                         if (button === Qt.MiddleButton || (Qt.application.keyboardModifiers & Qt.ShiftModifier))
                             apps.tasks.requestNewInstance(apps.tasks.makeModelIndex(app.index));
                         else
@@ -518,21 +773,17 @@ Item {
                 TapHandler {
                     acceptedButtons: Qt.RightButton
                     onTapped: {
-                        apps.menuApp = app;
-                        apps.tipVisible = false;
-                        apps.hoveredApp = null;
-                        actionModel.clear();
-                        lister.run("sh '" + apps.actionsScript + "' '" + app.model.LauncherUrlWithoutIcon + "'");
+                        apps.openMenu(app);
 
                     }
                 }
 
-                // Files dropped on an icon open in that app. Hovering a drag over a
+                // Files dropped on an icon open in that app; .desktop files are pinned instead. Hovering a drag over a
                 // running app raises its window.
                 DropArea {
                     anchors.fill: parent
                     onDropped: drop => {
-                        if (drop.hasUrls)
+                        if (drop.hasUrls && !apps.pinUrls(drop.urls))
                             apps.tasks.requestOpenUrls(apps.tasks.makeModelIndex(app.index), drop.urls);
                         drop.accept();
                     }

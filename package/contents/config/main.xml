@@ -22,6 +22,14 @@
         <entry name="barOpaque" type="Bool">
             <default>false</default>
         </entry>
+        <!-- Accent for the dock's buttons and highlights, as #rrggbb. Empty follows the Plasma theme. -->
+        <entry name="accentColor" type="String">
+            <default></default>
+        </entry>
+        <!-- Also set the Plasma accent color (system-wide) when the dock accent changes. -->
+        <entry name="syncSystemAccent" type="Bool">
+            <default>true</default>
+        </entry>
         <entry name="showClock" type="Bool">
             <default>true</default>
         </entry>
@@ -86,6 +94,14 @@
             <default>false</default>
         </entry>
         <entry name="showApps" type="Bool">
+            <default>false</default>
+        </entry>
+        <!-- Icons near the pointer grow, like a macOS dock. -->
+        <entry name="appMagnify" type="Bool">
+            <default>false</default>
+        </entry>
+        <!-- Hovering a window thumbnail in the app card fades every other window out. -->
+        <entry name="peekWindows" type="Bool">
             <default>false</default>
         </entry>
         <!-- Follow the pinned apps of the Task Manager panel applet. appLaunchers is the fallback. -->

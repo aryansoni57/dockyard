@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.plasma.components as PlasmaComponents
+import org.kde.plasma.plasmoid
 import org.kde.kirigami as Kirigami
 
 // One app: icon over name in the grid, icon beside name in the list.
@@ -16,13 +17,14 @@ QQC2.AbstractButton {
     readonly property real iconSize: listMode ? Kirigami.Units.iconSizes.smallMedium : Math.round(Kirigami.Units.gridUnit * 1.9)
     // The icon sits on a faint rounded-square tile, so theme icons of any shape read as one set.
     readonly property real tileSize: listMode ? Math.round(Kirigami.Units.gridUnit * 1.75) : Math.round(iconSize * 1.25)
-    property color accent: "#0A84FF"
+    property color accent: Plasmoid.configuration.accentColor !== "" ? Plasmoid.configuration.accentColor : "#0A84FF"
     // Set by the launcher on the first search match, so Enter launches it.
     property bool searchHit: false
     readonly property bool selected: app.visualFocus || app.activeFocus || app.searchHit
 
     signal launched()
-    signal menuRequested(real x, real y)
+    // x and y are in this button's own coordinates.
+    signal menuRequested(Item source, real x, real y)
 
     activeFocusOnTab: true
     hoverEnabled: true
@@ -35,7 +37,8 @@ QQC2.AbstractButton {
     leftPadding: listMode ? Kirigami.Units.smallSpacing * 1.5 : padding
     rightPadding: listMode ? Kirigami.Units.largeSpacing * 1.5 : padding
 
-    onClicked: app.launched()
+    // Left button only (below): AbstractButton also emits clicked() for a right click,
+    // which launched the app before the menu could open.
     Keys.onReturnPressed: app.launched()
     Keys.onEnterPressed: app.launched()
     Keys.onRightPressed: nextItemInFocusChain(true).forceActiveFocus()
@@ -103,7 +106,12 @@ QQC2.AbstractButton {
     }
 
     TapHandler {
+        acceptedButtons: Qt.LeftButton
+        onTapped: app.launched()
+    }
+
+    TapHandler {
         acceptedButtons: Qt.RightButton
-        onTapped: eventPoint => app.menuRequested(eventPoint.scenePosition.x, eventPoint.scenePosition.y)
+        onTapped: eventPoint => app.menuRequested(app, eventPoint.position.x, eventPoint.position.y)
     }
 }

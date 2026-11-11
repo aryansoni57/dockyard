@@ -7,12 +7,14 @@
             }
         ],
         "Category": "Utilities",
-        "Description": "Smart dock modules: clock, system stats, now playing",
+        "Description": "A glass dock for Plasma 6: app icons with window previews, system tray, quick toggles, media, clock, calendar, weather, notes, todos and more, as one row of tiles.",
         "Icon": "preferences-desktop-panel",
         "Id": "dev.aryan.dock",
         "License": "GPL-2.0-or-later",
         "Name": "Dockyard",
-        "Version": "0.1.0"
+        "Version": "0.2.0",
+        "Website": "https://github.com/aryansoni57/dockyard",
+        "BugReportUrl": "https://github.com/aryansoni57/dockyard/issues"
     },
     "X-Plasma-API-Minimum-Version": "6.0",
     "X-Plasma-Provides": [

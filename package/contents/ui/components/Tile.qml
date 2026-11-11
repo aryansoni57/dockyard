@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls as QQC2
+import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
 
 // Glass tile (docs/STYLE.md, "Glass material"): faint fill, hairline border,
@@ -61,7 +62,7 @@ Rectangle {
 
     SlideOnMove {}
 
-    QQC2.ToolTip {
+    PlasmaComponents.ToolTip {
         visible: hover.hovered && tile.hoverName !== "" && tile.opacity === 1
         text: tile.hoverName
         delay: Kirigami.Units.toolTipDelay

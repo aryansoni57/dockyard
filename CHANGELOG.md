@@ -6,6 +6,9 @@ Notable changes to Dockyard. Newest first.
 
 ### Added
 
+- Widget gallery: right-click the dock and choose Widgets… to add or remove tiles from a searchable grid grouped by category. The header shows how many tiles are on the dock.
+- Drop a `.desktop` file on the dock's apps to pin it.
+- `appMagnify` setting on the Apps page: icons near the pointer grow.
 - Dockyard look for the whole desktop: a Kvantum style (`Dockyard`, solid windows with glass menus and tooltips, and `DockyardGlass`, translucent windows), a KDE color scheme, an Aurorae titlebar with monochrome buttons, and a look-and-feel package. `./install-all.sh --apply-global` installs and applies them. It saves your current choices first, and `theme/restore-global.sh` puts them back.
 - Meta+1 to Meta+9 open or switch to the app icons in the Apps module, left to right. A launcher opens, a window is focused or minimised, and an app with several windows cycles through them. A KWin script installed by `install.sh` owns the keys, because Plasma 6.8 gives them only to the stock Task Manager.
 - Tiles open their own popup view over the tapped tile: clock, calendar, world clocks, progress, media, notes and todos. The Start tile opens the launcher over itself.

@@ -10,6 +10,8 @@ ColumnLayout {
     property string title
     property string subtitle
     property int columns: 1
+    property real columnSpacing: Kirigami.Units.largeSpacing * 2
+    property real rowSpacing: Kirigami.Units.smallSpacing
     default property alias content: grid.data
     readonly property bool anyVisible: {
         for (let i = 0; i < grid.children.length; i++) {
@@ -57,8 +59,8 @@ ColumnLayout {
                 id: grid
                 Layout.fillWidth: true
                 columns: card.columns
-                columnSpacing: Kirigami.Units.largeSpacing * 2
-                rowSpacing: Kirigami.Units.smallSpacing
+                columnSpacing: card.columnSpacing
+                rowSpacing: card.rowSpacing
             }
         }
     }

@@ -3,10 +3,12 @@ import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PlasmaComponents
+import org.kde.plasma.extras as PlasmaExtras
 import org.kde.plasma.plasma5support as Plasma5Support
 import org.kde.plasma.private.kicker as Kicker
 import org.kde.plasma.private.sessions as Sessions
 import org.kde.kirigami as Kirigami
+import "../components"
 
 // Lumen Launcher panel (docs/PLAN-launcher.md): pinned apps, categories, live search,
 // recent files and the session buttons. Data comes from the same Kicker models Plasma's
@@ -19,8 +21,9 @@ Item {
     signal closeRequested()
 
     readonly property var cfg: Plasmoid.configuration
-    // System blue from docs/STYLE.md, so selection matches the dock whatever the theme accent is.
-    readonly property color accent: "#0A84FF"
+    // System blue from docs/STYLE.md (so selection matches the dock whatever the theme accent is),
+    // unless an accent is picked in settings.
+    readonly property color accent: cfg.accentColor !== "" ? cfg.accentColor : "#0A84FF"
     readonly property var favList: cfg.launcherFavorites.split(",").map(s => s.trim()).filter(s => s !== "")
     property string searchText: ""
     readonly property string query: searchText.trim()
@@ -189,22 +192,80 @@ Item {
         id: sm
     }
 
-    // Right-click menu for any app.
+    // Right-click menu for any app: a native Plasma menu, like the dock's own menus,
+    // opened where the pointer is.
     property string menuId: ""
-    QQC2.Menu {
+    PlasmaExtras.Menu {
         id: appMenu
-        popupType: QQC2.Popup.Window
+        onStatusChanged: if (status === PlasmaExtras.Menu.Closed) panel.menuClosedAt = Date.now()
 
-        QQC2.MenuItem {
-            text: panel.favList.indexOf(panel.menuId) >= 0 ? i18n("Unpin from launcher") : i18n("Pin to launcher")
-            icon.name: panel.favList.indexOf(panel.menuId) >= 0 ? "window-unpin" : "pin"
+        PlasmaExtras.MenuItem {
+            readonly property bool pinned: panel.favList.indexOf(panel.menuId) >= 0
+            text: pinned ? i18n("Unpin from launcher") : i18n("Pin to launcher")
+            icon: pinned ? "window-unpin" : "pin"
             enabled: panel.menuId !== ""
-            onTriggered: panel.favList.indexOf(panel.menuId) >= 0 ? panel.unpin(panel.menuId) : panel.pin(panel.menuId)
+            onClicked: pinned ? panel.unpin(panel.menuId) : panel.pin(panel.menuId)
+        }
+        PlasmaExtras.MenuItem { separator: true; visible: panel.uninstallKind !== "" }
+        // Shown once uninstall-app.sh has found how the app was installed. The uninstaller
+        // runs in a terminal (or Steam's own dialog), which asks before removing anything.
+        PlasmaExtras.MenuItem {
+            text: panel.uninstallKind === "entry" ? i18n("Remove from Menu…") : i18n("Uninstall…")
+            icon: panel.uninstallKind === "entry" ? "edit-delete-remove" : "delete"
+            visible: panel.uninstallKind !== ""
+            onClicked: {
+                uninstaller.run("sh " + panel.quote(panel.uninstallScript) + " run " + panel.quote(panel.menuId));
+            }
+        }
+        PlasmaExtras.MenuItem {
+            text: panel.uninstallLabel
+            enabled: false
+            visible: panel.uninstallKind !== ""
         }
     }
-    function showMenu(id, x, y) {
+
+    // How the app under the menu was installed: "pacman", "flatpak", "steam", ... or "".
+    property real menuX: 0
+    property real menuY: 0
+    property string uninstallKind: ""
+    property string uninstallLabel: ""
+    readonly property string uninstallScript: Qt.resolvedUrl("../../scripts/uninstall-app.sh").toString().replace("file://", "")
+    function quote(t) {
+        return "'" + String(t).replace(/'/g, "'\\''") + "'";
+    }
+    ShellRunner {
+        id: detector
+        onFinished: (cmd, out) => {
+            if (cmd.indexOf(panel.quote(panel.menuId)) < 0)
+                return; // a reply for an earlier menu
+            const f = out.trim().split("\t");
+            panel.uninstallKind = f.length >= 2 ? f[0] : "";
+            panel.uninstallLabel = f.length >= 2 ? f[1] : "";
+            // Open only now: an open menu does not grow when items appear.
+            appMenu.open(panel.menuX, panel.menuY);
+        }
+    }
+    // Close only once the script has opened its terminal, so hiding the panel cannot cut it off.
+    ShellRunner {
+        id: uninstaller
+        onFinished: panel.closeRequested()
+    }
+    // The click that dismisses the menu can land on an app below it; that click must not launch.
+    property double menuClosedAt: 0
+    function canLaunch() {
+        return appMenu.status === PlasmaExtras.Menu.Closed && Date.now() - menuClosedAt > 400;
+    }
+    function showMenu(id, source, x, y) {
         menuId = id;
-        appMenu.popup();
+        uninstallKind = "";
+        uninstallLabel = "";
+        appMenu.visualParent = source;
+        menuX = x;
+        menuY = y;
+        if (id !== "")
+            detector.run("sh " + quote(uninstallScript) + " detect " + quote(id));
+        else
+            appMenu.open(x, y);
     }
 
 
@@ -455,9 +516,10 @@ Item {
                                     opacity: enabled ? 1 : 0.35
                                     hoverEnabled: true
                                     activeFocusOnTab: false
-                                    QQC2.ToolTip.visible: hovered
-                                    QQC2.ToolTip.text: modelData.tip
-                                    QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+                                    PlasmaComponents.ToolTip {
+                                        visible: parent.hovered
+                                        text: modelData.tip
+                                    }
 
                                     onClicked: {
                                         panel.closeRequested();
@@ -568,8 +630,10 @@ Item {
                             hoverEnabled: true
                             activeFocusOnTab: false
                             onClicked: Plasmoid.configuration.launcherGridView = !panel.cfg.launcherGridView
-                            QQC2.ToolTip.visible: hovered
-                            QQC2.ToolTip.text: panel.cfg.launcherGridView ? i18n("Show as list") : i18n("Show as grid")
+                            PlasmaComponents.ToolTip {
+                                visible: parent.hovered
+                                text: panel.cfg.launcherGridView ? i18n("Show as list") : i18n("Show as grid")
+                            }
                             background: Rectangle {
                                 radius: panel.railRadius
                                 color: viewToggle.hovered ? Qt.alpha(Kirigami.Theme.textColor, 0.1) : "transparent"
@@ -664,8 +728,10 @@ Item {
                                         iconSource: model.decoration
                                         label: model.display
                                         note: model.description || ""
-                                        onLaunched: { if (!panel.applet.launchPinned(panel.favList[index] ?? "")) favs.trigger(index, "", null); panel.closeRequested(); }
-                                        onMenuRequested: panel.showMenu(panel.favList[index] ?? "", 0, 0)
+                                        // The row's own id: the model can differ from favList in order and length.
+                                        readonly property string pinId: model.favoriteId ?? panel.favList[index] ?? ""
+                                        onLaunched: { if (!panel.canLaunch()) return; if (!panel.applet.launchPinned(pinId)) favs.trigger(index, "", null); panel.closeRequested(); }
+                                        onMenuRequested: (src, x, y) => panel.showMenu(pinId, src, x, y)
                                     }
                                 }
                             }
@@ -684,7 +750,7 @@ Item {
                                     iconSource: model.decoration
                                     label: model.display
                                     note: model.description || ""
-                                    onLaunched: { recent.trigger(index, "", null); panel.closeRequested(); }
+                                    onLaunched: { if (!panel.canLaunch()) return; recent.trigger(index, "", null); panel.closeRequested(); }
                                 }
                             }
                         }
@@ -709,8 +775,10 @@ Item {
                                 property int visibleCount: 0
                                 function recount() {
                                     let n = 0;
+                                    // Count matches, not `visible`: a hidden section makes every
+                                    // button invisible, so it could never be shown again.
                                     for (let i = 0; i < flow.children.length; i++) {
-                                        if (flow.children[i].visible && flow.children[i].objectName === "app")
+                                        if (flow.children[i].objectName === "app" && flow.children[i].hit)
                                             n++;
                                     }
                                     visibleCount = n;
@@ -733,16 +801,17 @@ Item {
                                             required property var model
                                             required property int index
                                             objectName: "app"
-                                            visible: panel.matches(model.display)
-                                            onVisibleChanged: section.recount()
+                                            readonly property bool hit: panel.matches(model.display)
+                                            visible: hit
+                                            onHitChanged: section.recount()
                                             listMode: !panel.cfg.launcherGridView
                                             width: listMode ? flow.width : panel.cellWidth(flow.width)
                                             height: visible ? implicitHeight : 0
                                             iconSource: model.decoration
                                             label: model.display
                                             note: model.description || ""
-                                            onLaunched: { if (!panel.applet.launchPinned(model.favoriteId ?? "")) section.apps.trigger(index, "", null); panel.closeRequested(); }
-                                            onMenuRequested: panel.showMenu(model.favoriteId ?? "", 0, 0)
+                                            onLaunched: { if (!panel.canLaunch()) return; if (!panel.applet.launchPinned(model.favoriteId ?? "")) section.apps.trigger(index, "", null); panel.closeRequested(); }
+                                            onMenuRequested: (src, x, y) => panel.showMenu(model.favoriteId ?? "", src, x, y)
                                         }
                                     }
                                 }

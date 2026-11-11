@@ -11,6 +11,8 @@ KCM.SimpleKCM {
 
     property bool cfg_launcherGridView
     property bool cfg_appsFromTaskManager
+    property bool cfg_appMagnify
+    property bool cfg_peekWindows
     property string cfg_appLaunchers
     property string cfg_launcherFavorites
 
@@ -107,6 +109,23 @@ KCM.SimpleKCM {
                 normalize: t => page.normalizeLauncher(t)
                 placeholder: i18n("Desktop file name, e.g. firefox or org.kde.kate")
                 emptyText: i18n("No pinned apps. Pin apps from the launcher or add one below.")
+            }
+            QQC2.Label {
+                text: i18n("Drop a .desktop file on the dock's apps to pin it.")
+                font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                opacity: 0.6
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+            QQC2.CheckBox {
+                text: i18n("Magnify icons under the pointer")
+                checked: page.cfg_appMagnify
+                onToggled: page.cfg_appMagnify = checked
+            }
+            QQC2.CheckBox {
+                text: i18n("Peek: hovering a window preview shows only that window")
+                checked: page.cfg_peekWindows
+                onToggled: page.cfg_peekWindows = checked
             }
         }
 

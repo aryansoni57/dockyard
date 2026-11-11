@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Controls as QQC2
+import org.kde.plasma.components as PlasmaComponents
 import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.plasmoid
 import org.kde.kirigami as Kirigami
 import "../components"
 
@@ -31,7 +33,8 @@ Tile {
     readonly property real inner: height - padding * 2
     readonly property real iconSize: Math.round(inner * 0.56)
     // System blue from docs/STYLE.md; the "on" look stays blue whatever the theme accent is.
-    readonly property color accent: "#0A84FF"
+    // The dock accent picked in settings, else the system blue.
+    readonly property color accent: Plasmoid.configuration.accentColor !== "" ? Plasmoid.configuration.accentColor : "#0A84FF"
 
     implicitWidth: strip ? Math.round(inner * 2.7) + padding * 2 : row.implicitWidth + padding * 2
 
@@ -50,6 +53,7 @@ Tile {
     QuickSettingsFlyout {
         id: flyout
         source: qt.source
+        accent: qt.accent
         visualParent: qt
         location: qt.edge
         onSettingsRequested: qt.moreRequested()
@@ -175,9 +179,10 @@ Tile {
                         }
                     }
 
-                    QQC2.ToolTip.visible: hovered
-                    QQC2.ToolTip.text: (pill.item.label ?? "") + (pill.on ? " · on" : " · off")
-                    QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    PlasmaComponents.ToolTip {
+                        visible: parent.hovered
+                        text: (pill.item.label ?? "") + (pill.on ? " · on" : " · off")
+                    }
                 }
 
                 // Hairline between the toggle half and the detail half.
@@ -213,9 +218,10 @@ Tile {
                         }
                     }
 
-                    QQC2.ToolTip.visible: hovered
-                    QQC2.ToolTip.text: (pill.item.label ?? "") + " settings"
-                    QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    PlasmaComponents.ToolTip {
+                        visible: parent.hovered
+                        text: (pill.item.label ?? "") + " settings"
+                    }
                 }
             }
         }
@@ -245,9 +251,10 @@ Tile {
                 }
             }
 
-            QQC2.ToolTip.visible: hovered
-            QQC2.ToolTip.text: "More settings"
-            QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+            PlasmaComponents.ToolTip {
+                visible: parent.hovered
+                text: "More settings"
+            }
         }
     }
 }

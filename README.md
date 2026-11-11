@@ -26,7 +26,7 @@
 | Quick toggles | Wi-Fi, Bluetooth, Do Not Disturb, Night Light, mute |
 | Script | output of your own shell command, refreshed on a timer |
 
-Click the dock to open the detail popup.
+Click a tile to open its detail popup. Right-click the dock and choose Widgets… to add or remove tiles.
 
 > [!NOTE]
 > Pinned apps and quick toggles are off by default. Turn them on in the widget settings; the launcher list and toggle list are comma-separated text fields there.
@@ -99,3 +99,7 @@ Quick toggles run shell commands: `nmcli`, `bluetoothctl`, `rfkill`, `wpctl`, an
 Hidden modules stop their sensors and timers, so they cost nothing.
 
 **Opaque dock bar.** A switch on the Widgets settings page makes the dock bar solid and swaps the Plasma theme between `glass` and `glass-opaque`. It leaves any other theme alone.
+
+## License
+
+GPL-2.0-or-later. See [LICENSE](LICENSE).

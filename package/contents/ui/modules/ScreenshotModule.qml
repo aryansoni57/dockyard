@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls as QQC2
+import org.kde.plasma.components as PlasmaComponents
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import "../components"
@@ -38,9 +39,11 @@ Tile {
                 scale: pressed ? 0.92 : 1
                 onClicked: shell.run("spectacle -b " + modelData.flag)
 
-                QQC2.ToolTip.text: modelData.tip
-                QQC2.ToolTip.visible: hovered
-                QQC2.ToolTip.delay: 600
+                PlasmaComponents.ToolTip {
+                    visible: parent.hovered
+                    text: modelData.tip
+                    delay: 600
+                }
 
                 Behavior on scale {
                     NumberAnimation { duration: 80 }

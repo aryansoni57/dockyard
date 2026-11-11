@@ -19,7 +19,8 @@ PlasmaCore.Dialog {
     signal settingsRequested()
 
     readonly property real unit: Kirigami.Units.gridUnit
-    readonly property color accent: "#0A84FF"
+    // Set by the host tile to follow the dock accent.
+    property color accent: "#0A84FF"
     readonly property color cardColor: Qt.alpha(Kirigami.Theme.textColor, 0.07)
     readonly property real panelWidth: Math.round(unit * 20)
 

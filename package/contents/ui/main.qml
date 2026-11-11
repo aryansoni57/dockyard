@@ -26,7 +26,32 @@ PlasmoidItem {
     readonly property var player: mpris.currentPlayer
     readonly property bool playing: player !== null
         && player.playbackStatus === Mpris.PlaybackStatus.Playing
+    // Hidden while the player is stopped, so an idle app does not leave an empty bar.
     readonly property bool showMedia: cfg.showMedia && player !== null
+    // Every real MPRIS player (the multiplexer mirror is left out), kept by the Repeater below.
+    property var mprisPlayers: []
+    function isSpotify(p) {
+        return p.desktopEntry.toLowerCase().indexOf("spotify") >= 0 || p.identity.toLowerCase() === "spotify";
+    }
+    readonly property var spotifyPlayer: mprisPlayers.find(p => isSpotify(p)) ?? null
+    // The media tile follows a playing player (the current one when it plays), else a paused one
+    // (a paused video keeps its controls), else Spotify, else nothing: then the tile is a
+    // Spotify launcher. Plasma's own current player is not trusted: it can sit on a stopped one.
+    function pickPlayer() {
+        const S = Mpris.PlaybackStatus;
+        const has = st => mprisPlayers.filter(p => p.playbackStatus === st);
+        const cur = mprisPlayers.indexOf(player) >= 0 ? player : null;
+        const playingNow = has(S.Playing);
+        if (playingNow.length > 0)
+            return playingNow.indexOf(cur) >= 0 ? cur : playingNow[0];
+        const paused = has(S.Paused);
+        if (paused.length > 0)
+            return paused.indexOf(cur) >= 0 ? cur : paused[0];
+        return spotifyPlayer;
+    }
+    readonly property var mediaPlayer: pickPlayer()
+    readonly property bool mediaPlaying: mediaPlayer !== null
+        && mediaPlayer.playbackStatus === Mpris.PlaybackStatus.Playing
     // On the desktop there is no panel, so the widget draws its own dock bar.
     readonly property bool onDesktop: Plasmoid.formFactor === PlasmaCore.Types.Planar
 
@@ -196,6 +221,19 @@ PlasmoidItem {
     Mpris.Mpris2Model {
         id: mpris
     }
+    Repeater {
+        model: mpris
+        delegate: Item {
+            required property var container
+            required property bool isMultiplexer
+            readonly property var entry: container
+            Component.onCompleted: {
+                if (!isMultiplexer)
+                    root.mprisPlayers = root.mprisPlayers.concat([entry]);
+            }
+            Component.onDestruction: root.mprisPlayers = root.mprisPlayers.filter(p => p !== entry)
+        }
+    }
 
     // Pinned apps and running windows. Created only when shown.
     // Pinned apps come from the Task Manager panel applet when asked (and found);
@@ -299,6 +337,11 @@ PlasmoidItem {
     // Dock context menu (demo video 0:57): Plasma adds Configure and Remove itself.
     Plasmoid.contextualActions: [
         PlasmaCore.Action {
+            text: i18n("Widgets…")
+            icon.name: "view-app-grid"
+            onTriggered: root.togglePopup("gallery", root.dockItem)
+        },
+        PlasmaCore.Action {
             text: i18n("Task Manager")
             icon.name: "utilities-system-monitor"
             onTriggered: shell.run("plasma-systemmonitor")
@@ -348,7 +391,10 @@ PlasmoidItem {
 
     // The Meta key: plasmashell activates the applet that provides the launcher menu.
     activationTogglesExpanded: false
-    Plasmoid.onActivated: togglePopup("launcher", root.startTile)
+    Plasmoid.onActivated: {
+        launcherPending = true;
+        launcherFallback.restart();
+    }
 
     // Only tile popups exist: Plasma's own centred popup is never wanted, so undo any expand.
     onExpandedChanged: function () {
@@ -359,13 +405,33 @@ PlasmoidItem {
     Timer {
         id: collapseLater
         interval: 0
-        onTriggered: root.expanded = false
+        onTriggered: {
+            root.expanded = false;
+            root.flushLauncher();
+        }
+    }
+
+    // The launcher opens only once Plasma's expand/collapse after a Meta press is over:
+    // its one-pixel window takes focus meanwhile, and the popup would close as it deactivates.
+    // The fallback covers a Plasma that never expands.
+    property bool launcherPending: false
+    function flushLauncher() {
+        if (!launcherPending)
+            return;
+        launcherPending = false;
+        launcherFallback.stop();
+        togglePopup("launcher", root.startTile);
+    }
+    Timer {
+        id: launcherFallback
+        interval: 250
+        onTriggered: root.flushLauncher()
     }
 
     // Tile popups: the dock owns the popup window and sets dockItem.
     property Item dockItem: null
     property Item startTile: null
-    readonly property var tilePopupModes: ["launcher", "clock", "calendar", "worldclocks", "progress", "media", "notes", "todos"]
+    readonly property var tilePopupModes: ["launcher", "clock", "calendar", "worldclocks", "progress", "media", "notes", "todos", "gallery"]
 
     function togglePopup(mode, tile) {
         const tileOpen = dockItem !== null && dockItem.popup !== null && dockItem.popup.visible;
@@ -444,8 +510,28 @@ PlasmoidItem {
     toolTipMainText: ""
     toolTipSubText: ""
 
+    // Keeps the Plasma accent in step with the dock's, when asked. Runs on change only, never at startup.
+    Connections {
+        target: Plasmoid.configuration
+        function onAccentColorChanged() {
+            if (!root.cfg.syncSystemAccent)
+                return;
+            const c = root.cfg.accentColor;
+            const script = Qt.resolvedUrl("../scripts/system-accent.sh").toString().replace("file://", "");
+            shell.run("sh '" + script + "' " + (/^#[0-9a-fA-F]{6}$/.test(c) ? "'" + c + "'" : "reset") + " >/dev/null 2>&1");
+        }
+    }
+
+    // Dock accent: the picked color, else the theme's own highlight.
+    SystemPalette {
+        id: themePalette
+    }
+    readonly property color accent: /^#[0-9a-fA-F]{6}$/.test(cfg.accentColor) ? cfg.accentColor : themePalette.highlight
+
     compactRepresentation: Item {
         id: dock
+        // Everything in the dock reads Kirigami.Theme.highlightColor, so overriding it here recolors the lot.
+        Kirigami.Theme.highlightColor: root.accent
         Component.onCompleted: root.dockItem = dock
 
         // Bar padding around the tiles: thin inside a panel, roomier on the desktop.
@@ -549,13 +635,19 @@ PlasmoidItem {
                     hoverName: i18n("Now Playing")
                     Layout.column: root.colOf("media")
                     Layout.fillHeight: true
-                    visible: root.showMedia
-                    player: root.player
-                    playing: root.playing
+                    visible: root.cfg.showMedia
+                    player: root.mediaPlayer
+                    playing: root.mediaPlaying
+                    idleText: i18n("Spotify")
+                    idleIcon: "spotify-launcher"
+                    launchable: true
+                    onLaunchRequested: root.launch("spotify-launcher")
                     onClicked: src => {
+                        if (!root.mediaPlayer)
+                            root.launch("spotify-launcher");
                         // Raise the player app when it can be raised, else show the media view.
-                        if (root.player && typeof root.player.Raise === "function")
-                            root.player.Raise();
+                        else if (root.mediaPlayer.canRaise && typeof root.mediaPlayer.Raise === "function")
+                            root.mediaPlayer.Raise();
                         else
                             root.togglePopup("media", src);
                     }
@@ -566,6 +658,9 @@ PlasmoidItem {
                     Layout.fillHeight: true
                     visible: root.cfg.showApps
                     tasks: tasksLoader.item
+                    magnify: root.cfg.appMagnify
+                    peek: root.cfg.peekWindows
+                    dockActions: Plasmoid.contextualActions
                     onPinChanged: (id, pinned) => {
                         if (root.launchersFromTaskManager || id === "")
                             return;
@@ -1007,12 +1102,16 @@ PlasmoidItem {
                 }
 
                 mainItem: FocusScope {
+                    // The popup is its own window, so it does not inherit the dock's override.
+                    Kirigami.Theme.highlightColor: root.accent
                     readonly property bool launcher: root.popupMode === "launcher"
                     readonly property bool notes: root.popupMode === "notes"
                     readonly property bool todos: root.popupMode === "todos"
+                    readonly property bool gallery: root.popupMode === "gallery"
                     implicitWidth: launcher ? root.launcherWidth
-                        : Kirigami.Units.gridUnit * (notes ? 30 : todos ? 20 : 17)
+                        : Kirigami.Units.gridUnit * (gallery ? 30 : notes ? 30 : todos ? 20 : 17)
                     implicitHeight: launcher ? Kirigami.Units.gridUnit * 24
+                        : gallery ? Kirigami.Units.gridUnit * 26
                         : notes ? Kirigami.Units.gridUnit * 18
                         : (content.item ? content.item.implicitHeight : Kirigami.Units.gridUnit * 10)
                     Keys.onEscapePressed: dock.hide()
@@ -1024,7 +1123,8 @@ PlasmoidItem {
                         active: popupWindow.visible
                         sourceComponent: parent.launcher ? launcherComp
                             : parent.notes ? notesComp
-                            : parent.todos ? todosComp : infoComp
+                            : parent.todos ? todosComp
+                            : parent.gallery ? galleryComp : infoComp
                     }
                 }
             }
@@ -1057,6 +1157,17 @@ PlasmoidItem {
         id: notesComp
         Popups.NotesPanel {
             applet: root
+        }
+    }
+    Component {
+        id: galleryComp
+        Popups.GalleryPanel {
+            applet: root
+            onSettingsRequested: {
+                if (root.dockItem)
+                    root.dockItem.hide();
+                Plasmoid.internalAction("configure").trigger();
+            }
         }
     }
     Component {

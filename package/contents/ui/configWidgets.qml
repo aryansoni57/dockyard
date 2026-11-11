@@ -3,6 +3,7 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.kcmutils as KCM
+import org.kde.kquickcontrols as KQuickControls
 import "settings"
 
 // Which tiles are on the dock. Each tile's own options live on the other pages.
@@ -40,6 +41,8 @@ KCM.SimpleKCM {
     property alias cfg_showCalendar: showCalendar.checked
     property bool cfg_tilePopups
     property bool cfg_barOpaque
+    property string cfg_accentColor
+    property bool cfg_syncSystemAccent
 
     // Every widget switch, for the counter and the presets.
     readonly property var switches: [showStart, showClock, showStats, showMedia, showTemperature, showNetwork,
@@ -65,19 +68,55 @@ KCM.SimpleKCM {
             switches[i].checked = was.indexOf(switches[i]) >= 0;
     }
 
-    // A widget switch that hides itself when it does not match the search box.
+    // Category colors for the icon badges (docs/STYLE.md accents).
+    readonly property color timeAccent: "#FF9F0A"
+    readonly property color workAccent: "#FF453A"
+    readonly property color systemAccent: "#0A84FF"
+    readonly property color appsAccent: "#30D158"
+
+    // A widget row that hides itself when it does not match the search box.
     // `keywords` widen the search ("cpu" finds Temperature, "spotify" finds Now playing).
-    component WidgetCheck: QQC2.CheckBox {
+    component WidgetCheck: WidgetRow {
         property string keywords
         property string optionsPage
 
-        Layout.fillWidth: true
-        visible: page.query === "" || (text + " " + keywords).toLowerCase().indexOf(page.query) >= 0
+        visible: page.query === "" || (text + " " + description + " " + keywords).toLowerCase().indexOf(page.query) >= 0
         onToggled: page.beforePreset = null
 
         QQC2.ToolTip.visible: optionsPage !== "" && hovered
         QQC2.ToolTip.text: i18n("Options on the %1 page", optionsPage)
         QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay * 2
+    }
+
+    // Preset chip: a small pill, like the category chips in the gallery.
+    component Chip: QQC2.AbstractButton {
+        id: chip
+        leftPadding: Kirigami.Units.largeSpacing * 1.5
+        rightPadding: Kirigami.Units.largeSpacing * 1.5
+        topPadding: Kirigami.Units.smallSpacing * 1.5
+        bottomPadding: Kirigami.Units.smallSpacing * 1.5
+        implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
+        implicitHeight: contentItem.implicitHeight + topPadding + bottomPadding
+        hoverEnabled: true
+        contentItem: RowLayout {
+            spacing: Kirigami.Units.smallSpacing
+            Kirigami.Icon {
+                visible: chip.icon.name !== ""
+                source: chip.icon.name
+                Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                Layout.preferredHeight: Kirigami.Units.iconSizes.small
+            }
+            QQC2.Label {
+                id: chipLabel
+                text: chip.text
+            }
+        }
+        background: Rectangle {
+            radius: height / 2
+            color: Qt.alpha(Kirigami.Theme.textColor, chip.down ? 0.16 : chip.hovered ? 0.11 : 0.06)
+            border.width: 1
+            border.color: Qt.alpha(Kirigami.Theme.textColor, 0.08)
+        }
     }
 
     ColumnLayout {
@@ -114,7 +153,7 @@ KCM.SimpleKCM {
                 }
             }
             QQC2.Label {
-                text: i18n("Drag tiles on the dock to reorder them. Mouse wheel scrolls a crowded dock. Each widget's options are on the pages in the sidebar.")
+                text: i18n("Turn widgets on to add them to the dock. Drag tiles on the dock to reorder them.")
                 opacity: 0.6
                 wrapMode: Text.Wrap
                 Layout.fillWidth: true
@@ -129,46 +168,38 @@ KCM.SimpleKCM {
                 spacing: Kirigami.Units.smallSpacing
 
                 QQC2.Label {
-                    text: i18n("Presets:")
-                    opacity: 0.6
+                    text: i18n("Presets")
+                    opacity: 0.55
                     height: minimalBtn.height
                     verticalAlignment: Text.AlignVCenter
+                    rightPadding: Kirigami.Units.smallSpacing
                 }
-                QQC2.Button {
+                Chip {
                     id: minimalBtn
                     text: i18n("Minimal")
                     onClicked: page.applyPreset([showStart, showClock, showMedia, showApps])
                 }
-                QQC2.Button {
+                Chip {
                     text: i18n("Everyday")
                     onClicked: page.applyPreset([showStart, showClock, showMedia, showApps, showWeather, showVolume,
                                                   showToggles, showBattery, showNotes])
                 }
-                QQC2.Button {
+                Chip {
                     text: i18n("Monitor")
                     onClicked: page.applyPreset([showStart, showClock, showStats, showTemperature, showNetwork,
                                                   showStorage, showBattery, showMedia])
                 }
-                QQC2.Button {
+                Chip {
                     text: i18n("All off")
                     onClicked: page.applyPreset([])
                 }
-                QQC2.Button {
+                Chip {
                     visible: page.beforePreset !== null
-                    flat: true
                     icon.name: "edit-undo"
                     text: i18n("Undo preset")
                     onClicked: page.undoPreset()
                 }
             }
-        }
-
-        QQC2.Switch {
-            text: i18n("Opaque dock bar")
-            checked: page.cfg_barOpaque
-            onToggled: page.cfg_barOpaque = checked
-            QQC2.ToolTip.visible: hovered
-            QQC2.ToolTip.text: i18n("Solid instead of frosted glass. Changes the dock bar when it is a desktop widget, and switches the Glass Plasma theme to Glass (opaque) if that is your theme. Run install-all.sh once to install both.")
         }
 
         Kirigami.PlaceholderMessage {
@@ -181,50 +212,98 @@ KCM.SimpleKCM {
         Card {
             title: i18n("Time and date")
             columns: 2
-            WidgetCheck { id: showClock; text: i18n("Clock"); keywords: "time weather"; optionsPage: i18n("Weather") }
-            WidgetCheck { id: showDate; text: i18n("Date") }
-            WidgetCheck { id: showDayNumber; text: i18n("Day number") }
-            WidgetCheck { id: showClockStyle; text: i18n("Clock styles"); keywords: "flip analog segment"; optionsPage: i18n("Clock & Calendar") }
-            WidgetCheck { id: showCalendar; text: i18n("Calendar (next event)"); keywords: "ical plane meeting"; optionsPage: i18n("Clock & Calendar") }
-            WidgetCheck { id: showWorldClocks; text: i18n("World clocks"); keywords: "time zone"; optionsPage: i18n("Clock & Calendar") }
-            WidgetCheck { id: showDayProgress; text: i18n("Day progress") }
-            WidgetCheck { id: showMonthProgress; text: i18n("Month progress") }
-            WidgetCheck { id: showYearProgress; text: i18n("Year progress") }
+            columnSpacing: Kirigami.Units.smallSpacing
+            rowSpacing: 0
+            WidgetCheck { id: showClock; iconName: "preferences-system-time-symbolic"; accent: page.timeAccent; description: i18n("Time with today’s weather"); text: i18n("Clock"); keywords: "time weather"; optionsPage: i18n("Weather") }
+            WidgetCheck { id: showDate; iconName: "view-calendar-day-symbolic"; accent: page.timeAccent; description: i18n("Weekday and date"); text: i18n("Date") }
+            WidgetCheck { id: showDayNumber; iconName: "view-calendar-symbolic"; accent: page.timeAccent; description: i18n("Today as one big number"); text: i18n("Day number") }
+            WidgetCheck { id: showClockStyle; iconName: "clock-symbolic"; accent: page.timeAccent; description: i18n("Flip, analog or segment face"); text: i18n("Clock styles"); keywords: "flip analog segment"; optionsPage: i18n("Clock & Calendar") }
+            WidgetCheck { id: showCalendar; iconName: "view-calendar-agenda-symbolic"; accent: page.timeAccent; description: i18n("Your next event"); text: i18n("Calendar (next event)"); keywords: "ical plane meeting"; optionsPage: i18n("Clock & Calendar") }
+            WidgetCheck { id: showWorldClocks; iconName: "globe-symbolic"; accent: page.timeAccent; description: i18n("Up to three time zones"); text: i18n("World clocks"); keywords: "time zone"; optionsPage: i18n("Clock & Calendar") }
+            WidgetCheck { id: showDayProgress; iconName: "view-calendar-timeline-symbolic"; accent: page.timeAccent; description: i18n("How much of today is gone"); text: i18n("Day progress") }
+            WidgetCheck { id: showMonthProgress; iconName: "view-calendar-month-symbolic"; accent: page.timeAccent; description: i18n("How much of the month is gone"); text: i18n("Month progress") }
+            WidgetCheck { id: showYearProgress; iconName: "view-calendar-year-symbolic"; accent: page.timeAccent; description: i18n("How much of the year is gone"); text: i18n("Year progress") }
         }
 
         Card {
             title: i18n("Productivity")
             columns: 2
-            WidgetCheck { id: showPomodoro; text: i18n("Pomodoro"); keywords: "focus timer" }
-            WidgetCheck { id: showTimer; text: i18n("Timer"); keywords: "countdown" }
-            WidgetCheck { id: showStopwatch; text: i18n("Stopwatch") }
-            WidgetCheck { id: showTodos; text: i18n("Todos"); keywords: "tasks list" }
-            WidgetCheck { id: showNotes; text: i18n("Notes") }
+            columnSpacing: Kirigami.Units.smallSpacing
+            rowSpacing: 0
+            WidgetCheck { id: showPomodoro; iconName: "chronometer-symbolic"; accent: page.workAccent; description: i18n("25 / 5 minute focus cycles"); text: i18n("Pomodoro"); keywords: "focus timer" }
+            WidgetCheck { id: showTimer; iconName: "chronometer-start-symbolic"; accent: page.workAccent; description: i18n("Countdown with presets"); text: i18n("Timer"); keywords: "countdown" }
+            WidgetCheck { id: showStopwatch; iconName: "chronometer-lap-symbolic"; accent: page.workAccent; description: i18n("Start, pause and reset"); text: i18n("Stopwatch") }
+            WidgetCheck { id: showTodos; iconName: "view-task-symbolic"; accent: page.workAccent; description: i18n("A quick task list"); text: i18n("Todos"); keywords: "tasks list" }
+            WidgetCheck { id: showNotes; iconName: "note-symbolic"; accent: page.workAccent; description: i18n("Several quick notes"); text: i18n("Notes") }
         }
 
         Card {
             title: i18n("System")
             columns: 2
-            WidgetCheck { id: showStats; text: i18n("CPU and RAM"); keywords: "memory usage"; optionsPage: i18n("System") }
-            WidgetCheck { id: showTemperature; text: i18n("CPU temperature"); optionsPage: i18n("System") }
-            WidgetCheck { id: showNetwork; text: i18n("Network speed"); keywords: "download upload"; optionsPage: i18n("System") }
-            WidgetCheck { id: showStorage; text: i18n("Disk usage"); keywords: "storage" }
-            WidgetCheck { id: showScript; text: i18n("Script output"); keywords: "custom command shell"; optionsPage: i18n("System") }
-            WidgetCheck { id: showBattery; text: i18n("Battery"); keywords: "power"; optionsPage: i18n("System") }
-            WidgetCheck { id: showVolume; text: i18n("Volume slider"); keywords: "sound audio" }
-            WidgetCheck { id: showToggles; text: i18n("Quick toggles"); keywords: "wifi bluetooth dnd night"; optionsPage: i18n("System") }
-            WidgetCheck { id: showTray; text: i18n("System tray") }
+            columnSpacing: Kirigami.Units.smallSpacing
+            rowSpacing: 0
+            WidgetCheck { id: showStats; iconName: "cpu-symbolic"; accent: page.systemAccent; description: i18n("Live CPU and memory rings"); text: i18n("CPU and RAM"); keywords: "memory usage"; optionsPage: i18n("System") }
+            WidgetCheck { id: showTemperature; iconName: "temperature-normal-symbolic"; accent: page.systemAccent; description: i18n("CPU heat and load"); text: i18n("CPU temperature"); optionsPage: i18n("System") }
+            WidgetCheck { id: showNetwork; iconName: "network-wireless-symbolic"; accent: page.systemAccent; description: i18n("Download and upload speed"); text: i18n("Network speed"); keywords: "download upload"; optionsPage: i18n("System") }
+            WidgetCheck { id: showStorage; iconName: "drive-harddisk-symbolic"; accent: page.systemAccent; description: i18n("Used space on your disk"); text: i18n("Disk usage"); keywords: "storage" }
+            WidgetCheck { id: showScript; iconName: "utilities-terminal-symbolic"; accent: page.systemAccent; description: i18n("Your own command, on a timer"); text: i18n("Script output"); keywords: "custom command shell"; optionsPage: i18n("System") }
+            WidgetCheck { id: showBattery; iconName: "battery-good-symbolic"; accent: page.systemAccent; description: i18n("Charge level and charging"); text: i18n("Battery"); keywords: "power"; optionsPage: i18n("System") }
+            WidgetCheck { id: showVolume; iconName: "audio-volume-high-symbolic"; accent: page.systemAccent; description: i18n("Output level slider"); text: i18n("Volume slider"); keywords: "sound audio" }
+            WidgetCheck { id: showToggles; iconName: "network-wireless-connected-symbolic"; accent: page.systemAccent; description: i18n("Wi-Fi, Bluetooth, Do Not Disturb"); text: i18n("Quick toggles"); keywords: "wifi bluetooth dnd night"; optionsPage: i18n("System") }
+            WidgetCheck { id: showTray; iconName: "preferences-desktop-notification-symbolic"; accent: page.systemAccent; description: i18n("Status icons from apps"); text: i18n("System tray") }
         }
 
         Card {
             title: i18n("Apps, media and weather")
             columns: 2
-            WidgetCheck { id: showStart; text: i18n("Application launcher"); keywords: "start menu"; optionsPage: i18n("Apps") }
-            WidgetCheck { id: showApps; text: i18n("Pinned apps"); keywords: "dock taskbar"; optionsPage: i18n("Apps") }
-            WidgetCheck { id: showMedia; text: i18n("Now playing"); keywords: "music spotify mpris" }
-            WidgetCheck { id: showWeather; text: i18n("Weather"); optionsPage: i18n("Weather") }
-            WidgetCheck { id: showRecycleBin; text: i18n("Recycle bin"); keywords: "trash" }
-            WidgetCheck { id: showScreenshot; text: i18n("Screenshot capture") }
+            columnSpacing: Kirigami.Units.smallSpacing
+            rowSpacing: 0
+            WidgetCheck { id: showStart; iconName: "start-here-kde-symbolic"; accent: page.appsAccent; description: i18n("Start menu with search"); text: i18n("Application launcher"); keywords: "start menu"; optionsPage: i18n("Apps") }
+            WidgetCheck { id: showApps; iconName: "view-app-grid-symbolic"; accent: page.appsAccent; description: i18n("Your apps, with running dots"); text: i18n("Pinned apps"); keywords: "dock taskbar"; optionsPage: i18n("Apps") }
+            WidgetCheck { id: showMedia; iconName: "media-playback-start-symbolic"; accent: page.appsAccent; description: i18n("Player controls, or a Spotify launcher"); text: i18n("Now playing"); keywords: "music spotify mpris" }
+            WidgetCheck { id: showWeather; iconName: "weather-few-clouds-symbolic"; accent: page.appsAccent; description: i18n("Current conditions"); text: i18n("Weather"); optionsPage: i18n("Weather") }
+            WidgetCheck { id: showRecycleBin; iconName: "user-trash-symbolic"; accent: page.appsAccent; description: i18n("Trash at a glance"); text: i18n("Recycle bin"); keywords: "trash" }
+            WidgetCheck { id: showScreenshot; iconName: "spectacle-symbolic"; accent: page.appsAccent; description: i18n("Capture the screen or a region"); text: i18n("Screenshot capture") }
+        }
+
+        Card {
+            title: i18n("Dock bar")
+            visible: page.query === ""
+            WidgetRow {
+                text: i18n("Opaque dock bar")
+                description: i18n("Solid instead of frosted glass")
+                iconName: "preferences-desktop-theme-global-symbolic"
+                accent: "#8E8E93"
+                checked: page.cfg_barOpaque
+                onToggled: page.cfg_barOpaque = checked
+                QQC2.ToolTip.visible: hovered
+                QQC2.ToolTip.text: i18n("Changes the dock bar when it is a desktop widget, and switches the Glass Plasma theme to Glass (opaque) if that is your theme. Run install-all.sh once to install both.")
+                QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay * 2
+            }
+            FormRow {
+                label: i18n("Accent color")
+                hint: i18n("Colors the dock's buttons and highlights. Reset follows your Plasma theme.")
+                KQuickControls.ColorButton {
+                    color: /^#[0-9a-fA-F]{6}$/.test(page.cfg_accentColor) ? page.cfg_accentColor : Kirigami.Theme.highlightColor
+                    showAlphaChannel: false
+                    onAccepted: page.cfg_accentColor = Qt.color(color).toString().toLowerCase()
+                }
+                QQC2.Button {
+                    text: i18n("Reset")
+                    icon.name: "edit-undo"
+                    enabled: page.cfg_accentColor !== ""
+                    onClicked: page.cfg_accentColor = ""
+                }
+            }
+            FormRow {
+                label: i18n("System theme")
+                hint: i18n("Also sets the Plasma accent color and the Dockyard Plasma theme colors (volume pop-up and more), so apps and Plasma follow. Changing it restarts plasmashell. Reset puts the originals back. Kvantum-styled widgets keep their blue.")
+                QQC2.CheckBox {
+                    text: i18n("Sync accent with the system")
+                    checked: page.cfg_syncSystemAccent
+                    onToggled: page.cfg_syncSystemAccent = checked
+                }
+            }
         }
     }
 }
