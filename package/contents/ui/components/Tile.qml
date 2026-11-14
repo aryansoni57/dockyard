@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
+import "motion.js" as Motion
 
 // Glass tile (docs/STYLE.md, "Glass material"): faint fill, hairline border,
 // top-lit edge on dark themes. Children go straight inside; size them yourself.
@@ -46,8 +47,13 @@ Rectangle {
     Behavior on color {
         ColorAnimation { duration: 120; easing.type: Easing.OutCubic }
     }
+    // Pressing dips fast; letting go springs back past 1 and settles (elastic curve).
     Behavior on scale {
-        NumberAnimation { duration: 80 }
+        NumberAnimation {
+            duration: Motion.ms(tap.pressed ? 80 : Motion.elasticMs, Kirigami.Units.longDuration)
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: tap.pressed ? Motion.snap : Motion.elastic
+        }
     }
 
     // Top highlight: brighter rim along the flat part of the top edge.

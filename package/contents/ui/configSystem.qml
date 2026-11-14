@@ -20,6 +20,13 @@ KCM.SimpleKCM {
     property alias cfg_scriptIcon: scriptIcon.text
     property alias cfg_scriptClickCommand: scriptClickCommand.text
     property int cfg_scriptInterval
+    property alias cfg_notificationPopups: notificationPopups.checked
+    property alias cfg_statsConcentric: statsConcentric.checked
+    property alias cfg_showDevices: showDevices.checked
+    property alias cfg_dayNightLook: dayNightLook.checked
+    property string cfg_dayScheme
+    property string cfg_nightScheme
+    property var schemes: []
 
     readonly property var intervals: [
         { ms: 1000, text: i18n("Every second") },
@@ -59,7 +66,17 @@ KCM.SimpleKCM {
 
     readonly property string batteryCmd: "kstatsviewer --list 2>/dev/null | sed -n 's#^power/\\([^/ ]*\\)/chargePercentage .*#\\1#p'"
 
-    Component.onCompleted: shell.run(batteryCmd)
+    readonly property string schemeCmd: "plasma-apply-colorscheme --list-schemes 2>/dev/null | sed -n 's/^ *\\* \\([^ ]*\\).*/\\1/p'"
+
+    Component.onCompleted: {
+        shell.run(batteryCmd);
+        schemeShell.run(schemeCmd);
+    }
+
+    ShellRunner {
+        id: schemeShell
+        onFinished: (cmd, out) => page.schemes = out.split("\n").map(s => s.trim()).filter(s => s !== "")
+    }
 
     ShellRunner {
         id: shell
@@ -87,6 +104,54 @@ KCM.SimpleKCM {
         spacing: Kirigami.Units.largeSpacing * 1.5
 
         Card {
+            title: i18n("Notifications")
+            subtitle: i18n("The dock runs Plasma's notification server, so apps can notify you without a Notifications widget in a panel.")
+
+            FormRow {
+                label: i18n("Popups:")
+                QQC2.CheckBox {
+                    id: notificationPopups
+                    text: i18n("Show new notifications in the screen corner")
+                }
+            }
+        }
+
+        Card {
+            title: i18n("Day and night look")
+            subtitle: i18n("Switches the Plasma color scheme at sunrise and sunset. The times come from the weather location, so set one in the Weather settings.")
+
+            FormRow {
+                label: i18n("Schedule:")
+                QQC2.CheckBox {
+                    id: dayNightLook
+                    text: i18n("Follow sunrise and sunset")
+                }
+            }
+            FormRow {
+                label: i18n("Day:")
+                enabled: dayNightLook.checked
+                QQC2.ComboBox {
+                    Layout.fillWidth: true
+                    model: page.schemes
+                    currentIndex: page.schemes.indexOf(page.cfg_dayScheme)
+                    displayText: currentIndex < 0 ? page.cfg_dayScheme : currentText
+                    onActivated: index => page.cfg_dayScheme = page.schemes[index]
+                }
+            }
+            FormRow {
+                label: i18n("Night:")
+                enabled: dayNightLook.checked
+                QQC2.ComboBox {
+                    Layout.fillWidth: true
+                    model: page.schemes
+                    currentIndex: page.schemes.indexOf(page.cfg_nightScheme)
+                    displayText: currentIndex < 0 ? page.cfg_nightScheme : currentText
+                    onActivated: index => page.cfg_nightScheme = page.schemes[index]
+                }
+            }
+        }
+
+        Card {
             title: i18n("Sensors")
             subtitle: i18n("How often the CPU, temperature, network and battery tiles update. Slower uses less power.")
 
@@ -104,11 +169,25 @@ KCM.SimpleKCM {
                     Layout.fillWidth: true
                 }
             }
+            FormRow {
+                label: i18n("Stats tile:")
+                QQC2.CheckBox {
+                    id: statsConcentric
+                    text: i18n("Nested rings for CPU, RAM and disk")
+                }
+            }
         }
 
         Card {
             title: i18n("Battery")
 
+            FormRow {
+                label: i18n("Devices:")
+                QQC2.CheckBox {
+                    id: showDevices
+                    text: i18n("List phones, mice and headsets in the battery popup")
+                }
+            }
             FormRow {
                 label: i18n("Battery:")
                 hint: page.scanned && page.batteries.length === 0

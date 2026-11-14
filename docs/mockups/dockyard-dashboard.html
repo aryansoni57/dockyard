@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dockyard Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Dockyard: Start dashboard mockup. Design size 1680 x 900, scaled to fit.
+   Tokens follow docs/STYLE.md and docs/mockups/dockyard-next.html. */
+:root {
+  --sans: Inter, "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --enter: cubic-bezier(.16, 1, .3, 1);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  --accent: #0a84ff;
+  --accent-ink: #fff;
+  --green: #30d158;
+  --red: #ff453a;
+  --amber: #ffb340;
+  --purple: #bf5af2;
+  --orange: #ff9f0a;
+
+  /* page chrome */
+  --page: #0b0c10;
+  --raise: #15161c;
+  --ink: #f5f5f7;
+  --ink-2: rgba(245, 245, 247, .64);
+  --line: rgba(255, 255, 255, .1);
+  --knob-off: rgba(255, 255, 255, .18);
+
+  /* glass on the stage */
+  --g-ink: #fff;
+  --g-ink-2: rgba(255, 255, 255, .62);
+  --g-ink-3: rgba(255, 255, 255, .44);
+  --g-bar: rgba(16, 17, 24, .55);
+  --g-rim: rgba(255, 255, 255, .14);
+  --g-top: rgba(255, 255, 255, .09);
+  --g-panel: rgba(20, 21, 30, .72);
+  --g-foot: rgba(255, 255, 255, .035);
+  --g-tile: rgba(255, 255, 255, .055);
+  --g-tile-h: rgba(255, 255, 255, .09);
+  --g-tile-rim: rgba(255, 255, 255, .11);
+  --g-track: rgba(255, 255, 255, .14);
+  --g-btn: rgba(255, 255, 255, .08);
+  --g-btn-h: rgba(255, 255, 255, .14);
+  --g-shadow: 0 24px 64px rgba(0, 0, 0, .45), 0 2px 8px rgba(0, 0, 0, .25);
+  --bar-ok: #30d158;
+  --bar-low: #ff453a;
+  --tag-bg: rgba(255, 179, 64, .16);
+  --tag-ink: #ffc56b;
+  --now-bg: rgba(10, 132, 255, .2);
+  --now-ink: #6cb4ff;
+  --sun: #ffcc4d;
+}
+:root[data-theme="light"] {
+  --page: #eceef3;
+  --raise: #ffffff;
+  --ink: #1c1c1e;
+  --ink-2: rgba(28, 28, 30, .64);
+  --line: rgba(0, 0, 0, .1);
+  --knob-off: rgba(0, 0, 0, .18);
+
+  --g-ink: #1c1c1e;
+  --g-ink-2: rgba(28, 28, 30, .64);
+  --g-ink-3: rgba(28, 28, 30, .5);
+  --g-bar: rgba(255, 255, 255, .62);
+  --g-rim: rgba(0, 0, 0, .08);
+  --g-top: rgba(255, 255, 255, .7);
+  --g-panel: rgba(248, 248, 251, .8);
+  --g-foot: rgba(0, 0, 0, .03);
+  --g-tile: rgba(0, 0, 0, .04);
+  --g-tile-h: rgba(0, 0, 0, .07);
+  --g-tile-rim: rgba(0, 0, 0, .08);
+  --g-track: rgba(0, 0, 0, .1);
+  --g-btn: rgba(0, 0, 0, .05);
+  --g-btn-h: rgba(0, 0, 0, .09);
+  --g-shadow: 0 24px 64px rgba(30, 30, 60, .22), 0 2px 8px rgba(30, 30, 60, .1);
+  --bar-ok: #28a745;
+  --bar-low: #e0352b;
+  --tag-bg: rgba(255, 149, 0, .16);
+  --tag-ink: #8a4b00;
+  --now-bg: rgba(10, 132, 255, .14);
+  --now-ink: #0058c4;
+  --sun: #f5a300;
+  --accent: #0a7aff;
+}
+
+*, *::before, *::after { box-sizing: border-box }
+html, body { height: 100% }
+body {
+  margin: 0; background: var(--page); color: var(--ink);
+  font: 400 14px/1.45 var(--sans); -webkit-font-smoothing: antialiased;
+  transition: background .3s, color .3s;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer }
+input { font: inherit; color: inherit }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px }
+svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+.tnum { font-variant-numeric: tabular-nums }
+.trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+
+/* ---------- page layout ---------- */
+.page {
+  min-height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 264px; gap: 16px;
+  padding: 16px; align-items: center;
+}
+.fit-wrap { min-width: 0; display: grid; place-items: center }
+.fit { position: relative; border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 16px 48px rgba(0,0,0,.25) }
+.stage {
+  position: absolute; top: 0; left: 0; width: 1680px; height: 900px; transform-origin: 0 0;
+  overflow: hidden; isolation: isolate; color: var(--g-ink);
+}
+@media (max-width: 900px) {
+  .page { grid-template-columns: 1fr; align-items: start; align-content: start }
+  .controls { align-self: start }
+}
+
+/* ---------- wallpaper ---------- */
+.wall { position: absolute; inset: 0; z-index: -1 }
+.wall.night {
+  background:
+    radial-gradient(55% 65% at 14% 22%, rgba(88, 86, 214, .75), transparent 62%),
+    radial-gradient(45% 55% at 86% 18%, rgba(48, 120, 255, .55), transparent 60%),
+    radial-gradient(60% 55% at 70% 92%, rgba(94, 214, 220, .32), transparent 62%),
+    radial-gradient(40% 40% at 36% 78%, rgba(170, 80, 220, .35), transparent 60%),
+    linear-gradient(160deg, #0d0f22, #10122a 55%, #070811);
+}
+.wall.day {
+  opacity: 0; transition: opacity .5s;
+  background:
+    radial-gradient(55% 65% at 14% 22%, rgba(150, 146, 255, .85), transparent 62%),
+    radial-gradient(45% 55% at 86% 18%, rgba(120, 180, 255, .85), transparent 60%),
+    radial-gradient(60% 55% at 70% 92%, rgba(140, 230, 230, .75), transparent 62%),
+    radial-gradient(40% 40% at 36% 78%, rgba(220, 170, 250, .7), transparent 60%),
+    linear-gradient(160deg, #e7e8fb, #e4ecfb 55%, #e9f5f7);
+}
+[data-theme="light"] .wall.day { opacity: 1 }
+.wall.night::after, .wall.day::after {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(118deg, transparent 0 120px, rgba(255,255,255,.035) 120px 122px, transparent 122px 260px);
+}
+
+/* ---------- dock ---------- */
+.dock {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px; padding: 6px; height: 64px; white-space: nowrap;
+  border-radius: 16px; background: var(--g-bar); border: 1px solid var(--g-rim);
+  -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%);
+  box-shadow: 0 4px 18px rgba(0,0,0,.26), inset 0 1px 0 var(--g-top);
+}
+.tile {
+  position: relative; height: 52px; border-radius: 12px; display: flex; align-items: center; gap: 10px; padding: 0 12px;
+  background: var(--g-tile); border: 1px solid var(--g-tile-rim); box-shadow: inset 0 1px 0 var(--g-top);
+  text-align: left; transition: background .12s, transform .08s, border-color .2s;
+}
+button.tile:hover { background: var(--g-tile-h) }
+button.tile:active { transform: scale(.97) }
+.tile.sq { width: 52px; padding: 0; justify-content: center }
+.tile.start svg.i { width: 24px; height: 24px; transition: transform .28s var(--spring) }
+.tile.start[aria-expanded="true"] { background: var(--now-bg); border-color: color-mix(in srgb, var(--accent) 55%, transparent); color: var(--now-ink) }
+.tile.start[aria-expanded="true"] svg.i { transform: scale(.9) }
+.dock-apps { display: flex; align-items: center; gap: 6px; padding: 0 6px }
+.dock-apps .ai { --s: 38px }
+.dock-apps .slot { position: relative; transition: transform .28s var(--spring) }
+.dock-apps .slot:hover { transform: translateY(-3px) scale(1.08) }
+.dock-apps .slot.run::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent) }
+.big { font-weight: 700; font-size: 20px; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums }
+.small { font-size: 11.5px; line-height: 1.25; color: var(--g-ink-2) }
+.col { display: flex; flex-direction: column; gap: 4px; min-width: 0 }
+
+/* ---------- app icon (squircle) ---------- */
+.ai {
+  --s: 52px; width: var(--s); height: var(--s); border-radius: calc(var(--s) * .27); flex: none;
+  display: grid; place-items: center; color: #fff; position: relative;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 0 rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.18);
+}
+.ai svg { width: 50%; height: 50%; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round }
+.ai.cal { background: #fff; color: #1c1c1e; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: flex-start }
+.ai.cal i { flex: none; width: 100%; height: calc(var(--s) * .3); background: #ff3b30; color: #fff; font: 700 calc(var(--s) * .15)/1 var(--sans); font-style: normal; letter-spacing: .04em; display: grid; place-items: center }
+.ai.cal b { font: 600 calc(var(--s) * .4)/1 var(--sans); letter-spacing: -.03em; margin-top: calc(var(--s) * .08); font-variant-numeric: tabular-nums }
+
+/* ---------- panels (dashboard + launcher) ---------- */
+.panel {
+  position: absolute; z-index: 20; color: var(--g-ink);
+  border-radius: 28px; background: var(--g-panel); border: 1px solid var(--g-rim);
+  -webkit-backdrop-filter: blur(40px) saturate(170%); backdrop-filter: blur(40px) saturate(170%);
+  box-shadow: var(--g-shadow), inset 0 1px 0 var(--g-top);
+  overflow: hidden;
+  opacity: 0; visibility: hidden; transform: scale(.96); filter: blur(4px);
+  transition: opacity .16s ease-out, transform .16s ease-out, filter .16s ease-out, visibility 0s linear .16s;
+}
+.panel.open {
+  opacity: 1; visibility: visible; transform: none; filter: none;
+  transition: opacity .4s var(--enter), transform .4s var(--enter), filter .4s var(--enter), visibility 0s;
+}
+.panel:focus { outline: none }
+.panel.entering { transform: scale(.92); opacity: 0; filter: blur(8px); transition: none }
+.panel.open .rise { animation: rise .4s var(--enter) both; animation-delay: calc(60ms + var(--i, 0) * 40ms) }
+@keyframes rise { from { opacity: 0; transform: translateY(10px) } }
+
+.dash { width: 1040px }
+.dash-body { padding: 24px; display: grid; gap: 24px }
+
+.card {
+  position: relative; border-radius: 18px; background: var(--g-tile); border: 1px solid var(--g-tile-rim);
+  box-shadow: inset 0 1px 0 var(--g-top); transition: background .12s ease-out, border-color .12s;
+}
+.card:hover { background: var(--g-tile-h) }
+h2.sec { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: -.005em; line-height: 20px; display: flex; align-items: center; gap: 8px }
+.eyebrow { font-size: 12px; font-weight: 500; color: var(--g-ink-2); line-height: 16px }
+.muted { color: var(--g-ink-2) }
+
+/* top row */
+.top { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px }
+.top .card { height: 188px; padding: 16px; display: flex; flex-direction: column; min-width: 0 }
+
+.wx-head { display: flex; justify-content: space-between; gap: 12px }
+.wx-loc { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: var(--g-ink-2) }
+.wx-loc svg.i { width: 14px; height: 14px }
+.wx-temp { font-size: 44px; font-weight: 600; letter-spacing: -.04em; line-height: 48px; font-variant-numeric: tabular-nums; margin-top: 4px }
+.wx-now { display: flex; align-items: flex-start; gap: 8px; text-align: right }
+.wx-now .lbl { font-size: 13px; font-weight: 500; line-height: 18px }
+.wx-now svg.i { width: 36px; height: 36px; stroke-width: 1.5 }
+.hourly {
+  margin-top: auto; display: flex; gap: 4px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  margin-inline: -8px; padding-inline: 8px; overscroll-behavior-x: contain;
+}
+.hourly::-webkit-scrollbar { display: none }
+.hr { flex: 1 0 44px; scroll-snap-align: start; display: grid; justify-items: center; gap: 4px; padding: 6px 0; border-radius: 10px }
+.hr.now { background: var(--g-tile) }
+.hr span { font-size: 12px; line-height: 16px; color: var(--g-ink-2) }
+.hr.now span { color: var(--g-ink); font-weight: 600 }
+.hr b { font-size: 13px; font-weight: 600; line-height: 16px; font-variant-numeric: tabular-nums }
+.hr svg.i { width: 20px; height: 20px; stroke-width: 1.6 }
+
+.today-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px }
+.agenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px }
+.agenda li { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; column-gap: 10px; align-items: start }
+.agenda .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; background: var(--c) }
+.agenda .t { font-size: 12px; line-height: 16px; color: var(--g-ink-2); font-variant-numeric: tabular-nums }
+.agenda .n { font-size: 13px; font-weight: 500; line-height: 18px }
+.agenda li.past .n { color: var(--g-ink-2); font-weight: 400 }
+.agenda li.past .dot { opacity: .5 }
+.chip { font-size: 11px; font-weight: 600; line-height: 18px; padding: 0 7px; border-radius: 999px; background: var(--now-bg); color: var(--now-ink) }
+
+.devices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; height: 100%; align-items: center }
+.dev { display: grid; justify-items: center; gap: 4px; min-width: 0 }
+.dev .round {
+  width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 4px;
+  background: var(--g-btn); border: 1px solid var(--g-tile-rim); box-shadow: inset 0 1px 0 var(--g-top);
+}
+.dev .round svg.i { width: 24px; height: 24px; stroke-width: 1.6 }
+.dev .nm { font-size: 12px; line-height: 16px; color: var(--g-ink-2); max-width: 100% }
+.dev .pc { display: flex; align-items: center; gap: 2px; font-size: 15px; font-weight: 600; line-height: 20px; font-variant-numeric: tabular-nums }
+.dev .pc svg.i { width: 14px; height: 14px; stroke: none; fill: var(--bar-ok) }
+.dev.low .pc { color: var(--bar-low) }
+.meter { width: 64px; height: 4px; border-radius: 4px; background: var(--g-track); overflow: hidden; margin-top: 2px }
+.meter b { display: block; height: 100%; border-radius: inherit; background: var(--bar-ok) }
+.dev.low .meter b { background: var(--bar-low) }
+
+/* empty states */
+.empty { display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px; padding: 0 8px }
+.empty .eic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--g-btn); color: var(--g-ink-2); margin-bottom: 6px }
+.empty strong { font-size: 13px; font-weight: 600; line-height: 18px }
+.empty p { margin: 0; font-size: 12px; line-height: 16px; color: var(--g-ink-2); max-width: 30ch }
+.empty .pill { margin-top: 8px }
+[data-empty="on"] .full { display: none !important }
+[data-empty="on"] .empty { display: flex }
+
+/* middle */
+.mid { display: grid; grid-template-columns: minmax(0, 1fr) 1px 352px; gap: 24px; align-items: start }
+.vr { align-self: stretch; background: var(--g-tile-rim) }
+.left-col, .right-col { display: grid; gap: 12px; min-width: 0 }
+.pins { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin-inline: -8px }
+.pin {
+  display: grid; justify-items: center; gap: 8px; padding: 8px 4px 8px; border-radius: 14px; min-width: 0;
+  transition: background .12s;
+}
+.pin:hover { background: var(--g-tile) }
+.pin .ai { transition: transform .28s var(--spring) }
+.pin:hover .ai { transform: translateY(-2px) }
+.pin:active .ai { transform: scale(.94); transition-duration: .08s }
+.pin span { font-size: 12px; font-weight: 500; line-height: 16px; max-width: 100% }
+
+.setups-wrap { display: grid; gap: 12px; margin-top: 12px }
+[data-setups="off"] .setups-wrap { display: none }
+.tag { font-size: 11px; font-weight: 600; line-height: 18px; padding: 0 8px; border-radius: 999px; background: var(--tag-bg); color: var(--tag-ink) }
+.sec-row { display: flex; justify-content: space-between; align-items: center; gap: 8px }
+.ghost { height: 28px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 500; color: var(--g-ink-2); display: inline-flex; align-items: center; gap: 4px; transition: background .12s, color .12s }
+.ghost:hover { background: var(--g-btn); color: var(--g-ink) }
+.ghost svg.i { width: 14px; height: 14px }
+.setups { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px }
+.setup { display: grid; gap: 8px; text-align: left; min-width: 0 }
+.thumb {
+  height: 84px; border-radius: 14px; padding: 6px; display: grid; gap: 4px;
+  background: var(--g-tile); border: 1px solid var(--g-tile-rim); box-shadow: inset 0 1px 0 var(--g-top);
+  transition: border-color .12s, background .12s, transform .28s var(--spring);
+}
+.setup:hover .thumb { background: var(--g-tile-h); transform: translateY(-2px) }
+.thumb .pane { border-radius: 8px; background: var(--g-btn); display: grid; place-items: center; min-height: 0 }
+.thumb .ai { --s: 26px }
+.setup .meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; line-height: 16px }
+.setup .meta b { font-weight: 500 }
+
+.pick { padding: 12px 14px 14px; display: grid; gap: 10px }
+.pick-row { display: flex; align-items: center; gap: 12px; min-width: 0 }
+.pick-row .grow { flex: 1; min-width: 0 }
+.ttl { font-size: 14px; font-weight: 600; line-height: 20px }
+.sub { font-size: 12px; line-height: 16px; color: var(--g-ink-2) }
+.art {
+  width: 48px; height: 48px; border-radius: 10px; flex: none; position: relative; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.art::after { content: ""; position: absolute; right: 3px; bottom: 3px; width: 16px; height: 16px; border-radius: 5px; background: linear-gradient(160deg,#ff5a7a,#d01e5a) }
+.art::before { content: ""; position: absolute; right: 7px; bottom: 7px; width: 8px; height: 8px; z-index: 1; border-radius: 50%; border: 2px solid #fff; box-sizing: border-box }
+.play {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: var(--accent); color: var(--accent-ink); transition: transform .28s var(--spring), filter .12s;
+}
+.play:hover { filter: brightness(1.08); transform: scale(1.06) }
+.play:active { transform: scale(.94) }
+.play svg.i { width: 16px; height: 16px; fill: currentColor; stroke-width: 1.4 }
+.play .pz { display: none }
+.play[aria-pressed="true"] .pz { display: block; fill: none; stroke-width: 2.6 }
+.play[aria-pressed="true"] .pl { display: none }
+.ibtn { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: var(--g-ink-2); flex: none; transition: background .12s, color .12s }
+.ibtn:hover { background: var(--g-btn-h); color: var(--g-ink) }
+.ibtn svg.i { width: 18px; height: 18px }
+.ibtn .fillme { fill: currentColor }
+.prog { display: flex; align-items: center; gap: 8px; font-size: 11px; line-height: 14px; color: var(--g-ink-2) }
+.prog .bar { flex: 1; height: 3px; border-radius: 3px; background: var(--g-track); overflow: hidden }
+.prog .bar b { display: block; height: 100%; border-radius: inherit; background: var(--g-ink); opacity: .85; transition: width .9s linear }
+.file-ic { width: 40px; height: 48px; flex: none; position: relative; display: grid; place-items: center }
+.file-ic .sheet {
+  width: 36px; height: 44px; border-radius: 6px 12px 6px 6px; background: #fff; position: relative;
+  box-shadow: 0 1px 2px rgba(0,0,0,.2), inset 0 0 0 1px rgba(0,0,0,.08);
+}
+.file-ic .sheet::before { content: ""; position: absolute; inset: 14px 8px auto; height: 14px; background: repeating-linear-gradient(#c9ccd4 0 2px, transparent 2px 6px) }
+.file-ic .badge { position: absolute; left: -2px; bottom: 2px; font: 700 9px/1 var(--sans); letter-spacing: .02em; color: #fff; padding: 3px 4px; border-radius: 4px; background: var(--c) }
+.pill {
+  height: 32px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  background: var(--g-btn); border: 1px solid var(--g-tile-rim); transition: background .12s, transform .08s; flex: none;
+}
+.pill:hover { background: var(--g-btn-h) }
+.pill:active { transform: scale(.97) }
+
+/* footer */
+.foot {
+  height: 72px; padding: 0 24px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
+  background: var(--g-foot); border-top: 1px solid var(--g-tile-rim);
+}
+.me { display: flex; align-items: center; gap: 12px; min-width: 0 }
+.avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 16px; font-weight: 600; flex: none; box-shadow: inset 0 1px 0 rgba(255,255,255,.25) }
+.actions { display: flex; gap: 8px }
+.fbtn {
+  position: relative; height: 40px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 500; background: var(--g-btn); border: 1px solid var(--g-tile-rim); transition: background .12s, color .12s, transform .08s;
+}
+.fbtn:hover { background: var(--g-btn-h) }
+.fbtn:active { transform: scale(.97) }
+.fbtn svg.i { width: 18px; height: 18px }
+.fbtn.power { width: 40px; padding: 0; justify-content: center }
+.fbtn.power:hover { color: var(--bar-low) }
+[data-tip]::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translate(-50%, 4px);
+  padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 500; white-space: nowrap; line-height: 16px;
+  background: var(--g-ink); color: var(--page); opacity: 0; pointer-events: none; transition: opacity .12s, transform .12s;
+}
+[data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; transform: translate(-50%, 0) }
+.storage { justify-self: end; display: flex; align-items: center; gap: 12px; width: 264px }
+.storage .col { flex: 1; gap: 6px }
+.storage .line { display: flex; justify-content: space-between; font-size: 12px; line-height: 16px }
+.storage .line b { font-weight: 600 }
+.storage .bar { height: 4px; border-radius: 4px; background: var(--g-track); overflow: hidden }
+.storage .bar b { display: block; height: 100%; width: 48%; background: var(--accent); border-radius: inherit }
+.storage > svg.i { color: var(--g-ink-2) }
+
+/* launcher stand-in */
+.launch { width: 600px }
+.launch-body { padding: 20px; display: grid; gap: 20px }
+.l-top { display: flex; gap: 8px; align-items: center }
+.search {
+  flex: 1; height: 44px; border-radius: 999px; display: flex; align-items: center; gap: 10px; padding: 0 16px;
+  background: var(--g-tile); border: 1px solid var(--g-tile-rim); box-shadow: inset 0 1px 0 var(--g-top);
+}
+.search:focus-within { border-color: var(--accent) }
+.search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 14px }
+.search input::placeholder { color: var(--g-ink-3) }
+.search svg.i { color: var(--g-ink-2); width: 18px; height: 18px }
+.l-pins { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin-inline: -8px }
+.l-pins .ai { --s: 44px }
+.l-none { grid-column: 1 / -1; padding: 16px; text-align: center; color: var(--g-ink-2); font-size: 13px }
+.recent { list-style: none; margin: 0 -8px; padding: 0; display: grid; gap: 2px }
+.recent button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 12px; text-align: left; transition: background .12s }
+.recent button:hover { background: var(--g-tile) }
+.recent .file-ic { transform: scale(.75); width: 32px; height: 36px }
+.recent .when { font-size: 12px; color: var(--g-ink-2); flex: none }
+.launch .foot { height: 64px; padding: 0 20px; grid-template-columns: 1fr auto }
+.back { display: none }
+.launch[data-from="dash"] .back { display: inline-flex }
+
+/* toast */
+.toast {
+  position: absolute; z-index: 40; left: 50%; top: 24px; transform: translate(-50%, -12px); opacity: 0; pointer-events: none;
+  display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px 0 12px; border-radius: 999px; font-size: 13px; font-weight: 500;
+  background: var(--g-panel); border: 1px solid var(--g-rim); color: var(--g-ink);
+  -webkit-backdrop-filter: blur(30px) saturate(170%); backdrop-filter: blur(30px) saturate(170%);
+  box-shadow: var(--g-shadow); transition: opacity .2s ease-out, transform .28s var(--spring);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0) }
+.toast svg.i { width: 16px; height: 16px; color: var(--accent) }
+
+/* ---------- control panel ---------- */
+.controls {
+  align-self: stretch; background: var(--raise); border: 1px solid var(--line); border-radius: 16px; padding: 20px;
+  display: flex; flex-direction: column; gap: 20px; overflow: auto; max-height: calc(100vh - 32px);
+}
+@media (max-width: 900px) { .controls { max-height: none } }
+.controls h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.02em; line-height: 24px }
+.controls .lede { margin: 4px 0 0; font-size: 13px; line-height: 18px; color: var(--ink-2) }
+.ctl { display: grid; gap: 8px }
+.ctl-lbl { font-size: 12px; font-weight: 600; color: var(--ink-2); line-height: 16px }
+.seg { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; gap: 2px; border-radius: 10px; background: var(--page); border: 1px solid var(--line) }
+.seg button { height: 32px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--ink-2); transition: background .15s, color .15s }
+.seg button[aria-checked="true"] { background: var(--raise); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 0 0 1px var(--line) }
+.switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 36px; text-align: left; font-size: 14px; font-weight: 500 }
+.switch small { display: block; font-size: 12px; font-weight: 400; color: var(--ink-2); line-height: 16px }
+.switch i { width: 38px; height: 22px; border-radius: 999px; background: var(--knob-off); position: relative; flex: none; transition: background .2s }
+.switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .28s var(--spring) }
+.switch[aria-checked="true"] i { background: var(--accent) }
+.switch[aria-checked="true"] i::after { transform: translateX(16px) }
+.cta { height: 40px; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 600; font-size: 14px; transition: filter .12s, transform .08s }
+.cta:hover { filter: brightness(1.08) }
+.cta:active { transform: scale(.98) }
+.hint { font-size: 12px; line-height: 17px; color: var(--ink-2); margin: 0 }
+.hint kbd { font: 600 11px/1 var(--sans); padding: 2px 5px; border-radius: 4px; border: 1px solid var(--line); background: var(--page) }
+.divider { height: 1px; background: var(--line) }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important }
+  .panel, .panel.entering { filter: none !important; transform: none !important }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-start" viewBox="0 0 24 24"><path d="M12 3 21 19H3Z"/><path d="M12 10.5 15.5 16.5H8.5Z"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></symbol>
+  <symbol id="i-term" viewBox="0 0 24 24"><path d="m5 8 4 4-4 4M12 17h7"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16Z"/><path d="m13.5 6.5 4 4"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12Z"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></symbol>
+  <symbol id="i-lines" viewBox="0 0 24 24"><path d="M5 6h14M5 10h14M5 14h14M5 18h9"/></symbol>
+  <symbol id="i-brush" viewBox="0 0 24 24"><path d="M20 4 11 13"/><path d="M11 13c-2.5-1-5 .5-5.5 3S4 20 3 20.5c3 1 7.5.5 8.8-2.2.8-1.8.2-3.6-.8-5.3Z"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5Z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M6 6.5v11l8.5-5.5Z" class="fillme"/><path d="M18 6v12"/></symbol>
+  <symbol id="i-pinloc" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21Z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><g style="stroke:var(--sun)"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></g></symbol>
+  <symbol id="i-cloudsun" viewBox="0 0 24 24"><g style="stroke:var(--sun)"><path d="M10 3v1.5M4.3 5.3l1 1M2.5 11h1.5M15.7 5.3l-1 1"/><path d="M6.4 11.5a3.8 3.8 0 0 1 7-2.6"/></g><path d="M8 20h9.5a3.5 3.5 0 0 0 0-7h-.3A5 5 0 0 0 8 14.5 2.8 2.8 0 0 0 8 20Z"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 19h10a4 4 0 0 0 0-8h-.4A5.5 5.5 0 0 0 6 12.5 3.3 3.3 0 0 0 7 19Z"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10Z"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7Z"/></symbol>
+  <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="10" rx="1.5"/><path d="M3 19h18"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-head" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></symbol>
+  <symbol id="i-bt" viewBox="0 0 24 24"><path d="m7 7 10 10-5 4V3l5 4L7 17"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3 4v4h4M12 8v4l3 2"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></symbol>
+  <symbol id="i-disk" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 14h18M7 16.5h.01M10 16.5h.01"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2.5V6M15 2.5V6M9 18v3.5M15 18v3.5M2.5 9H6M2.5 15H6M18 9h3.5M18 15h3.5"/></symbol>
+</svg>
+
+<div class="page">
+  <div class="fit-wrap">
+    <div class="fit" id="fit">
+      <div class="stage" id="stage" data-setups="on" data-empty="off">
+        <div class="wall night"></div>
+        <div class="wall day"></div>
+        <div class="toast" id="toast" role="status" aria-live="polite"><svg class="i"><use href="#i-check"/></svg><span id="toast-text"></span></div>
+
+        <!-- ================= DASHBOARD ================= -->
+        <section class="panel dash" id="dash" role="dialog" aria-modal="false" aria-label="Dashboard" tabindex="-1">
+          <div class="dash-body">
+            <div class="top">
+              <!-- Weather -->
+              <article class="card rise" style="--i:0" aria-label="Weather">
+                <div class="full" style="display:contents">
+                  <div class="wx-head">
+                    <div>
+                      <div class="wx-loc"><svg class="i"><use href="#i-pinloc"/></svg>Bengaluru</div>
+                      <div class="wx-temp">24°</div>
+                    </div>
+                    <div class="wx-now">
+                      <div>
+                        <div class="lbl">Partly cloudy</div>
+                        <div class="sub tnum">H 27° · L 18°</div>
+                      </div>
+                      <svg class="i"><use href="#i-cloudsun"/></svg>
+                    </div>
+                  </div>
+                  <div class="hourly" id="hourly" tabindex="0" aria-label="Hourly forecast"></div>
+                </div>
+                <div class="empty">
+                  <span class="eic"><svg class="i"><use href="#i-pinloc"/></svg></span>
+                  <strong>No weather yet</strong>
+                  <p>Set a location in the widget settings.</p>
+                  <button class="pill" data-toast="Opening weather settings">Set location</button>
+                </div>
+              </article>
+
+              <!-- Today -->
+              <article class="card rise" style="--i:1" aria-label="Today">
+                <div class="today-head">
+                  <h2 class="sec">Today</h2>
+                  <span class="sub">Fri 13 Nov</span>
+                </div>
+                <ol class="agenda full">
+                  <li class="past"><span class="dot" style="--c:var(--accent)"></span><div class="trunc"><div class="t">09:30 – 10:00</div><div class="n trunc">Standup</div></div></li>
+                  <li><span class="dot" style="--c:var(--purple)"></span><div class="trunc"><div class="t">14:00 – 15:00</div><div class="n trunc">Dock dashboard review</div></div><span class="chip">Now</span></li>
+                  <li><span class="dot" style="--c:var(--orange)"></span><div class="trunc"><div class="t">19:00 – 20:30</div><div class="n trunc">Dinner with Meera</div></div></li>
+                </ol>
+                <div class="empty" style="margin-top:-12px">
+                  <span class="eic"><svg class="i"><use href="#i-cal"/></svg></span>
+                  <strong>No calendar</strong>
+                  <p>Add a calendar in the widget settings.</p>
+                  <button class="pill" data-toast="Opening calendar settings">Add calendar</button>
+                </div>
+              </article>
+
+              <!-- Devices -->
+              <article class="card rise" style="--i:2" aria-label="Device batteries">
+                <div class="devices full">
+                  <div class="dev">
+                    <span class="round"><svg class="i"><use href="#i-laptop"/></svg></span>
+                    <span class="nm trunc">This laptop</span>
+                    <span class="pc"><svg class="i" aria-label="Charging"><use href="#i-bolt"/></svg>82%</span>
+                    <span class="meter"><b style="width:82%"></b></span>
+                  </div>
+                  <div class="dev">
+                    <span class="round"><svg class="i"><use href="#i-phone"/></svg></span>
+                    <span class="nm trunc">Pixel 8</span>
+                    <span class="pc">54%</span>
+                    <span class="meter"><b style="width:54%"></b></span>
+                  </div>
+                  <div class="dev low">
+                    <span class="round"><svg class="i"><use href="#i-head"/></svg></span>
+                    <span class="nm trunc">WH-1000XM5</span>
+                    <span class="pc">14%</span>
+                    <span class="meter"><b style="width:14%"></b></span>
+                  </div>
+                </div>
+                <div class="empty">
+                  <span class="eic"><svg class="i"><use href="#i-bt"/></svg></span>
+                  <strong>No devices</strong>
+                  <p>Paired Bluetooth and KDE Connect devices show their battery here.</p>
+                </div>
+              </article>
+            </div>
+
+            <div class="mid">
+              <div class="left-col">
+                <div class="rise" style="--i:3;display:grid;gap:12px">
+                  <h2 class="sec">Pinned Apps</h2>
+                  <div class="pins" id="pins"></div>
+                </div>
+                <div class="setups-wrap rise" style="--i:5">
+                  <div class="sec-row">
+                    <h2 class="sec">App Setups <span class="tag">Proposal</span></h2>
+                    <button class="ghost" data-toast="Saves the windows on this desktop as a setup"><svg class="i"><use href="#i-plus"/></svg>Save current</button>
+                  </div>
+                  <div class="setups" id="setups"></div>
+                </div>
+              </div>
+
+              <div class="vr rise" style="--i:4" aria-hidden="true"></div>
+
+              <div class="right-col rise" style="--i:4">
+                <h2 class="sec">Pick up where you left off</h2>
+                <div class="full" style="display:grid;gap:8px">
+                  <div class="card pick">
+                    <div class="eyebrow" id="listen-lbl">Continue listening</div>
+                    <div class="pick-row">
+                      <div class="art" id="art" aria-hidden="true"></div>
+                      <div class="grow">
+                        <div class="ttl trunc" id="track">Midnight City</div>
+                        <div class="sub trunc" id="artist">M83</div>
+                      </div>
+                      <button class="play" id="play" aria-pressed="false" aria-label="Play">
+                        <svg class="i pl"><use href="#i-play"/></svg><svg class="i pz"><use href="#i-pause"/></svg>
+                      </button>
+                      <button class="ibtn" id="next" aria-label="Next track"><svg class="i"><use href="#i-next"/></svg></button>
+                    </div>
+                    <div class="prog tnum"><span id="el">1:42</span><span class="bar"><b id="pbar" style="width:42%"></b></span><span id="dur">4:03</span></div>
+                  </div>
+                  <div class="card pick">
+                    <div class="eyebrow">Continue editing</div>
+                    <div class="pick-row">
+                      <span class="file-ic"><span class="sheet"></span><span class="badge" style="--c:#2a7de1">ODT</span></span>
+                      <div class="grow">
+                        <div class="ttl trunc">dashboard-spec.odt</div>
+                        <div class="sub trunc">5 min ago · Documents</div>
+                      </div>
+                      <button class="pill" data-toast="Opening dashboard-spec.odt">Open</button>
+                    </div>
+                  </div>
+                  <div class="card pick">
+                    <div class="eyebrow">Recent file</div>
+                    <div class="pick-row">
+                      <span class="file-ic"><span class="sheet"></span><span class="badge" style="--c:#c2185b">KRA</span></span>
+                      <div class="grow">
+                        <div class="ttl trunc">dock-wallpaper-v3.kra</div>
+                        <div class="sub trunc">2 h ago · Pictures</div>
+                      </div>
+                      <button class="pill" data-toast="Opening dock-wallpaper-v3.kra">Open</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="card empty" style="min-height:188px">
+                  <span class="eic"><svg class="i"><use href="#i-history"/></svg></span>
+                  <strong>Nothing to pick up yet</strong>
+                  <p>Music you play and files you open show up here.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <footer class="foot rise" style="--i:6">
+            <div class="me">
+              <span class="avatar" aria-hidden="true">A</span>
+              <div class="col" style="gap:0">
+                <span class="ttl trunc">Aryan Soni</span>
+                <span class="sub trunc">aryan</span>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="fbtn" data-toast="Opening System Settings"><svg class="i"><use href="#i-sliders"/></svg>Settings</button>
+              <button class="fbtn" id="all-apps"><svg class="i"><use href="#i-grid"/></svg>All apps</button>
+              <button class="fbtn power" aria-label="Shut down" data-tip="Shut down…" data-toast="Shut down dialog would open"><svg class="i"><use href="#i-power"/></svg></button>
+            </div>
+            <div class="storage">
+              <svg class="i"><use href="#i-disk"/></svg>
+              <div class="col">
+                <div class="line"><b>Storage</b><span class="muted tnum">240 GB used of 500 GB</span></div>
+                <div class="bar" role="meter" aria-label="Storage used" aria-valuemin="0" aria-valuemax="500" aria-valuenow="240"><b></b></div>
+              </div>
+            </div>
+          </footer>
+        </section>
+
+        <!-- ================= LAUNCHER STAND-IN ================= -->
+        <section class="panel launch" id="launch" role="dialog" aria-modal="false" aria-label="Launcher" tabindex="-1">
+          <div class="launch-body">
+            <div class="l-top rise" style="--i:0">
+              <button class="ibtn back" id="back" aria-label="Back to dashboard"><svg class="i"><use href="#i-back"/></svg></button>
+              <label class="search"><svg class="i"><use href="#i-search"/></svg><span class="sr">Search</span><input id="q" type="search" placeholder="Search apps, files and settings" autocomplete="off"></label>
+            </div>
+            <div class="rise" style="--i:1;display:grid;gap:12px">
+              <h2 class="sec" id="l-pins-title">Pinned</h2>
+              <div class="l-pins pins" id="l-pins"></div>
+            </div>
+            <div class="rise" style="--i:2;display:grid;gap:8px">
+              <h2 class="sec">Recent</h2>
+              <ul class="recent">
+                <li><button data-toast="Opening dashboard-spec.odt"><span class="file-ic"><span class="sheet"></span><span class="badge" style="--c:#2a7de1">ODT</span></span><span class="grow col" style="gap:0;flex:1"><span class="ttl trunc">dashboard-spec.odt</span><span class="sub trunc">~/Documents</span></span><span class="when">5 min ago</span></button></li>
+                <li><button data-toast="Opening dock-wallpaper-v3.kra"><span class="file-ic"><span class="sheet"></span><span class="badge" style="--c:#c2185b">KRA</span></span><span class="grow col" style="gap:0;flex:1"><span class="ttl trunc">dock-wallpaper-v3.kra</span><span class="sub trunc">~/Pictures</span></span><span class="when">2 h ago</span></button></li>
+                <li><button data-toast="Opening release-notes.md"><span class="file-ic"><span class="sheet"></span><span class="badge" style="--c:#5b5f6b">MD</span></span><span class="grow col" style="gap:0;flex:1"><span class="ttl trunc">release-notes.md</span><span class="sub trunc">~/Development/plasma-dock</span></span><span class="when">Yesterday</span></button></li>
+              </ul>
+            </div>
+          </div>
+          <footer class="foot rise" style="--i:3">
+            <div class="me">
+              <span class="avatar" aria-hidden="true">A</span>
+              <span class="ttl trunc">Aryan Soni</span>
+            </div>
+            <button class="fbtn power" aria-label="Shut down" data-tip="Shut down…" data-toast="Shut down dialog would open"><svg class="i"><use href="#i-power"/></svg></button>
+          </footer>
+        </section>
+
+        <!-- ================= DOCK ================= -->
+        <nav class="dock" id="dock" aria-label="Dock">
+          <button class="tile sq start" id="start" aria-label="Start" aria-expanded="false" aria-haspopup="dialog"><svg class="i"><use href="#i-start"/></svg></button>
+          <div class="dock-apps" id="dock-apps"></div>
+          <div class="tile" style="padding:0 12px 0 10px">
+            <svg class="i" style="width:30px;height:30px;stroke-width:1.5"><use href="#i-cloudsun"/></svg>
+            <div class="col"><span class="big">24°</span><span class="small tnum">H 27° L 18°</span></div>
+          </div>
+          <div class="tile">
+            <svg class="i" style="color:var(--g-ink-2)"><use href="#i-cpu"/></svg>
+            <div class="col"><span class="big" style="font-size:16px">34%</span><span class="small">CPU · RAM 48%</span></div>
+          </div>
+          <div class="tile" style="padding:0 14px">
+            <div class="col"><span class="big" style="font-size:22px">14:32</span><span class="small">Fri 13 Nov</span></div>
+          </div>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CONTROLS ================= -->
+  <aside class="controls" aria-label="Mockup controls">
+    <div>
+      <h1>Start: Dashboard</h1>
+      <p class="lede">Design mockup for Dockyard's <code>startStyle</code> setting. Click the Start tile on the dock.</p>
+    </div>
+    <button class="cta" id="open-btn">Open Start</button>
+    <div class="ctl">
+      <span class="ctl-lbl" id="lbl-style">Start style</span>
+      <div class="seg" role="radiogroup" aria-labelledby="lbl-style" id="seg-style">
+        <button role="radio" aria-checked="false" data-v="launcher">Launcher</button>
+        <button role="radio" aria-checked="true" data-v="dashboard">Dashboard</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <span class="ctl-lbl" id="lbl-theme">Theme</span>
+      <div class="seg" role="radiogroup" aria-labelledby="lbl-theme" id="seg-theme">
+        <button role="radio" aria-checked="true" data-v="dark">Dark</button>
+        <button role="radio" aria-checked="false" data-v="light">Light</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <button class="switch" role="switch" aria-checked="true" id="sw-setups"><span>Show App Setups<small>Proposal, not built yet</small></span><i></i></button>
+    <button class="switch" role="switch" aria-checked="false" id="sw-empty"><span>Empty states<small>No weather, calendar, devices or recents</small></span><i></i></button>
+    <div class="divider"></div>
+    <p class="hint"><kbd>Esc</kbd> or a click outside closes the panel. All apps swaps to the launcher in place.</p>
+    <p class="hint">Motion: panel 92% to 100% with a blur ramp, 400 ms <code>cubic-bezier(.16,1,.3,1)</code>; rows rise 10 px, 40 ms apart.</p>
+  </aside>
+</div>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* ---------- data ---------- */
+  const APPS = {
+    files:    { n: 'Files',    bg: 'linear-gradient(160deg,#4aa3ff,#0a64d6)', ic: 'i-folder' },
+    firefox:  { n: 'Firefox',  bg: 'linear-gradient(160deg,#ffb340,#ff5e3a)', ic: 'i-globe' },
+    konsole:  { n: 'Konsole',  bg: 'linear-gradient(160deg,#3d3e48,#17181d)', ic: 'i-term' },
+    kate:     { n: 'Kate',     bg: 'linear-gradient(160deg,#5ac8fa,#2b7fd9)', ic: 'i-pen' },
+    mail:     { n: 'Mail',     bg: 'linear-gradient(160deg,#6aa8ff,#3a5bd9)', ic: 'i-mail' },
+    calendar: { n: 'Calendar', cal: true },
+    notes:    { n: 'Notes',    bg: 'linear-gradient(160deg,#ffe066,#f5b51f)', ic: 'i-lines', fg: '#4a3500' },
+    messages: { n: 'Messages', bg: 'linear-gradient(160deg,#4cd964,#1f9d48)', ic: 'i-chat' },
+    music:    { n: 'Music',    bg: 'linear-gradient(160deg,#ff5a7a,#d01e5a)', ic: 'i-note' },
+    photos:   { n: 'Photos',   bg: 'linear-gradient(160deg,#c58bff,#7b4ddb)', ic: 'i-image' },
+    krita:    { n: 'Krita',    bg: 'linear-gradient(160deg,#ff8a65,#c2185b)', ic: 'i-brush' },
+    settings: { n: 'Settings', bg: 'linear-gradient(160deg,#9a9aa4,#5a5a63)', ic: 'i-sliders' },
+  };
+  const PINNED = ['files','firefox','konsole','kate','mail','calendar','notes','messages','music','photos','krita','settings'];
+  const icon = (id, size) => {
+    const a = APPS[id];
+    const st = size ? `--s:${size}px;` : '';
+    if (a.cal) return `<span class="ai cal" style="${st}" aria-hidden="true"><i>FRI</i><b>13</b></span>`;
+    return `<span class="ai" style="${st}background:${a.bg};${a.fg ? 'color:' + a.fg : ''}" aria-hidden="true"><svg><use href="#${a.ic}"/></svg></span>`;
+  };
+  const pinBtn = id => `<button class="pin" data-app="${id}">${icon(id)}<span class="trunc">${APPS[id].n}</span></button>`;
+
+  $('#pins').innerHTML = PINNED.map(pinBtn).join('');
+  $('#dock-apps').innerHTML = ['files','firefox','konsole','kate','messages','music']
+    .map((id, k) => `<span class="slot${k === 2 || k === 4 ? '' : ' run'}" title="${APPS[id].n}">${icon(id)}</span>`).join('');
+
+  const HOURS = [['Now','i-cloudsun',24],['15','i-sun',25],['16','i-sun',25],['17','i-cloudsun',23],['18','i-cloud',21],['19','i-moon',20]];
+  $('#hourly').innerHTML = HOURS.map(([h, ic, t], k) =>
+    `<div class="hr${k ? '' : ' now'}"><span>${h}</span><svg class="i"><use href="#${ic}"/></svg><b>${t}°</b></div>`).join('');
+
+  const SETUPS = [
+    { n: 'Design',  cols: '1.6fr 1fr', rows: '1fr 1fr', panes: [['krita','1 / 3'], ['photos'], ['files']] },
+    { n: 'Coding',  cols: '1.6fr 1fr', rows: '1fr 1fr', panes: [['kate','1 / 3'], ['konsole'], ['firefox']] },
+    { n: 'Inbox',   cols: '1fr 1fr',   rows: '1fr',     panes: [['mail'], ['calendar']] },
+    { n: 'Writing', cols: '2fr 1fr',   rows: '1fr',     panes: [['notes'], ['firefox']] },
+  ];
+  $('#setups').innerHTML = SETUPS.map(s => {
+    const names = s.panes.map(p => APPS[p[0]].n);
+    return `<button class="setup" data-toast="Opening ${s.n}: ${names.join(', ')}" aria-label="${s.n} setup: ${names.join(', ')}">
+      <span class="thumb" style="grid-template-columns:${s.cols};grid-template-rows:${s.rows}">
+        ${s.panes.map(p => `<span class="pane"${p[1] ? ` style="grid-row:${p[1]}"` : ''}>${icon(p[0])}</span>`).join('')}
+      </span>
+      <span class="meta"><b class="trunc">${s.n}</b><span class="muted">${s.panes.length} apps</span></span>
+    </button>`;
+  }).join('');
+
+  /* ---------- launcher grid + search ---------- */
+  const lPins = $('#l-pins');
+  const renderLauncher = q => {
+    const all = Object.keys(APPS);
+    const list = q ? all.filter(id => APPS[id].n.toLowerCase().includes(q.toLowerCase())) : PINNED;
+    $('#l-pins-title').textContent = q ? 'Apps' : 'Pinned';
+    lPins.innerHTML = list.length ? list.map(pinBtn).join('') : `<div class="l-none">No apps match “${q.replace(/[<>&"]/g, '')}”</div>`;
+  };
+  renderLauncher('');
+  $('#q').addEventListener('input', e => renderLauncher(e.target.value.trim()));
+
+  /* ---------- toast ---------- */
+  const toast = $('#toast'); let tt;
+  const say = msg => {
+    $('#toast-text').textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(tt); tt = setTimeout(() => toast.classList.remove('show'), 2200);
+  };
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-toast]');
+    if (t) { say(t.dataset.toast); return; }
+    const app = e.target.closest('[data-app]');
+    if (app) say('Launching ' + APPS[app.dataset.app].n);
+  });
+
+  /* ---------- scale stage to fit ---------- */
+  const stage = $('#stage'), fit = $('#fit');
+  const W = 1680, H = 900;
+  const resize = () => {
+    const wrap = fit.parentElement;
+    const narrow = innerWidth <= 900;
+    const availW = wrap.clientWidth;
+    const availH = narrow ? Infinity : innerHeight - 32;
+    const s = Math.min(availW / W, availH / H);
+    stage.style.transform = `scale(${s})`;
+    fit.style.width = Math.floor(W * s) + 'px';
+    fit.style.height = Math.floor(H * s) + 'px';
+  };
+  addEventListener('resize', resize); resize();
+
+  /* ---------- open / close ---------- */
+  const start = $('#start'), dock = $('#dock');
+  const panels = { dashboard: $('#dash'), launcher: $('#launch') };
+  let startStyle = 'dashboard';
+  let current = null;
+
+  const place = el => {
+    // Anchor over the Start tile: left edge aligned with the dock, kept inside the stage.
+    const dockLeft = dock.offsetLeft - dock.offsetWidth / 2;
+    const tileCx = dockLeft + start.offsetLeft + start.offsetWidth / 2;
+    const w = el.offsetWidth;
+    const left = Math.max(24, Math.min(dockLeft, W - w - 24));
+    el.style.left = left + 'px';
+    el.style.bottom = (14 + 64 + 12) + 'px';
+    el.style.transformOrigin = `${tileCx - left}px 100%`;
+  };
+
+  const show = (name, from) => {
+    const el = panels[name];
+    if (name === 'launcher') { el.dataset.from = from || ''; $('#q').value = ''; renderLauncher(''); }
+    place(el);
+    el.classList.add('entering');
+    el.offsetWidth; // commit the start state
+    el.classList.remove('entering');
+    el.classList.add('open');
+    current = name;
+    start.setAttribute('aria-expanded', 'true');
+    const focusEl = name === 'launcher' ? $('#q') : el;
+    setTimeout(() => focusEl.focus({ preventScroll: true }), reduce.matches ? 0 : 60);
+  };
+  const hide = (restoreFocus = true) => {
+    if (!current) return;
+    panels[current].classList.remove('open');
+    current = null;
+    start.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) start.focus({ preventScroll: true });
+  };
+  const swap = (to, from) => {
+    if (current) panels[current].classList.remove('open');
+    current = null;
+    show(to, from);
+  };
+  const toggle = () => current ? hide() : show(startStyle);
+
+  start.addEventListener('click', e => { e.stopPropagation(); toggle(); });
+  $('#open-btn').addEventListener('click', e => { e.stopPropagation(); if (current) hide(false); requestAnimationFrame(() => show(startStyle)); });
+  $('#all-apps').addEventListener('click', () => swap('launcher', 'dash'));
+  $('#back').addEventListener('click', () => swap('dashboard'));
+  stage.addEventListener('click', e => {
+    if (!current) return;
+    if (e.target.closest('.panel') || e.target.closest('#start') || e.target.closest('.toast')) return;
+    hide(false);
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && current) { e.preventDefault(); hide(); } });
+
+  /* ---------- media ---------- */
+  const TRACKS = [
+    { t: 'Midnight City', a: 'M83', d: 243, art: 'radial-gradient(circle at 32% 68%, #ff8a5c 0 20%, transparent 21%), linear-gradient(160deg,#25305e,#7a2a6b)' },
+    { t: 'Holocene', a: 'Bon Iver', d: 337, art: 'radial-gradient(circle at 70% 30%, #f4e7c5 0 16%, transparent 17%), linear-gradient(180deg,#5d7a8c,#22333d)' },
+    { t: 'Teardrop', a: 'Massive Attack', d: 330, art: 'radial-gradient(circle at 50% 55%, #d9b26a 0 24%, transparent 25%), linear-gradient(160deg,#151515,#3a2f24)' },
+  ];
+  let ti = 0, pos = 102, playing = false, timer;
+  const fmt = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+  const drawTrack = () => {
+    const tr = TRACKS[ti];
+    $('#track').textContent = tr.t; $('#artist').textContent = tr.a; $('#art').style.background = tr.art;
+    $('#dur').textContent = fmt(tr.d); $('#el').textContent = fmt(pos); $('#pbar').style.width = (pos / tr.d * 100) + '%';
+  };
+  const setPlaying = p => {
+    playing = p;
+    const b = $('#play');
+    b.setAttribute('aria-pressed', String(p)); b.setAttribute('aria-label', p ? 'Pause' : 'Play');
+    $('#listen-lbl').textContent = p ? 'Now playing' : 'Continue listening';
+    clearInterval(timer);
+    if (p) timer = setInterval(() => { pos += 1; if (pos >= TRACKS[ti].d) { ti = (ti + 1) % TRACKS.length; pos = 0; } drawTrack(); }, 1000);
+  };
+  $('#play').addEventListener('click', () => setPlaying(!playing));
+  $('#next').addEventListener('click', () => { ti = (ti + 1) % TRACKS.length; pos = 0; drawTrack(); });
+  drawTrack();
+
+  /* ---------- controls ---------- */
+  const seg = (id, fn) => {
+    const g = $(id), btns = $$('button', g);
+    const pick = b => { btns.forEach(x => { x.setAttribute('aria-checked', String(x === b)); x.tabIndex = x === b ? 0 : -1; }); fn(b.dataset.v); };
+    btns.forEach(b => { b.tabIndex = b.getAttribute('aria-checked') === 'true' ? 0 : -1; b.addEventListener('click', () => pick(b)); });
+    g.addEventListener('keydown', e => {
+      if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
+      e.preventDefault();
+      const i = btns.findIndex(b => b.getAttribute('aria-checked') === 'true');
+      const n = btns[(i + (e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1) + btns.length) % btns.length];
+      pick(n); n.focus();
+    });
+    return pick;
+  };
+  const setTheme = v => document.documentElement.dataset.theme = v;
+  const pickTheme = seg('#seg-theme', setTheme);
+  const params = new URLSearchParams(location.search);
+  const wantTheme = params.get('theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  pickTheme($(`#seg-theme [data-v="${wantTheme === 'light' ? 'light' : 'dark'}"]`));
+  const pickStyle = seg('#seg-style', v => {
+    startStyle = v;
+    $('.controls h1').textContent = 'Start: ' + (v === 'dashboard' ? 'Dashboard' : 'Launcher');
+    if (current) swap(v);
+  });
+  const sw = (id, fn) => {
+    const b = $(id);
+    b.addEventListener('click', () => { const on = b.getAttribute('aria-checked') !== 'true'; b.setAttribute('aria-checked', String(on)); fn(on); });
+  };
+  sw('#sw-setups', on => { stage.dataset.setups = on ? 'on' : 'off'; });
+  sw('#sw-empty', on => {
+    stage.dataset.empty = on ? 'on' : 'off';
+    if (on) setPlaying(false);
+  });
+  // Deep links for review: ?theme=light&empty=1&setups=0&style=launcher
+  if (params.get('style') === 'launcher') pickStyle($('#seg-style [data-v="launcher"]'));
+  if (params.get('empty') === '1') $('#sw-empty').click();
+  if (params.get('setups') === '0') $('#sw-setups').click();
+
+  // Open on load so the design is visible straight away (after fonts settle).
+  const boot = () => requestAnimationFrame(() => show(startStyle));
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(boot);
+})();
+</script>
+</body>
+</html>

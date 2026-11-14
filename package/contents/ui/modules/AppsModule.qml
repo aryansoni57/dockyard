@@ -8,6 +8,7 @@ import org.kde.plasma.plasmoid
 import org.kde.taskmanager as TaskManager
 import org.kde.pipewire as PipeWire
 import "../components"
+import "../components/motion.js" as Motion
 
 // Pinned and running apps (docs/STYLE.md): app icons sit loose between tiles,
 // with no tile behind them. A small accent dot marks a running app.
@@ -20,6 +21,31 @@ Item {
     property bool magnify: false
     // Hovering a window preview fades every other window out (KWin's highlight effect).
     property bool peek: false
+    // Hides the pinned apps that are not running, leaving the running ones and a chevron
+    // to bring the rest back. Meta+1..9 keep counting the hidden ones.
+    property bool collapsed: false
+    // How many pinned-but-not-running icons there are; the chevron shows only if some.
+    property int launcherRows: 0
+    readonly property bool canCollapse: launcherRows > 0
+    signal collapseToggled(bool collapsed)
+
+    function recountLaunchers() {
+        let n = 0;
+        if (tasks) {
+            for (let i = 0; i < tasks.count; ++i) {
+                if (tasks.data(tasks.makeModelIndex(i), TaskManager.AbstractTasksModel.IsLauncher))
+                    ++n;
+            }
+        }
+        launcherRows = n;
+    }
+    onTasksChanged: recountLaunchers()
+    Connections {
+        target: apps.tasks
+        function onCountChanged() { apps.recountLaunchers(); }
+        function onDataChanged() { apps.recountLaunchers(); }
+        function onLayoutChanged() { apps.recountLaunchers(); }
+    }
 
     // Emitted when an icon was dragged to a new place, after the model has moved.
     signal moved()
@@ -625,7 +651,7 @@ Item {
 
     SlideOnMove {}
 
-    readonly property real iconSize: Math.round(height * 0.72)
+    readonly property real iconSize: Math.round(height * 0.8)
 
     implicitWidth: row.implicitWidth
 
@@ -662,6 +688,20 @@ Item {
 
                 width: apps.iconSize
                 height: apps.height
+
+                // Collapsed: pinned apps that are not running fade out and leave the row,
+                // so the others glide together (SlideOnMove).
+                readonly property bool hide: apps.collapsed && app.model.IsLauncher === true
+                opacity: hide ? 0 : 1
+                visible: !hide || opacity > 0.01
+                enabled: !hide
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: Motion.ms(250, Kirigami.Units.longDuration)
+                        easing.type: Easing.BezierSpline
+                        easing.bezierCurve: Motion.enter
+                    }
+                }
 
                 // 1 far from the pointer, up to 1.25 right under it. It grows from the centre,
                 // which keeps it inside the dock height.
@@ -728,6 +768,8 @@ Item {
                 DragHandler {
                     id: reorder
                     target: null
+                    // Reordering needs every icon in view.
+                    enabled: !apps.collapsed
                     acceptedButtons: Qt.LeftButton
                     dragThreshold: Kirigami.Units.gridUnit * 0.6
 
@@ -797,6 +839,48 @@ Item {
                         id: raiseTimer
                         interval: 600
                         onTriggered: apps.tasks.requestActivate(apps.tasks.makeModelIndex(app.index))
+                    }
+                }
+            }
+        }
+    
+        // Chevron: hides or shows the pinned apps that are not running.
+        QQC2.AbstractButton {
+            id: chevron
+            visible: apps.canCollapse
+            width: Math.round(apps.iconSize * 0.55)
+            height: apps.height
+            hoverEnabled: true
+            onClicked: apps.collapseToggled(!apps.collapsed)
+            QQC2.ToolTip.text: apps.collapsed ? i18n("Show all apps") : i18n("Hide apps that are not running")
+            QQC2.ToolTip.visible: hovered
+            QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+
+            background: Rectangle {
+                anchors.centerIn: parent
+                width: parent.width
+                height: apps.iconSize
+                radius: width * 0.4
+                color: Qt.alpha(Kirigami.Theme.textColor, chevron.hovered ? 0.1 : 0)
+                Behavior on color { ColorAnimation { duration: 120 } }
+            }
+            contentItem: Item {
+                Kirigami.Icon {
+                    anchors.centerIn: parent
+                    width: Math.round(apps.iconSize * 0.4)
+                    height: width
+                    source: Qt.resolvedUrl("../../icons/chevron-right.svg")
+                    isMask: true
+                    color: Kirigami.Theme.textColor
+                    opacity: chevron.hovered ? 0.9 : 0.55
+                    // Points right to expand, left to collapse.
+                    rotation: apps.collapsed ? 0 : 180
+                    Behavior on rotation {
+                        NumberAnimation {
+                            duration: Motion.ms(Motion.elasticMs, Kirigami.Units.longDuration)
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Motion.elastic
+                        }
                     }
                 }
             }

@@ -249,7 +249,12 @@ def main():
     # all-day items sort after timed ones that start the same day
     cands.sort(key=lambda c: (c[0].astimezone(timezone.utc), c[4]))
     s, e, title, kind, allday, extra = cands[0]
-    out(ok=True, title=title, extra=extra, kind=kind, errors=errors,
+    # Everything that starts today, for the launcher dashboard's Today card.
+    today = datetime.now(LOCAL).date()
+    items = [dict(title=c[2], kind=c[3], allDay=c[4],
+                  start=c[0].astimezone(timezone.utc).isoformat(), end=c[1].astimezone(timezone.utc).isoformat())
+             for c in cands if c[0].astimezone(LOCAL).date() == today][:6]
+    out(ok=True, title=title, extra=extra, kind=kind, errors=errors, items=items,
         start=s.astimezone(timezone.utc).isoformat(), end=e.astimezone(timezone.utc).isoformat(), allDay=allday)
 
 

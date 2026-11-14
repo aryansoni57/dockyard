@@ -8,6 +8,10 @@
         <entry name="launcherFavorites" type="String">
             <default>applications:org.kde.dolphin.desktop,preferred://browser,applications:org.kde.konsole.desktop,applications:systemsettings.desktop,applications:org.kde.discover.desktop,applications:org.kde.kate.desktop</default>
         </entry>
+        <!-- What the Start tile and Meta open: "launcher" (Lumen) or "dashboard" (AvdanOS-style home). -->
+        <entry name="startStyle" type="String">
+            <default>launcher</default>
+        </entry>
         <entry name="launcherGridView" type="Bool">
             <default>true</default>
         </entry>
@@ -19,6 +23,10 @@
             <default>false</default>
         </entry>
         <!-- Dock bar fill when the dock is a desktop widget: false = frosted glass (55%), true = solid (96%). Panels use the Plasma theme. -->
+        <!-- "bar": one glass bar. "islands": the bar splits into floating glass pills. -->
+        <entry name="dockLayout" type="String">
+            <default>bar</default>
+        </entry>
         <entry name="barOpaque" type="Bool">
             <default>false</default>
         </entry>
@@ -97,6 +105,10 @@
             <default>false</default>
         </entry>
         <!-- Icons near the pointer grow, like a macOS dock. -->
+        <!-- Hide the pinned apps that are not running; the chevron in the row brings them back. -->
+        <entry name="appsCollapsed" type="Bool">
+            <default>false</default>
+        </entry>
         <entry name="appMagnify" type="Bool">
             <default>false</default>
         </entry>
@@ -198,6 +210,47 @@
         <!-- "strip" (status glyphs, tap opens the flyout) or "toggles" (pill row). -->
         <entry name="toggleStyle" type="String">
             <default>strip</default>
+        </entry>
+        <!-- Job pill for file copies and other KDE jobs. Shows only while one runs. -->
+        <entry name="showJobs" type="Bool">
+            <default>true</default>
+        </entry>
+        <!-- Stats tile: CPU, RAM and disk as nested rings. Off keeps CPU and RAM side by side. -->
+        <entry name="statsConcentric" type="Bool">
+            <default>true</default>
+        </entry>
+        <!-- Clipboard history tile (Klipper). Tap opens the list. -->
+        <entry name="showClipboard" type="Bool">
+            <default>false</default>
+        </entry>
+        <!-- Battery flyout lists other devices: mice, keyboards, headsets, phones over KDE Connect. -->
+        <entry name="showDevices" type="Bool">
+            <default>true</default>
+        </entry>
+        <!-- Swap the Plasma color scheme at sunrise and sunset (from the weather location). -->
+        <entry name="dayNightLook" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="dayScheme" type="String">
+            <default>DockyardDay</default>
+        </entry>
+        <entry name="nightScheme" type="String">
+            <default>Dockyard</default>
+        </entry>
+        <!-- App Setups: JSON [{"name", "layout": side|grid|main, "apps": [desktop file ids]}]. -->
+        <entry name="appSetups" type="String">
+            <default>[]</default>
+        </entry>
+        <!-- Hand-off from the KWin save script: the windows to turn into a setup. Cleared at once. -->
+        <entry name="pendingSetup" type="String">
+            <default></default>
+        </entry>
+        <entry name="showNotifications" type="Bool">
+            <default>true</default>
+        </entry>
+        <!-- Toast popups for new notifications. The server and history stay on either way. -->
+        <entry name="notificationPopups" type="Bool">
+            <default>true</default>
         </entry>
         <entry name="showTray" type="Bool">
             <default>false</default>

@@ -10,6 +10,7 @@ KCM.SimpleKCM {
     id: page
 
     property bool cfg_launcherGridView
+    property string cfg_startStyle
     property bool cfg_appsFromTaskManager
     property bool cfg_appMagnify
     property bool cfg_peekWindows
@@ -61,6 +62,19 @@ KCM.SimpleKCM {
             title: i18n("Application launcher")
             subtitle: i18n("Opens from the Start tile or the Meta key.")
 
+            FormRow {
+                label: i18n("Start style:")
+                QQC2.RadioButton {
+                    text: i18n("Launcher")
+                    checked: page.cfg_startStyle !== "dashboard"
+                    onToggled: if (checked) page.cfg_startStyle = "launcher"
+                }
+                QQC2.RadioButton {
+                    text: i18n("Dashboard")
+                    checked: page.cfg_startStyle === "dashboard"
+                    onToggled: if (checked) page.cfg_startStyle = "dashboard"
+                }
+            }
             FormRow {
                 label: i18n("Show apps as:")
                 QQC2.RadioButton {

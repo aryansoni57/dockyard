@@ -8,7 +8,16 @@
   aurorae/Dockyard/                      Aurorae window decoration, monochrome buttons
   look-and-feel/dev.aryan.dockyard/      look-and-feel defaults that select the above
 
-GLASS_THEME=glass-opaque writes only the solid Plasma theme.
+The Day set (light, for the dock's Day and night look) is written beside it:
+
+  glass-day/, glass-day-opaque/          Plasma desktop themes, light
+  color-schemes/DockyardDay.colors       KDE color scheme, light
+  kvantum/DockyardDay/, DockyardDayGlass/
+  aurorae/DockyardDay/
+  look-and-feel/dev.aryan.dockyard.day/
+
+GLASS_THEME=glass-opaque writes only the solid Plasma theme. GLASS_THEME=glass-day writes
+the Day set (glass-day, glass-day-opaque and the Day app themes). Tokens: docs/theme-day.md
 """
 import base64, json, math, os, struct, subprocess, sys, zlib
 
@@ -17,7 +26,9 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 # "glass" is frosted. "glass-opaque" is the same theme with every surface solid, for
 # the Opaque dock bar switch. The default run writes both, and the rest of the set.
 NAME = os.environ.get("GLASS_THEME", "glass")
-SOLID = NAME == "glass-opaque"
+# glass-day and glass-day-opaque are the light (Day) counterparts.
+DAY = NAME.startswith("glass-day")
+SOLID = NAME in ("glass-opaque", "glass-day-opaque")
 OUT = os.path.join(BASE, NAME)
 GLASS = "#16161a"
 HEADER = "#212128"
@@ -33,6 +44,24 @@ APP_INK_2 = "#a8a9b3"
 SELECT = "#0071e3"  # selection and primary buttons; white text on it passes AA
 RIM = 'fill="#ffffff" fill-opacity="0.14"'
 RIM_TOP = 'fill="#ffffff" fill-opacity="0.08"'
+
+if DAY:
+    # Day tokens (docs/theme-day.md). Surfaces are light neutrals with a faint cool tint,
+    # ink is near-black, rims are dark hairlines instead of light ones.
+    GLASS = "#f8f8fb"       # Plasma glass fill, as the dashboard mockup's light panel
+    HEADER = "#e6e7ed"      # active titlebar: one step deeper than the window
+    VIEW = "#ffffff"        # lists and text areas, the brightest level
+    VIEW_ALT = "#f4f5f8"
+    WINDOW = "#eff0f4"      # pages and panels
+    BUTTON = "#ffffff"      # raised white controls on the window grey
+    BUTTON_ALT = "#f6f7fa"
+    LINE = "#d5d7df"
+    APP_INK = "#1c1c1e"
+    APP_INK_2 = "#5c5e66"   # secondary text, AA on every surface (theme/contrast.py)
+    SELECT = "#0064d6"      # selection and primary buttons; white text on it passes AA
+    PLASMA_INK_2 = "#4b4d55"  # secondary text on the translucent Plasma glass
+    RIM = 'fill="#000000" fill-opacity="0.10"'
+    RIM_TOP = 'fill="#ffffff" fill-opacity="0.70"'
 
 
 def frame(R, alpha, margin, top_lit=False, rim=True, shadow=False):
@@ -104,6 +133,13 @@ SURFACES = [
     ("widgets/tooltip.svg", 10, 0.10, 8, False),
     ("widgets/panel-background.svg", 12, 0.55, 8, False),
 ]
+if DAY:
+    # The same translucency as the dark set, so day and night look alike. The one exception
+    # is the tooltip: the dark set's is nearly clear (white ink on a blurred dark ground), which
+    # would leave dark ink unreadable on a bright wallpaper, so it takes the popup alpha.
+    DAY_ALPHA = {"dialogs/background.svg": 0.62, "widgets/background.svg": 0.62,
+                 "widgets/tooltip.svg": 0.62, "widgets/panel-background.svg": 0.55}
+    SURFACES = [(p, R, DAY_ALPHA[p], m, lit) for p, R, _, m, lit in SURFACES]
 
 for path, R, alpha, margin, lit in SURFACES:
     panel = "panel" in path
@@ -116,6 +152,8 @@ for path, R, alpha, margin, lit in SURFACES:
     # base: compositing without blur, so keep text readable on the wallpaper
     # tooltips are nearly clear; the base fallback (no blur) stays more readable
     base = 0.40 if tip else 0.90
+    if DAY:
+        base = 0.62 if tip else 0.90
     write(path, frame(R, 0.96 if SOLID else base, margin, lit, **kw))
     # opaque/ (no compositing) and solid/ (adaptive panel under a window, menus)
     write("opaque/" + path, frame(R, 0.96, margin, lit, **kw))
@@ -129,8 +167,19 @@ def rgb(h):
     return ",".join(str(int(h[i:i + 2], 16)) for i in (0, 2, 4))
 
 
-def group(name, bg, alt, accent="#0A84FF", ink="#ffffff", ink_2="#a2a2a3"):
-    return f"""[Colors:{name}]
+# Text colors other than ink. The dark set uses the bright system hues; on light surfaces
+# they are darkened until they pass AA as text (theme/contrast.py checks every pair).
+FG_NIGHT = {"link": "#64d2ff", "negative": "#ff3b30", "neutral": "#ff9f0a",
+            "positive": "#30d158", "visited": "#bf5af2"}
+FG_DAY = {"link": "#0058c4", "negative": "#c8102e", "neutral": "#9a4a00",
+          "positive": "#157030", "visited": "#8a3fb5"}
+ACCENT_DAY = "#0a7aff"    # rings, focus, slider fill, checked controls (non-text, 3:1)
+ACTIVE_DAY = "#0058c4"    # accent as text (ForegroundActive): AA on every light surface
+
+
+def group(name, bg, alt, accent="#0A84FF", ink="#ffffff", ink_2="#a2a2a3", fg=None, active=None):
+    if fg is None:
+        return f"""[Colors:{name}]
 BackgroundAlternate={rgb(alt)}
 BackgroundNormal={rgb(bg)}
 DecorationFocus={rgb(accent)}
@@ -143,6 +192,48 @@ ForegroundNeutral=255,159,10
 ForegroundNormal={rgb(ink)}
 ForegroundPositive=48,209,88
 ForegroundVisited=191,90,242
+"""
+    return f"""[Colors:{name}]
+BackgroundAlternate={rgb(alt)}
+BackgroundNormal={rgb(bg)}
+DecorationFocus={rgb(accent)}
+DecorationHover={rgb(accent)}
+ForegroundActive={rgb(active or accent)}
+ForegroundInactive={rgb(ink_2)}
+ForegroundLink={rgb(fg["link"])}
+ForegroundNegative={rgb(fg["negative"])}
+ForegroundNeutral={rgb(fg["neutral"])}
+ForegroundNormal={rgb(ink)}
+ForegroundPositive={rgb(fg["positive"])}
+ForegroundVisited={rgb(fg["visited"])}
+"""
+
+
+def day_group(name, bg, alt, ink=APP_INK, ink_2=APP_INK_2):
+    """A light group: day accent, day text hues."""
+    return group(name, bg, alt, ACCENT_DAY, ink, ink_2, FG_DAY, ACTIVE_DAY)
+
+
+def dark_group(name, bg="#16161a", alt="#1e1e23"):
+    """Complementary stays dark in a light scheme (as in Breeze Light): it is the
+    contrasting set for surfaces that must stand out, such as the lock screen."""
+    return group(name, bg, alt, "#0A84FF", "#ffffff", "#a2a2a3", FG_NIGHT, "#0A84FF")
+
+
+def selection_group(sel):
+    return f"""[Colors:Selection]
+BackgroundAlternate={rgb(sel)}
+BackgroundNormal={rgb(sel)}
+DecorationFocus=255,255,255
+DecorationHover=255,255,255
+ForegroundActive=255,255,255
+ForegroundInactive=230,236,248
+ForegroundLink=255,255,255
+ForegroundNegative=255,232,232
+ForegroundNeutral=255,232,200
+ForegroundNormal=255,255,255
+ForegroundPositive=214,255,224
+ForegroundVisited=246,234,255
 """
 
 
@@ -176,6 +267,18 @@ colors += group("Selection", "#0071e3", "#0071e3", "#ffffff").replace(
 colors += group("Tooltip", "#16161a", "#1e1e23")
 colors += group("View", "#16161a", "#1e1e23")
 colors += group("Window", "#16161a", "#1e1e23")
+if DAY:
+    # Plasma surfaces: glass #f8f8fb with near-black ink. Controls are white on the glass.
+    # Secondary ink is a step darker than in the app scheme, so it stays AA on frosted
+    # glass over a dark wallpaper (theme/contrast.py checks the worst case).
+    pg = lambda name, bg, alt: day_group(name, bg, alt, APP_INK, PLASMA_INK_2)
+    colors = effects + pg("Button", "#ffffff", "#f0f1f5")
+    colors += dark_group("Complementary")
+    colors += pg("Header", "#eeeff3", GLASS)
+    colors += selection_group(SELECT)
+    colors += pg("Tooltip", GLASS, "#eeeff3")
+    colors += pg("View", "#ffffff", "#f3f4f7")
+    colors += pg("Window", GLASS, "#eeeff3")
 write("colors", colors)
 
 app = lambda name, bg, alt: group(name, bg, alt, ink=APP_INK, ink_2=APP_INK_2)
@@ -188,25 +291,43 @@ app_colors += group("Selection", SELECT, SELECT, "#ffffff").replace(
 app_colors += app("Tooltip", "#16161a", "#1e1e23")
 app_colors += app("View", VIEW, VIEW_ALT)
 app_colors += app("Window", WINDOW, HEADER)
+if DAY:
+    app = day_group
+    app_colors = effects + day_group("Button", BUTTON, BUTTON_ALT)
+    app_colors += dark_group("Complementary")
+    app_colors += day_group("Header", HEADER, WINDOW)
+    app_colors += selection_group(SELECT)
+    app_colors += day_group("Tooltip", GLASS, "#eeeff3")
+    app_colors += day_group("View", VIEW, VIEW_ALT)
+    app_colors += day_group("Window", WINDOW, HEADER)
 
+if DAY:
+    desc = ("Solid light glass" if SOLID else "Frosted light glass") + ": popups, notifications, tooltips and panels matching Dockyard Day"
+    title = "Glass Day (opaque)" if SOLID else "Glass Day"
+else:
+    desc = ("Solid dark glass" if SOLID else "Frosted dark glass") + ": popups, notifications, tooltips and panels matching Dockyard"
+    title = "Glass (opaque)" if SOLID else "Glass"
 write("metadata.json", json.dumps({
     "KPackageStructure": "Plasma/Theme",
     "KPlugin": {
         "Authors": [{"Name": "aryan"}],
         "Category": "Plasma Theme",
-        "Description": ("Solid dark glass" if SOLID else "Frosted dark glass") + ": popups, notifications, tooltips and panels matching Dockyard",
+        "Description": desc,
         "EnabledByDefault": True,
         "Id": NAME,
-        "Name": "Glass (opaque)" if SOLID else "Glass",
+        "Name": title,
         "Version": "1.3",
         "License": "GPL-2.0+",
     },
 }, indent=4))
 print("wrote", OUT)
 
+if NAME in ("glass", "glass-day"):
+    subprocess.run([sys.executable, os.path.abspath(__file__)],
+                   env={**os.environ, "GLASS_THEME": NAME + "-opaque"}, check=True)
 if NAME == "glass":
     subprocess.run([sys.executable, os.path.abspath(__file__)],
-                   env={**os.environ, "GLASS_THEME": "glass-opaque"}, check=True)
+                   env={**os.environ, "GLASS_THEME": "glass-day"}, check=True)
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +344,29 @@ ACC = (10, 132, 255)           # focus rings, slider fill, checked controls
 SEL = (0, 113, 227)            # SELECT: selection and primary buttons
 NEG = (255, 59, 48)
 STATES = ("normal", "focused", "pressed", "toggled", "disabled")
+BLACK = (0, 0, 0)
+
+
+def hexrgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+# Glyph and shadow colors. The dark set draws white glyphs and black shadows.
+GLYPH = "#ffffff"
+SHADOW_RGB = (0, 0, 0)
+SET = "Dockyard"
+if DAY:
+    PANEL = hexrgb(GLASS)
+    HEADER_RGB = hexrgb(HEADER)
+    HEADER_DIM = "#eff0f4"         # inactive titlebar: the window color, so it recedes
+    RIM_SOLID = "#c4c6cf"          # window edge: black ~17% flattened over white
+    ACC = hexrgb(ACCENT_DAY)
+    SEL = hexrgb(SELECT)
+    NEG = (224, 36, 46)            # close hover; white glyph on it passes 4.5:1
+    GLYPH = APP_INK
+    SHADOW_RGB = (24, 26, 48)      # cool shadow, as the mockup's rgba(30,30,60,...)
+    SET = "DockyardDay"
 
 
 def S(fill, a, rim=WHITE, ra=0.14):
@@ -276,9 +420,59 @@ KV = {
     "progress": (4, same(S(ACC, 1, ACC, 0))),
 }
 
+if DAY:
+    # Same shapes and radii. Controls are raised white with a dark hairline rim, the way
+    # the dark set's controls are lifted white overlays with a light rim. Hover deepens the
+    # rim, press sinks the fill a step below the window, toggled is an accent tint.
+    G = S(BLACK, 0, BLACK, 0)   # nothing drawn
+    BUTTON = {"normal": S(WHITE, 1, BLACK, .13), "focused": S(WHITE, 1, BLACK, .22),
+              "pressed": S((230, 232, 238), 1, BLACK, .18), "toggled": S(ACC, .16, ACC, .6),
+              "disabled": S(WHITE, .55, BLACK, .07)}
+    KV = {
+        "button": (10, BUTTON),
+        "combo": (10, BUTTON),
+        "lineedit": (10, {"normal": S(WHITE, 1, BLACK, .14), "focused": S(WHITE, 1, ACC, .85),
+                          "pressed": S(WHITE, 1, BLACK, .14), "toggled": S(WHITE, 1, ACC, .85),
+                          "disabled": S(WHITE, .5, BLACK, .07)}),
+        # The selected tab is a white segment on the window grey.
+        "tab": (8, {"normal": G, "focused": S(BLACK, .04, BLACK, 0),
+                    "pressed": S(BLACK, .07, BLACK, 0), "toggled": S(WHITE, 1, BLACK, .10),
+                    "disabled": G}),
+        "tabframe": (12, same(S(WHITE, 0, BLACK, .10))),
+        "common": (12, same(S(WHITE, 0, BLACK, .10))),
+        "menu": (12, same(S(PANEL, .62, BLACK, .12))),
+        "tooltip": (10, same(S(PANEL, .62, BLACK, .12))),
+        "dock": (14, same(S(PANEL, .55, BLACK, .10))),
+        "header": (2, same(S(hexrgb(VIEW_ALT), 1, BLACK, .08))),
+        # Selected rows are solid blue with white text: Kirigami and Qt Quick views draw
+        # selected text in highlightedText (white), so a pale tint would hide it.
+        "itemview": (6, {"normal": G, "focused": S(BLACK, .05, BLACK, 0),
+                         "pressed": S(SEL, 1, SEL, 0), "toggled": S(SEL, 1, SEL, 0),
+                         "disabled": G}),
+        "menuitem": (6, {"normal": G, "focused": S(SEL, 1, SEL, 0),
+                         "pressed": S(SEL, 1, SEL, 0), "toggled": S(SEL, 1, SEL, 0),
+                         "disabled": G}),
+        "menubaritem": (6, {"normal": G, "focused": S(BLACK, .06, BLACK, 0),
+                            "pressed": S(BLACK, .09, BLACK, 0), "toggled": S(BLACK, .09, BLACK, 0),
+                            "disabled": G}),
+        "scrollbarslider": (4, {"normal": S(BLACK, .28, BLACK, 0), "focused": S(BLACK, .45, BLACK, 0),
+                                "pressed": S(BLACK, .50, BLACK, 0), "toggled": S(BLACK, .45, BLACK, 0),
+                                "disabled": S(BLACK, .10, BLACK, 0)}),
+        "slider": (2, {**same(S(BLACK, .12, BLACK, 0)), "toggled": S(ACC, 1, ACC, 0)}),
+        "progressbar": (4, same(S(BLACK, .10, BLACK, 0))),
+        "progress": (4, same(S(ACC, 1, ACC, 0))),
+    }
+
 TEXT = [f"text.normal.color={APP_INK}", f"text.focus.color={APP_INK}",
         f"text.press.color={APP_INK}", f"text.toggle.color={APP_INK}"]
 MARGINS = ["text.margin.top=2", "text.margin.bottom=2", "text.margin.left=6", "text.margin.right=6"]
+# Sections whose text differs from TEXT. The day menu item highlight is solid blue, so
+# its text turns white (the dark set's ink is already light).
+TEXT_FOR = {}
+if DAY:
+    TEXT_FOR["MenuItem"] = [f"text.normal.color={APP_INK}", "text.focus.color=#ffffff",
+                            "text.press.color=#ffffff", "text.toggle.color=#ffffff"]
+    TEXT_FOR["ItemView"] = TEXT_FOR["MenuItem"]
 
 # Kvantum section -> element it draws with, and its own keys
 KV_SECTIONS = [
@@ -396,8 +590,8 @@ def kv_glyphs(oy):
         cells.append(f'<g id="{gid}"><g transform="translate({x},{y + oy})">{box}{body}</g></g>')
         x += step
 
-    line = lambda d, a, w=1.6: (f'<path d="{d}" fill="none" stroke="#ffffff" stroke-opacity="{a}" '
-                                f'stroke-width="{w}" stroke-linecap="round" stroke-linejoin="round"/>')
+    line = lambda d, a, w=1.6, c=GLYPH: (f'<path d="{d}" fill="none" stroke="{c}" stroke-opacity="{a}" '
+                                         f'stroke-width="{w}" stroke-linecap="round" stroke-linejoin="round"/>')
     for state in STATES:
         a = INK[state]
         for way, d in ARROWS.items():
@@ -419,19 +613,33 @@ def kv_glyphs(oy):
         rim_a = {"normal": .3, "focused": .45, "pressed": .45, "disabled": .14}[state]
         fill_a = {"normal": .07, "focused": .12, "pressed": .16, "disabled": .04}[state]
         off = (f'fill="#ffffff" fill-opacity="{fill_a}" stroke="#ffffff" stroke-opacity="{rim_a}"')
+        if DAY:
+            # white box with a dark rim, darker on hover
+            rim_a = {"normal": .32, "focused": .48, "pressed": .48, "disabled": .14}[state]
+            fill_a = .5 if state == "disabled" else 1
+            off = (f'fill="#ffffff" fill-opacity="{fill_a}" stroke="#000000" stroke-opacity="{rim_a}"')
         on_a = .35 if state == "disabled" else 1
         on = f'fill="{css(ACC)}" fill-opacity="{on_a}"'
         mark = .4 if state == "disabled" else 1
+        if DAY:
+            mark = .85 if state == "disabled" else 1
         cell(f"checkbox-{state}", 16, f'<rect x=".5" y=".5" width="15" height="15" rx="4.5" {off}/>')
         cell(f"checkbox-checked-{state}", 16, f'<rect width="16" height="16" rx="5" {on}/>'
-             + line("M4,8.5 L7,11 L12,5", mark, 1.8))
+             + line("M4,8.5 L7,11 L12,5", mark, 1.8, "#ffffff"))
         cell(f"checkbox-tristate-{state}", 16, f'<rect width="16" height="16" rx="5" {on}/>'
-             + line("M4.5,8 H11.5", mark, 1.8))
+             + line("M4.5,8 H11.5", mark, 1.8, "#ffffff"))
         cell(f"radio-{state}", 16, f'<circle cx="8" cy="8" r="7.5" {off}/>')
         cell(f"radio-checked-{state}", 16, f'<circle cx="8" cy="8" r="8" {on}/>'
              f'<circle cx="8" cy="8" r="3" fill="#ffffff" fill-opacity="{mark}"/>')
         knob = {"normal": "#ffffff", "focused": "#ffffff", "pressed": "#dcdce0", "disabled": "#737376"}[state]
-        cell(f"slidercursor-{state}", 16, f'<circle cx="8" cy="8" r="7.5" fill="{knob}"/>')
+        if DAY:
+            # a white knob needs a rim on a light groove
+            knob = {"normal": "#ffffff", "focused": "#ffffff", "pressed": "#ececf1", "disabled": "#f4f5f8"}[state]
+            ka = {"normal": .22, "focused": .32, "pressed": .32, "disabled": .10}[state]
+            cell(f"slidercursor-{state}", 16, f'<circle cx="8" cy="8" r="7.5" fill="#000000" fill-opacity="{ka}"/>'
+                 f'<circle cx="8" cy="8" r="6.5" fill="{knob}"/>')
+        else:
+            cell(f"slidercursor-{state}", 16, f'<circle cx="8" cy="8" r="7.5" fill="{knob}"/>')
     grip = "M10,2 L2,10 M10,6 L6,10"
     for state in ("normal", "focused"):
         cell(f"resize-grip-{state}", 12, line(grip, INK[state], 1.1))
@@ -464,7 +672,8 @@ def kv_config(translucent):
     lines = [
         "[%General]",
         "author=aryan",
-        "comment=Dockyard: dark glass. Popups, menus and tooltips are glass; windows are "
+        ("comment=Dockyard Day: light glass. Popups, menus and tooltips are glass; windows are "
+         if DAY else "comment=Dockyard: dark glass. Popups, menus and tooltips are glass; windows are ")
         + ("glass too." if translucent else "solid."),
         "x11drag=all",
         "alt_mnemonic=true",
@@ -520,7 +729,7 @@ def kv_config(translucent):
         "transient_groove=true",
         "tooltip_delay=-1",
         "tree_branch_line=false",
-        "dark_titlebar=true",
+        f"dark_titlebar={'false' if DAY else 'true'}",
         "no_inactiveness=true",
         "respect_DE=true",
         "opaque=QMPlay2,kaffeine,kmplayer,subtitlecomposer,kdenlive,vlc,avidemux,kamoso,QtCreator,VirtualBox,dragon,digikam,virtualboxvm",
@@ -532,16 +741,16 @@ def kv_config(translucent):
         f"button.color={BUTTON}",
         f"light.color={BUTTON_ALT}",
         f"mid.color={LINE}",
-        "dark.color=#0e0e10",
-        "highlight.color=#0071e3",
+        f"dark.color={'#a9acb8' if DAY else '#0e0e10'}",
+        f"highlight.color={SELECT if DAY else '#0071e3'}",
         f"text.color={APP_INK}",
         f"window.text.color={APP_INK}",
         f"button.text.color={APP_INK}",
-        "disabled.text.color=#8e8e93",
-        "tooltip.base.color=#16161a",
+        f"disabled.text.color={'#9a9ca5' if DAY else '#8e8e93'}",
+        f"tooltip.base.color={GLASS if DAY else '#16161a'}",
         f"tooltip.text.color={APP_INK}",
-        "link.color=#64d2ff",
-        "link.visited.color=#bf5af2",
+        f"link.color={FG_DAY['link'] if DAY else '#64d2ff'}",
+        f"link.visited.color={FG_DAY['visited'] if DAY else '#bf5af2'}",
         "highlight.text.color=#ffffff",
         "progress.indicator.text.color=#ffffff",
         "",
@@ -576,14 +785,15 @@ def kv_config(translucent):
         ]
         if element != "focus":
             lines += ["interior=true", f"interior.element={element}"]
-        lines += extra + TEXT + [""]
+        lines += extra + TEXT_FOR.get(section, TEXT) + [""]
     for section, keys in KV_PLAIN:
         lines += [f"[{section}]"] + keys + TEXT + [""]
     return "\n".join(lines)
 
 
 def color_scheme():
-    head = ("[General]\nName=Dockyard\nColorScheme=Dockyard\n\n"
+    title = "Dockyard Day" if DAY else "Dockyard"
+    head = (f"[General]\nName={title}\nColorScheme={SET}\n\n"
             "[KDE]\ncontrast=4\n\n"
             f"[WM]\nactiveBackground={rgb(HEADER)}\nactiveBlend={rgb(HEADER)}\nactiveForeground={rgb(APP_INK)}\n"
             f"inactiveBackground={rgb(HEADER_DIM)}\ninactiveBlend={rgb(HEADER_DIM)}\ninactiveForeground={rgb(APP_INK_2)}\n\n")
@@ -637,7 +847,7 @@ def shadow_image(box, oy, peak, sigma):
     for py in range(h * 2):
         for px in range(w * 2):
             a = shadow_alpha(x0 + (px + .5) / 2, y0 + (py + .5) / 2, peak, sigma)
-            raw += bytes((0, 0, 0, round(a * 255)))
+            raw += bytes((*SHADOW_RGB, round(a * 255)))
     data = base64.b64encode(png(w * 2, h * 2, bytes(raw))).decode()
     return (f'<image x="{x0}" y="{y0 + oy}" width="{w}" height="{h}" '
             f'xlink:href="data:image/png;base64,{data}"/>')
@@ -654,6 +864,10 @@ def deco_set(prefix, oy, head, rim, peak, sigma):
     fh = f'fill="{head}"'
     fr = f'fill="#ffffff" fill-opacity="{rim}"'
     fl = 'fill="#ffffff" fill-opacity="0.08"'
+    if DAY:
+        # light titlebar: dark hairline rim and a dark separator under the title
+        fr = f'fill="#000000" fill-opacity="{rim}"'
+        fl = 'fill="#000000" fill-opacity="0.08"'
     edge = f'fill="{RIM_SOLID}"'
     boxes = {
         "topleft": (0, 0, SIDE_W, TOP_H), "top": (SIDE_W, 0, 8, TOP_H),
@@ -687,10 +901,16 @@ def deco_set(prefix, oy, head, rim, peak, sigma):
 def aurorae_svg():
     """Active and inactive frames, plus the plain bars a maximized window uses."""
     step = DECO_H + 4
-    body = deco_set("decoration", 0, HEADER, .14, .38, 15)
-    body += deco_set("decoration-inactive", step, HEADER_DIM, .08, .22, 11)
+    if DAY:
+        # A light window needs a softer, wider shadow than a dark one to lift off the desktop.
+        body = deco_set("decoration", 0, HEADER, .12, .26, 16)
+        body += deco_set("decoration-inactive", step, HEADER_DIM, .08, .15, 12)
+    else:
+        body = deco_set("decoration", 0, HEADER, .14, .38, 15)
+        body += deco_set("decoration-inactive", step, HEADER_DIM, .08, .22, 11)
+    sep = "#000000" if DAY else "#ffffff"
     bar = lambda pid, y, f: (f'<g id="{pid}"><rect x="0" y="{y}" width="{DECO_W}" height="{TITLE}" fill="{f}"/>'
-                             f'<rect x="0" y="{y + TITLE - 1}" width="{DECO_W}" height="1" fill="#ffffff" fill-opacity="0.08"/></g>')
+                             f'<rect x="0" y="{y + TITLE - 1}" width="{DECO_W}" height="1" fill="{sep}" fill-opacity="0.08"/></g>')
     body += bar("decoration-maximized-center", 2 * step, HEADER)
     body += bar("decoration-maximized-inactive-center", 2 * step + TITLE + 4, HEADER_DIM)
     body += '<rect id="decoration-hint-stretch-borders" width="1" height="1" fill="none"/>'
@@ -720,6 +940,9 @@ def aurorae_button(glyph):
     close = glyph == "close"
     hover = f'fill="{css(NEG)}"' if close else 'fill="#ffffff" fill-opacity="0.10"'
     press = 'fill="#d9332a"' if close else 'fill="#ffffff" fill-opacity="0.16"'
+    if DAY:
+        hover = f'fill="{css(NEG)}"' if close else 'fill="#000000" fill-opacity="0.07"'
+        press = 'fill="#b81d26"' if close else 'fill="#000000" fill-opacity="0.12"'
     states = {
         "active": (None, .7), "inactive": (None, .35),
         "hover": (hover, 1), "hover-inactive": (hover, .9),
@@ -739,7 +962,11 @@ def aurorae_button(glyph):
             back = f'<rect width="34" height="34" {bg}/>'
         else:
             back = f'<rect x="2" y="5" width="30" height="24" rx="6" {bg}/>'
-        icon = (f'<path d="{d}" fill="none" stroke="#ffffff" stroke-opacity="{a}" stroke-width="1.2" '
+        # On the light titlebar the glyph is ink, except over the red close hover.
+        ink = "#ffffff" if not DAY or (close and bg) else GLYPH
+        if DAY and not (close and bg):
+            a = min(1, a + .15)   # dark glyphs on light read weaker than white on dark
+        icon = (f'<path d="{d}" fill="none" stroke="{ink}" stroke-opacity="{a}" stroke-width="1.2" '
                 'stroke-linecap="round" stroke-linejoin="round"/>')
         groups += f'<g id="{prefix}-center">{box}{back}<g transform="translate(0,4)">{icon}</g></g>'
     return f'<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">{groups}</svg>'
@@ -793,18 +1020,18 @@ TitleEdgeRightMaximized=0
 
 
 def look_and_feel_defaults():
-    return """[kdeglobals][General]
-ColorScheme=Dockyard
+    return f"""[kdeglobals][General]
+ColorScheme={SET}
 
 [kdeglobals][KDE]
 widgetStyle=kvantum
 
 [kwinrc][org.kde.kdecoration2]
 library=org.kde.kwin.aurorae
-theme=__aurorae__svg__Dockyard
+theme=__aurorae__svg__{SET}
 
 [plasmarc][Theme]
-name=glass
+name={NAME}
 """
 
 
@@ -845,52 +1072,64 @@ Rectangle {
     }
 }
 """
+if DAY:
+    SPLASH = (SPLASH.replace('"#16161a"', f'"{WINDOW}"').replace('"#ffffff"', f'"{APP_INK}"')
+              .replace("Qt.rgba(1, 1, 1, 0.15)", "Qt.rgba(0, 0, 0, 0.10)")
+              .replace('"#0A84FF"', f'"{ACCENT_DAY}"'))
+
+# Names and words that differ between the sets.
+if DAY:
+    LNF = "dev.aryan.dockyard.day"
+    WORDS = dict(tone="light", Tone="Light", name="Dockyard Day", plasma="glass-day")
+else:
+    LNF = "dev.aryan.dockyard"
+    WORDS = dict(tone="dark", Tone="Dark", name="Dockyard", plasma="glass")
 
 
-if NAME == "glass":
-    put("color-schemes/Dockyard.colors", color_scheme())
+if NAME in ("glass", "glass-day"):
+    put(f"color-schemes/{SET}.colors", color_scheme())
 
     svg = kv_svg()
-    for folder, translucent in (("Dockyard", False), ("DockyardGlass", True)):
+    for folder, translucent in ((SET, False), (SET + "Glass", True)):
         put(f"kvantum/{folder}/{folder}.kvconfig", kv_config(translucent))
         put(f"kvantum/{folder}/{folder}.svg", svg)
 
-    put("aurorae/Dockyard/decoration.svg", aurorae_svg())
-    put("aurorae/Dockyard/Dockyardrc", aurorae_rc())
-    put("aurorae/Dockyard/metadata.json", json.dumps({
+    put(f"aurorae/{SET}/decoration.svg", aurorae_svg())
+    put(f"aurorae/{SET}/{SET}rc", aurorae_rc())
+    put(f"aurorae/{SET}/metadata.json", json.dumps({
         "KPlugin": {
             "Authors": [{"Email": "", "Name": "aryan"}],
             "Category": "",
-            "Description": "Dockyard: dark glass titlebar with monochrome buttons.",
+            "Description": f"{WORDS['name']}: {WORDS['tone']} glass titlebar with monochrome buttons.",
             "EnabledByDefault": True,
-            "Id": "Dockyard",
+            "Id": SET,
             "License": "GPL-2.0+",
-            "Name": "Dockyard",
+            "Name": WORDS["name"],
             "Version": "1.1",
         },
     }, indent=4) + "\n")
-    put("aurorae/Dockyard/metadata.desktop", """[Desktop Entry]
-Name=Dockyard
-Comment=Dark glass titlebar with monochrome buttons.
+    put(f"aurorae/{SET}/metadata.desktop", f"""[Desktop Entry]
+Name={WORDS['name']}
+Comment={WORDS['Tone']} glass titlebar with monochrome buttons.
 X-KDE-PluginInfo-Author=aryan
-X-KDE-PluginInfo-Name=Dockyard
+X-KDE-PluginInfo-Name={SET}
 X-KDE-PluginInfo-Version=1.1
 X-KDE-PluginInfo-License=GPL-2.0+
 X-KDE-PluginInfo-EnabledByDefault=true
 """)
     for name in GLYPHS:
-        put(f"aurorae/Dockyard/{name}.svg", aurorae_button(name))
+        put(f"aurorae/{SET}/{name}.svg", aurorae_button(name))
 
-    put("look-and-feel/dev.aryan.dockyard/metadata.json", json.dumps({
+    put(f"look-and-feel/{LNF}/metadata.json", json.dumps({
         "KPackageStructure": "Plasma/LookAndFeel",
         "KPlugin": {
             "Authors": [{"Name": "aryan"}],
-            "Description": "Dockyard dark glass: color scheme, Kvantum, Aurorae and the glass Plasma theme.",
-            "Id": "dev.aryan.dockyard",
+            "Description": f"{WORDS['name']} {WORDS['tone']} glass: color scheme, Kvantum, Aurorae and the {WORDS['plasma']} Plasma theme.",
+            "Id": LNF,
             "License": "GPL-2.0+",
-            "Name": "Dockyard",
+            "Name": WORDS["name"],
             "Version": "1.1",
         },
     }, indent=4) + "\n")
-    put("look-and-feel/dev.aryan.dockyard/contents/defaults", look_and_feel_defaults())
-    put("look-and-feel/dev.aryan.dockyard/contents/splash/Splash.qml", SPLASH)
+    put(f"look-and-feel/{LNF}/contents/defaults", look_and_feel_defaults())
+    put(f"look-and-feel/{LNF}/contents/splash/Splash.qml", SPLASH)

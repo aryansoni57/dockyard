@@ -152,6 +152,13 @@ Item {
     function close() {
         panel.closeRequested();
     }
+    // Text typed in the dashboard: the popup switches to the launcher and hands it over.
+    function takePendingQuery() {
+        const q = panel.applet && panel.applet.launcherInitialQuery ? String(panel.applet.launcherInitialQuery) : "";
+        if (panel.applet && panel.applet.launcherInitialQuery !== undefined)
+            panel.applet.launcherInitialQuery = "";
+        return q;
+    }
 
     Plasma5Support.DataSource {
         id: exec
@@ -164,7 +171,13 @@ Item {
             panel.userName = (lines[1] || "").trim();
         }
     }
-    Component.onCompleted: exec.connectSource("getent passwd \"$USER\" | cut -d: -f5 | cut -d, -f1; echo \"$USER\"")
+    Component.onCompleted: {
+        exec.connectSource("getent passwd \"$USER\" | cut -d: -f5 | cut -d, -f1; echo \"$USER\"");
+        timesRunner.run("sh '" + Qt.resolvedUrl("../../scripts/recent-times.sh").toString().replace("file://", "") + "'");
+        search.text = takePendingQuery();
+        search.forceActiveFocus();
+        focusLater.restart();
+    }
 
     Kicker.RootModel {
         id: cats
@@ -188,6 +201,39 @@ Item {
         id: recent
         shownItems: Kicker.RecentUsageModel.OnlyDocs
     }
+
+    // When each recent file was last used, from the activity history: {path: epoch seconds}.
+    property var recentTimes: ({})
+    ShellRunner {
+        id: timesRunner
+        onFinished: (cmd, out) => {
+            const map = {};
+            for (const line of out.split("\n")) {
+                const i = line.indexOf("\t");
+                if (i > 0)
+                    map[line.slice(i + 1)] = parseInt(line.slice(0, i), 10);
+            }
+            panel.recentTimes = map;
+        }
+    }
+
+    // "5 min ago", "2h ago": how long ago a file was used, "" when unknown.
+    function agoText(epoch) {
+        if (!epoch)
+            return "";
+        const secs = Math.max(0, Date.now() / 1000 - epoch);
+        if (secs < 60)
+            return i18n("just now");
+        if (secs < 3600)
+            return i18n("%1 min ago", Math.floor(secs / 60));
+        if (secs < 86400)
+            return i18n("%1h ago", Math.floor(secs / 3600));
+        if (secs < 7 * 86400)
+            return i18n("%1d ago", Math.floor(secs / 86400));
+        return Qt.formatDate(new Date(epoch * 1000), "d MMM");
+    }
+    // The player the dock left paused, to resume from the Continue list.
+    readonly property var pausedPlayer: applet && applet.mediaPaused ? applet.mediaPlayer : null
     Sessions.SessionManagement {
         id: sm
     }
@@ -292,7 +338,7 @@ Item {
             }
         }
 
-        onVisibleChanged: if (visible) { search.text = ""; panel.view = "home"; search.forceActiveFocus(); focusLater.restart(); }
+        onVisibleChanged: if (visible) { search.text = takePendingQuery(); panel.view = "home"; search.forceActiveFocus(); focusLater.restart(); }
 
         // The popup window is not active yet when the panel first shows, so focus the
         // search again once it is (and once the show animation has settled).
@@ -736,7 +782,24 @@ Item {
                                 }
                             }
 
-                            Heading { text: i18n("Recent"); visible: recent.count > 0 }
+                            Heading { text: i18n("Continue"); visible: recent.count > 0 || panel.pausedPlayer !== null }
+                            // A paused track comes first: one tap plays it again.
+                            AppButton {
+                                visible: panel.pausedPlayer !== null
+                                listMode: true
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: visible ? implicitHeight : 0
+                                iconSource: panel.pausedPlayer && panel.pausedPlayer.artUrl ? panel.pausedPlayer.artUrl : "media-playback-start"
+                                label: panel.pausedPlayer ? panel.pausedPlayer.track : ""
+                                note: panel.pausedPlayer && panel.pausedPlayer.artist !== ""
+                                    ? i18n("%1 · paused", panel.pausedPlayer.artist) : i18n("Paused")
+                                onLaunched: {
+                                    if (!panel.canLaunch() || !panel.pausedPlayer)
+                                        return;
+                                    panel.pausedPlayer.PlayPause();
+                                    panel.closeRequested();
+                                }
+                            }
                             Repeater {
                                 model: recent
 
@@ -749,7 +812,9 @@ Item {
                                     Layout.preferredHeight: visible ? implicitHeight : 0
                                     iconSource: model.decoration
                                     label: model.display
-                                    note: model.description || ""
+                                    // How long ago it was used, else the model's own description.
+                                    note: panel.agoText(panel.recentTimes[decodeURIComponent(String(model.url || "").replace(/^file:\/\//, ""))])
+                                        || model.description || ""
                                     onLaunched: { if (!panel.canLaunch()) return; recent.trigger(index, "", null); panel.closeRequested(); }
                                 }
                             }

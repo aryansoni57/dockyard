@@ -38,9 +38,13 @@ KCM.SimpleKCM {
     property alias cfg_showRecycleBin: showRecycleBin.checked
     property alias cfg_showScreenshot: showScreenshot.checked
     property alias cfg_showTray: showTray.checked
+    property alias cfg_showNotifications: showNotifications.checked
+    property alias cfg_showJobs: showJobs.checked
+    property alias cfg_showClipboard: showClipboard.checked
     property alias cfg_showCalendar: showCalendar.checked
     property bool cfg_tilePopups
     property bool cfg_barOpaque
+    property string cfg_dockLayout
     property string cfg_accentColor
     property bool cfg_syncSystemAccent
 
@@ -48,7 +52,7 @@ KCM.SimpleKCM {
     readonly property var switches: [showStart, showClock, showStats, showMedia, showTemperature, showNetwork,
         showStorage, showScript, showBattery, showWeather, showPomodoro, showTimer, showStopwatch, showWorldClocks,
         showTodos, showApps, showToggles, showMonthProgress, showDayProgress, showYearProgress,
-        showDate, showDayNumber, showClockStyle, showNotes, showVolume, showRecycleBin, showScreenshot, showTray, showCalendar]
+        showDate, showDayNumber, showClockStyle, showNotes, showVolume, showRecycleBin, showScreenshot, showTray, showNotifications, showJobs, showClipboard, showCalendar]
     readonly property int enabledCount: switches.filter(c => c.checked).length
     readonly property int matchCount: switches.filter(c => c.visible).length
     readonly property string query: search.text.trim().toLowerCase()
@@ -242,7 +246,7 @@ KCM.SimpleKCM {
             columns: 2
             columnSpacing: Kirigami.Units.smallSpacing
             rowSpacing: 0
-            WidgetCheck { id: showStats; iconName: "cpu-symbolic"; accent: page.systemAccent; description: i18n("Live CPU and memory rings"); text: i18n("CPU and RAM"); keywords: "memory usage"; optionsPage: i18n("System") }
+            WidgetCheck { id: showStats; iconName: "cpu-symbolic"; accent: page.systemAccent; description: i18n("CPU, RAM and disk rings"); text: i18n("System stats"); keywords: "cpu ram memory disk usage stats"; optionsPage: i18n("System") }
             WidgetCheck { id: showTemperature; iconName: "temperature-normal-symbolic"; accent: page.systemAccent; description: i18n("CPU heat and load"); text: i18n("CPU temperature"); optionsPage: i18n("System") }
             WidgetCheck { id: showNetwork; iconName: "network-wireless-symbolic"; accent: page.systemAccent; description: i18n("Download and upload speed"); text: i18n("Network speed"); keywords: "download upload"; optionsPage: i18n("System") }
             WidgetCheck { id: showStorage; iconName: "drive-harddisk-symbolic"; accent: page.systemAccent; description: i18n("Used space on your disk"); text: i18n("Disk usage"); keywords: "storage" }
@@ -250,6 +254,9 @@ KCM.SimpleKCM {
             WidgetCheck { id: showBattery; iconName: "battery-good-symbolic"; accent: page.systemAccent; description: i18n("Charge level and charging"); text: i18n("Battery"); keywords: "power"; optionsPage: i18n("System") }
             WidgetCheck { id: showVolume; iconName: "audio-volume-high-symbolic"; accent: page.systemAccent; description: i18n("Output level slider"); text: i18n("Volume slider"); keywords: "sound audio" }
             WidgetCheck { id: showToggles; iconName: "network-wireless-connected-symbolic"; accent: page.systemAccent; description: i18n("Wi-Fi, Bluetooth, Do Not Disturb"); text: i18n("Quick toggles"); keywords: "wifi bluetooth dnd night"; optionsPage: i18n("System") }
+            WidgetCheck { id: showNotifications; iconName: "preferences-desktop-notification-bell-symbolic"; accent: page.systemAccent; description: i18n("Unread count and history"); text: i18n("Notifications"); keywords: "alerts dnd bell" }
+            WidgetCheck { id: showClipboard; iconName: "edit-paste-symbolic"; accent: page.systemAccent; description: i18n("Search and reuse what you copied"); text: i18n("Clipboard history"); keywords: "copy paste klipper" }
+            WidgetCheck { id: showJobs; iconName: "folder-download-symbolic"; accent: page.systemAccent; description: i18n("Progress of file copies, while they run"); text: i18n("Job progress"); keywords: "copy download transfer progress" }
             WidgetCheck { id: showTray; iconName: "preferences-desktop-notification-symbolic"; accent: page.systemAccent; description: i18n("Status icons from apps"); text: i18n("System tray") }
         }
 
@@ -279,6 +286,20 @@ KCM.SimpleKCM {
                 QQC2.ToolTip.visible: hovered
                 QQC2.ToolTip.text: i18n("Changes the dock bar when it is a desktop widget, and switches the Glass Plasma theme to Glass (opaque) if that is your theme. Run install-all.sh once to install both.")
                 QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay * 2
+            }
+            FormRow {
+                label: i18n("Layout")
+                hint: i18n("Islands split the dock into floating pills: tiles before the apps, the apps, and tiles after. Switches the Glass Plasma theme to a variant with no panel background, if Glass is your theme.")
+                QQC2.RadioButton {
+                    text: i18n("Bar")
+                    checked: page.cfg_dockLayout !== "islands"
+                    onToggled: if (checked) page.cfg_dockLayout = "bar"
+                }
+                QQC2.RadioButton {
+                    text: i18n("Islands")
+                    checked: page.cfg_dockLayout === "islands"
+                    onToggled: if (checked) page.cfg_dockLayout = "islands"
+                }
             }
             FormRow {
                 label: i18n("Accent color")

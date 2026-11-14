@@ -13,6 +13,8 @@ import "popups" as Popups
 import "components"
 import "launcher" as Launcher
 import "components/progress.js" as Progress
+import "components/motion.js" as Motion
+import "components/dockregistry.js" as DockRegistry
 
 // Data sources live here, once, and are shared by every module.
 // Modules stay dumb views; cross-module automations hook in at this level.
@@ -52,6 +54,9 @@ PlasmoidItem {
     readonly property var mediaPlayer: pickPlayer()
     readonly property bool mediaPlaying: mediaPlayer !== null
         && mediaPlayer.playbackStatus === Mpris.PlaybackStatus.Playing
+    // A track left paused, which the launcher offers to resume.
+    readonly property bool mediaPaused: mediaPlayer !== null
+        && mediaPlayer.playbackStatus === Mpris.PlaybackStatus.Paused && mediaPlayer.track !== ""
     // On the desktop there is no panel, so the widget draws its own dock bar.
     readonly property bool onDesktop: Plasmoid.formFactor === PlasmaCore.Types.Planar
 
@@ -72,6 +77,15 @@ PlasmoidItem {
         }
     }
 
+    // Owns the notification server: without the stock Notifications applet nobody
+    // else in plasmashell does, and apps' notifications go nowhere.
+    readonly property alias notificationService: notificationService
+    NotificationService {
+        id: notificationService
+        popupsEnabled: root.cfg.notificationPopups && root.dockOwner
+        accent: root.accent
+    }
+
     Sensors.Sensor {
         id: cpuSensor
         sensorId: root.cfg.showStats || root.cfg.showTemperature ? "cpu/all/usage" : ""
@@ -82,6 +96,25 @@ PlasmoidItem {
         id: memSensor
         sensorId: root.cfg.showStats || root.cfg.showTemperature ? "memory/physical/usedPercent" : ""
         updateRateLimit: root.cfg.statsInterval
+    }
+
+    // What the Stats popup reads: current values and the last two minutes of CPU and memory.
+    readonly property real statsCpu: cpuSensor.value ?? 0
+    readonly property real statsMem: memSensor.value ?? 0
+    readonly property real diskUsed: diskUsedSensor.value ?? 0
+    readonly property real diskTotal: diskTotalSensor.value ?? 0
+    readonly property int statsHistoryLength: 60
+    property var cpuHistory: []
+    property var memHistory: []
+    Timer {
+        interval: 2000
+        repeat: true
+        running: root.cfg.showStats
+        onTriggered: {
+            const n = root.statsHistoryLength;
+            root.cpuHistory = root.cpuHistory.concat([root.statsCpu]).slice(-n);
+            root.memHistory = root.memHistory.concat([root.statsMem]).slice(-n);
+        }
     }
 
     readonly property string batteryPath: "power/" + (cfg.batteryDevice || "SerialNumber")
@@ -103,12 +136,12 @@ PlasmoidItem {
     }
     Sensors.Sensor {
         id: diskUsedSensor
-        sensorId: root.cfg.showStorage ? "disk/all/used" : ""
+        sensorId: root.cfg.showStorage || root.cfg.showStats || root.startMode === "dashboard" ? "disk/all/used" : ""
         updateRateLimit: 30000
     }
     Sensors.Sensor {
         id: diskTotalSensor
-        sensorId: root.cfg.showStorage ? "disk/all/total" : ""
+        sensorId: root.cfg.showStorage || root.cfg.showStats || root.startMode === "dashboard" ? "disk/all/total" : ""
         updateRateLimit: 30000
     }
     Sensors.Sensor {
@@ -124,6 +157,8 @@ PlasmoidItem {
 
     // A battery sensor with no value means no battery (desktop PC): hide the tile.
     readonly property bool hasBattery: cfg.showBattery && batteryPercentSensor.value !== undefined
+    readonly property real batteryPercent: batteryPercentSensor.value ?? 0
+    readonly property bool batteryCharging: (batteryRateSensor.value ?? 0) > 0
 
     // Todos live in the widget config; popup and tile both edit it through here.
     function todoItems() {
@@ -284,9 +319,10 @@ PlasmoidItem {
     }
 
     // Shared by the clock and weather tiles. Polls only while one of them is shown.
+    readonly property alias weatherSource: sharedWeather
     WeatherSource {
         id: sharedWeather
-        active: root.cfg.showClock || root.cfg.showWeather
+        active: root.cfg.showClock || root.cfg.showWeather || root.cfg.dayNightLook || root.startMode === "dashboard"
                 || (root.cfg.showClockStyle && (root.cfg.clockStyle === "week" || root.cfg.clockStyle === "today"))
         latitude: Number(root.cfg.latitude) || 0
         longitude: Number(root.cfg.longitude) || 0
@@ -296,8 +332,11 @@ PlasmoidItem {
     // Klipper (clipboard history, Meta+V). Loaded from its own file so a missing
     // private module only fails this Loader, not the dock.
     Loader {
+        id: clipboardLoader
         source: "components/ClipboardService.qml"
     }
+    // Klipper's history model, or null when its module is missing.
+    readonly property var clipboardHistory: clipboardLoader.item ? clipboardLoader.item.history : null
 
     // Wi-Fi, Bluetooth, Do Not Disturb, Night Light, Mute. Created only when shown,
     // so the Brightness plugin import is not loaded otherwise.
@@ -329,9 +368,199 @@ PlasmoidItem {
         }
     }
 
+    // Island layout: the bar splits into floating glass pills. Tiles before the apps are
+    // one pill, the apps another, the tiles after them a third. A Plasma panel draws its own
+    // background, so switching on islands also applies the glass-islands Plasma theme (a
+    // glass copy with no panel background), when a Dockyard theme is active.
+    readonly property bool islands: cfg.dockLayout === "islands"
+    readonly property real islandGap: Kirigami.Units.gridUnit * 1.1
+    readonly property real islandPad: Kirigami.Units.smallSpacing * 1.5
+    property var islandRects: []
+    // The tile row, set by the row itself (ids inside the dock's component are not visible here).
+    property Item tileRow: null
+    function updateIslands() {
+        if (!islands) {
+            islandRects = [];
+            return;
+        }
+        // row.children is a QML list, not an array: copy it before filtering.
+        const items = [];
+        if (!tileRow)
+            return;
+        for (let i = 0; i < tileRow.children.length; ++i) {
+            const c = tileRow.children[i];
+            if (c.visible && c.objectName !== "" && c.width > 0)
+                items.push(c);
+        }
+        const appsItem = items.find(c => c.objectName === "apps");
+        const groups = appsItem
+            ? [items.filter(c => c !== appsItem && c.x < appsItem.x), [appsItem], items.filter(c => c !== appsItem && c.x > appsItem.x)]
+            : [items];
+        islandRects = groups.filter(g => g.length > 0).map(g => {
+            const x0 = Math.min(...g.map(c => c.x));
+            const x1 = Math.max(...g.map(c => c.x + c.width));
+            return { x: x0 - islandPad, w: x1 - x0 + islandPad * 2 };
+        });
+    }
+    Timer {
+        id: islandTimer
+        interval: 60
+        onTriggered: root.updateIslands()
+    }
+    onIslandsChanged: islandTimer.restart()
+    onOrderChanged: islandTimer.restart()
+    Connections {
+        target: root.cfg
+        function onDockLayoutChanged() {
+            shell.run("sh '" + Qt.resolvedUrl("../scripts/layout-theme.sh").toString().replace("file://", "") + "' "
+                      + (root.cfg.dockLayout === "islands" ? "islands" : "bar " + (root.cfg.barOpaque ? "opaque" : "frosted")));
+        }
+    }
+
     // Run a command detached, so a long-lived app never blocks the runner.
     function launch(cmd) {
         shell.run("(" + cmd + ") >/dev/null 2>&1 &");
+    }
+
+    // App Setups: named sets of apps that open and tile together (settings: App Setups page).
+    readonly property var appSetups: {
+        try {
+            const l = JSON.parse(cfg.appSetups || "[]");
+            return Array.isArray(l) ? l.filter(x => x && Array.isArray(x.apps)) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+    property var runningSetup: null
+    // Loads the tiling script, which tiles each window once and then leaves it alone.
+    function tileSetup() {
+        if (!runningSetup)
+            return;
+        const cfgJson = JSON.stringify({ apps: runningSetup.apps, layout: runningSetup.layout || "side", gap: 8,
+            windows: runningSetup.windows || [],
+            // The dock's own screen, so a setup lands where it was started with two monitors.
+            screen: Plasmoid.containment ? { x: Plasmoid.containment.screenGeometry.x, y: Plasmoid.containment.screenGeometry.y,
+                width: Plasmoid.containment.screenGeometry.width, height: Plasmoid.containment.screenGeometry.height } : null });
+        launch("sh '" + Qt.resolvedUrl("../scripts/setup-tile.sh").toString().replace("file://", "") + "' '" + cfgJson.replace(/'/g, "'\\''") + "'");
+    }
+    // The tiling script stays loaded for a while to catch apps still starting, then goes.
+    Timer {
+        id: setupTimer
+        interval: 20000
+        onTriggered: root.launch("sh '" + Qt.resolvedUrl("../scripts/setup-tile.sh").toString().replace("file://", "") + "' --stop")
+    }
+    // Opens or raises each app and tiles each window once, as it appears (for about 20 s).
+    function runSetup(setup) {
+        if (!setup || setup.apps.length === 0)
+            return;
+        runningSetup = setup;
+        for (const id of setup.apps)
+            activateApp(id);
+        tileSetup();
+        setupTimer.restart();
+    }
+    // Saves how the windows are laid out now, per monitor, as a new setup. A KWin script reads
+    // the windows and hands them back through the pendingSetup setting (see below).
+    function saveCurrentSetup() {
+        launch("sh '" + Qt.resolvedUrl("../scripts/setup-save.sh").toString().replace("file://", "") + "' " + Plasmoid.id);
+    }
+    // The KWin script's answer: {outputs, windows}. Becomes a "saved" setup, which puts each
+    // window back on its own monitor at the same place.
+    function finishSavedSetup(json) {
+        let data = null;
+        try {
+            data = JSON.parse(json);
+        } catch (e) {
+            return;
+        }
+        const wins = (data.windows || []).filter(w => w && w.app);
+        if (wins.length === 0) {
+            launch("notify-send -a Dockyard -i dialog-information '" + i18n("Nothing to save") + "' '" + i18n("Open the apps you want in the setup first.") + "'");
+            return;
+        }
+        const apps = [];
+        for (const w of wins) {
+            if (apps.indexOf(w.app) < 0)
+                apps.push(w.app);
+        }
+        const list = appSetups.slice();
+        list.push({ name: i18n("Setup %1", list.length + 1), layout: "saved", apps: apps, outputs: data.outputs || [], windows: wins });
+        Plasmoid.configuration.appSetups = JSON.stringify(list);
+    }
+    // Dashboard right-click: rename or delete the setup at this position.
+    function renameSetup(index, name) {
+        const n = String(name).trim();
+        if (n === "" || index < 0 || index >= appSetups.length)
+            return;
+        const list = appSetups.slice();
+        list[index] = Object.assign({}, list[index], { name: n });
+        Plasmoid.configuration.appSetups = JSON.stringify(list);
+    }
+    function removeSetup(index) {
+        if (index < 0 || index >= appSetups.length)
+            return;
+        const list = appSetups.slice();
+        list.splice(index, 1);
+        Plasmoid.configuration.appSetups = JSON.stringify(list);
+    }
+    property string pendingJson: ""
+    Timer {
+        id: pendingTimer
+        interval: 600
+        onTriggered: {
+            const json = root.pendingJson;
+            root.pendingJson = "";
+            Plasmoid.configuration.pendingSetup = "";
+            if (json !== "")
+                root.finishSavedSetup(json);
+        }
+    }
+    Connections {
+        target: Plasmoid.configuration
+        function onPendingSetupChanged() {
+            const json = root.cfg.pendingSetup;
+            if (json === "")
+                return;
+            // Taken at once, but the setup is written a moment later: the KWin script's own write
+            // to the config is still being saved, and a write made in the same breath was lost.
+            root.pendingJson = json;
+            pendingTimer.restart();
+        }
+    }
+
+    // Opens where a job put its files, as the file manager would show them. Without a
+    // destination it raises the job's app instead.
+    function openJob(url, entry) {
+        const u = String(url || "");
+        if (u !== "") {
+            launch("xdg-open '" + u.replace(/'/g, "%27") + "'");
+            return;
+        }
+        activateApp(entry);
+    }
+
+    // Raises the window of the app with this desktop entry (with or without ".desktop"),
+    // or starts the app when it has none. False when there is nothing to open.
+    function activateApp(entry) {
+        const id = String(entry || "").replace(/\.desktop$/, "");
+        if (id === "")
+            return false;
+        const tasks = tasksLoader.item;
+        if (tasks) {
+            const R = TaskManager.AbstractTasksModel;
+            for (let i = 0; i < tasks.count; ++i) {
+                const idx = tasks.makeModelIndex(i);
+                if (tasks.data(idx, R.IsLauncher))
+                    continue;
+                if (String(tasks.data(idx, R.AppId) || "").replace(/\.desktop$/, "") !== id)
+                    continue;
+                const grouped = tasks.data(idx, R.IsGroupParent) && tasks.rowCount(idx) > 0;
+                tasks.requestActivate(grouped ? tasks.makeModelIndex(i, 0) : idx);
+                return true;
+            }
+        }
+        launch("gtk-launch '" + id.replace(/'/g, "") + "'");
+        return true;
     }
 
     // Dock context menu (demo video 0:57): Plasma adds Configure and Remove itself.
@@ -358,7 +587,7 @@ PlasmoidItem {
     // keys missing from the list keep their natural order after the listed ones.
     readonly property var tileKeys: ["start", "stats", "media", "apps", "weather", "pomodoro", "timer",
         "stopwatch", "worldclocks", "todos", "temperature", "network", "storage", "script", "quicktoggles",
-        "volume", "recyclebin", "screenshot", "notes", "monthprogress", "dayprogress",
+        "volume", "clipboard", "jobs", "notifications", "recyclebin", "screenshot", "notes", "monthprogress", "dayprogress",
         "yearprogress", "date", "daynumber", "battery", "tray", "calendar", "clockstyle", "clock"]
     property var dragOrder: null // full order while a tile is being dragged
     readonly property var order: dragOrder !== null
@@ -376,18 +605,26 @@ PlasmoidItem {
 
     // The popup shows either the info panel (most tiles) or the launcher (Start tile).
     property string popupMode: "clock"
+    // Typed in the dashboard: carried over when it switches to the launcher search.
+    property string launcherInitialQuery: ""
     // Header title for each popup view; every tile opens its own view.
     readonly property var popupTitles: ({
         clock: i18n("Clock"),
         calendar: i18n("Calendar"),
         worldclocks: i18n("World clocks"),
         progress: i18n("Progress"),
-        media: i18n("Now playing")
+        media: i18n("Now playing"),
+        notifications: i18n("Notifications"),
+        jobs: i18n("Jobs"),
+        weather: i18n("Weather")
     })
     function inMode(...modes) {
         return modes.indexOf(popupMode) >= 0;
     }
     readonly property real launcherWidth: Kirigami.Units.gridUnit * 42
+
+    // Which view the Start tile and the Meta key open: the Lumen launcher or the dashboard.
+    readonly property string startMode: cfg.startStyle === "dashboard" ? "dashboard" : "launcher"
 
     // The Meta key: plasmashell activates the applet that provides the launcher menu.
     activationTogglesExpanded: false
@@ -420,7 +657,7 @@ PlasmoidItem {
             return;
         launcherPending = false;
         launcherFallback.stop();
-        togglePopup("launcher", root.startTile);
+        togglePopup(root.startMode, root.startTile);
     }
     Timer {
         id: launcherFallback
@@ -431,7 +668,7 @@ PlasmoidItem {
     // Tile popups: the dock owns the popup window and sets dockItem.
     property Item dockItem: null
     property Item startTile: null
-    readonly property var tilePopupModes: ["launcher", "clock", "calendar", "worldclocks", "progress", "media", "notes", "todos", "gallery"]
+    readonly property var tilePopupModes: ["launcher", "dashboard", "clock", "calendar", "worldclocks", "progress", "media", "notes", "todos", "gallery", "notifications", "jobs", "weather", "stats", "clipboard"]
 
     function togglePopup(mode, tile) {
         const tileOpen = dockItem !== null && dockItem.popup !== null && dockItem.popup.visible;
@@ -442,6 +679,78 @@ PlasmoidItem {
         }
         if (tile && tile.visible && dockItem)
             dockItem.show(mode, tile);
+    }
+
+    // A newly pinned app would stay hidden in a collapsed row, so pinning expands it.
+    // Dragging only reorders (never while collapsed), so a longer list means a new pin.
+    property int knownLaunchers: -1
+    Connections {
+        target: Plasmoid.configuration
+        function onAppLaunchersChanged() {
+            const n = root.cfg.appLaunchers.split(",").filter(x => x.trim() !== "").length;
+            if (root.knownLaunchers >= 0 && n > root.knownLaunchers && root.cfg.appsCollapsed)
+                Plasmoid.configuration.appsCollapsed = false;
+            root.knownLaunchers = n;
+        }
+    }
+    Component.onCompleted: {
+        knownLaunchers = cfg.appLaunchers.split(",").filter(x => x.trim() !== "").length;
+        islandTimer.restart();
+        refreshDockOwner();
+    }
+
+    // With a dock on each monitor, only one does the once-only jobs: toasts, the day and
+    // night notice. See components/dockregistry.js. A lone dock always owns them.
+    property bool dockOwner: true
+    function isOnPrimaryScreen() {
+        const screens = Qt.application.screens;
+        const g = Plasmoid.containment ? Plasmoid.containment.screenGeometry : null;
+        if (!g || !screens || screens.length === 0)
+            return true;
+        return screens[0].virtualX === g.x && screens[0].virtualY === g.y;
+    }
+    function refreshDockOwner() {
+        DockRegistry.register(Plasmoid.id, isOnPrimaryScreen());
+        dockOwner = DockRegistry.ownerId() === Plasmoid.id;
+    }
+    Timer {
+        // Docks come and go (a monitor is plugged in, a panel is added), so look again now and then.
+        interval: 3000
+        repeat: true
+        running: true
+        onTriggered: root.refreshDockOwner()
+    }
+    Component.onDestruction: DockRegistry.unregister(Plasmoid.id)
+
+    // Day and night look: the Plasma color scheme follows sunrise and sunset. The times
+    // are the weather location's local times, compared with this machine's clock.
+    readonly property string clockHM: Qt.formatTime(now, "HH:mm")
+    readonly property var isDaytime: sharedWeather.sunrise !== "" && sharedWeather.sunset !== ""
+        ? (clockHM >= sharedWeather.sunrise && clockHM < sharedWeather.sunset) : null
+    property var lastDaytime: null
+    function applyDayNight(announce) {
+        if (!cfg.dayNightLook || isDaytime === null)
+            return;
+        const scheme = String(isDaytime ? cfg.dayScheme : cfg.nightScheme).replace(/'/g, "");
+        if (scheme === "")
+            return;
+        launch("sh '" + Qt.resolvedUrl("../scripts/day-night.sh").toString().replace("file://", "") + "' '" + scheme + "'");
+        if (announce && dockOwner) {
+            launch("notify-send -a Dockyard -i " + (isDaytime ? "weather-clear" : "weather-clear-night") + " '"
+                + (isDaytime ? i18n("Day look") : i18n("Night look")) + "' '"
+                + (isDaytime ? i18n("Sunrise %1", sharedWeather.sunrise) : i18n("Sunset %1", sharedWeather.sunset)) + "'");
+        }
+    }
+    onIsDaytimeChanged: {
+        // The first value after startup only syncs the scheme; a later change is a real sunrise or sunset.
+        applyDayNight(lastDaytime !== null);
+        lastDaytime = isDaytime;
+    }
+    Connections {
+        target: Plasmoid.configuration
+        function onDayNightLookChanged() { root.applyDayNight(false); }
+        function onDaySchemeChanged() { root.applyDayNight(false); }
+        function onNightSchemeChanged() { root.applyDayNight(false); }
     }
 
     // Starts a pinned app that is not running through the dock's own model, so its
@@ -534,8 +843,8 @@ PlasmoidItem {
         Kirigami.Theme.highlightColor: root.accent
         Component.onCompleted: root.dockItem = dock
 
-        // Bar padding around the tiles: thin inside a panel, roomier on the desktop.
-        readonly property real inset: root.onDesktop ? Kirigami.Units.smallSpacing * 1.5 : 2
+        // Bar padding around the tiles: none inside a panel (it has its own), roomier on the desktop.
+        readonly property real inset: root.onDesktop ? Kirigami.Units.smallSpacing * 1.5 : 0
 
         // Preferred is the full row; the minimum is small so a crowded dock
         // scrolls sideways instead of overflowing the panel.
@@ -554,7 +863,7 @@ PlasmoidItem {
 
             // Glass bar (docs/STYLE.md, "Glass material"). Panels draw their own.
             Rectangle {
-                visible: root.onDesktop
+                visible: root.onDesktop && !root.islands
                 anchors.fill: parent
                 radius: height * 0.25
                 color: Qt.alpha(Kirigami.Theme.backgroundColor, root.cfg.barOpaque ? 0.96 : 0.55)
@@ -602,8 +911,36 @@ PlasmoidItem {
                 contentX = Math.max(0, Math.min(contentWidth - width, contentX + d));
             }
 
+            // Island pills, behind the tiles. Positions come from updateIslands().
+            Item {
+                z: -1
+                Repeater {
+                    model: root.islandRects
+                    delegate: Rectangle {
+                        required property var modelData
+                        x: modelData.x
+                        width: modelData.w
+                        height: row.height
+                        radius: height * 0.25
+                        color: Qt.alpha(Kirigami.Theme.backgroundColor, root.cfg.barOpaque ? 0.96 : 0.55)
+                        border.width: 1
+                        border.color: Qt.alpha(Kirigami.Theme.textColor, 0.12)
+
+                        Behavior on x {
+                            NumberAnimation { duration: Motion.ms(Motion.snapMs, Kirigami.Units.longDuration); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.snap }
+                        }
+                        Behavior on width {
+                            NumberAnimation { duration: Motion.ms(Motion.snapMs, Kirigami.Units.longDuration); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.snap }
+                        }
+                    }
+                }
+            }
+
             GridLayout {
                 id: row
+                Component.onCompleted: root.tileRow = row
+                onImplicitWidthChanged: islandTimer.restart()
+                onWidthChanged: islandTimer.restart()
                 rows: 1
                 columnSpacing: Kirigami.Units.smallSpacing
                 rowSpacing: 0
@@ -618,7 +955,7 @@ PlasmoidItem {
                     Layout.fillHeight: true
                     visible: root.cfg.showStart
                     Component.onCompleted: root.startTile = startModule
-                    onClicked: src => root.togglePopup("launcher", src)
+                    onClicked: src => root.togglePopup(root.startMode, src)
                 }
                 Modules.StatsModule {
                     objectName: "stats"
@@ -626,9 +963,11 @@ PlasmoidItem {
                     Layout.column: root.colOf("stats")
                     Layout.fillHeight: true
                     visible: root.cfg.showStats
-                    cpu: cpuSensor.value ?? 0
-                    mem: memSensor.value ?? 0
-                    onClicked: root.launch("plasma-systemmonitor")
+                    cpu: root.statsCpu
+                    mem: root.statsMem
+                    disk: root.diskTotal > 0 ? root.diskUsed / root.diskTotal * 100 : 0
+                    concentric: root.cfg.statsConcentric
+                    onClicked: src => root.togglePopup("stats", src)
                 }
                 Modules.MediaModule {
                     objectName: "media"
@@ -657,8 +996,13 @@ PlasmoidItem {
                     Layout.column: root.colOf("apps")
                     Layout.fillHeight: true
                     visible: root.cfg.showApps
+                    // Room around the apps for the gap between islands.
+                    Layout.leftMargin: root.islands ? root.islandGap : 0
+                    Layout.rightMargin: root.islands ? root.islandGap : 0
                     tasks: tasksLoader.item
                     magnify: root.cfg.appMagnify
+                    collapsed: root.cfg.appsCollapsed
+                    onCollapseToggled: value => Plasmoid.configuration.appsCollapsed = value
                     peek: root.cfg.peekWindows
                     dockActions: Plasmoid.contextualActions
                     onPinChanged: (id, pinned) => {
@@ -690,12 +1034,12 @@ PlasmoidItem {
                     Layout.fillHeight: true
                     visible: root.cfg.showWeather
                     weatherSource: sharedWeather
-                    onClicked: {
+                    onClicked: src => {
                         const lat = Number(root.cfg.latitude), lon = Number(root.cfg.longitude);
                         if (lat === 0 && lon === 0)
                             Plasmoid.internalAction("configure").trigger();
                         else
-                            root.launch("xdg-open https://wttr.in/" + lat + "," + lon);
+                            root.togglePopup("weather", src);
                     }
                 }
                 Modules.PomodoroModule {
@@ -815,6 +1159,49 @@ PlasmoidItem {
                     // Taps off the slider open the audio settings; the slider keeps its own taps.
                     onClicked: root.launch("systemsettings kcm_pulseaudio")
                 }
+                Modules.ClipboardModule {
+                    objectName: "clipboard"
+                    hoverName: i18n("Clipboard")
+                    Layout.column: root.colOf("clipboard")
+                    Layout.fillHeight: true
+                    // Hidden when Klipper's module is missing, so the tile never shows empty.
+                    visible: root.cfg.showClipboard && root.clipboardHistory !== null
+                    count: root.clipboardHistory ? root.clipboardHistory.sourceCount : 0
+                    onClicked: src => root.togglePopup("clipboard", src)
+                }
+                Modules.JobsModule {
+                    objectName: "jobs"
+                    hoverName: i18n("Jobs")
+                    Layout.column: root.colOf("jobs")
+                    Layout.fillHeight: true
+                    // Takes room while a job runs, and for a few seconds after, so it can be clicked.
+                    visible: root.cfg.showJobs && notificationService.jobCount > 0
+                    count: notificationService.activeJobCount
+                    done: notificationService.jobsDone
+                    title: notificationService.jobTitle
+                    percent: notificationService.jobsPercent
+                    iconName: notificationService.jobIcon
+                    // A finished job opens its app; a running one opens the list with pause and stop.
+                    onClicked: src => {
+                        if (notificationService.jobsDone) {
+                            root.openJob(notificationService.jobDestUrl, notificationService.jobDesktopEntry);
+                            notificationService.sweepFinishedJobs();
+                        } else
+                            root.togglePopup("jobs", src);
+                    }
+                }
+                Modules.NotificationsModule {
+                    objectName: "notifications"
+                    hoverName: i18n("Notifications")
+                    Layout.column: root.colOf("notifications")
+                    Layout.fillHeight: true
+                    visible: root.cfg.showNotifications
+                    unread: notificationService.unreadCount
+                    doNotDisturb: notificationService.inhibited
+                    service: notificationService
+                    onConfigureRequested: root.launch("systemsettings kcm_notifications")
+                    onClicked: src => root.togglePopup("notifications", src)
+                }
                 Modules.RecycleBinModule {
                     objectName: "recyclebin"
                     hoverName: i18n("Recycle Bin")
@@ -919,6 +1306,7 @@ PlasmoidItem {
                     percent: batteryPercentSensor.value ?? 0
                     charging: (batteryRateSensor.value ?? 0) > 0
                     edge: Plasmoid.location
+                    showDevices: root.cfg.showDevices
                     onSettingsRequested: root.launch("systemsettings kcm_powerdevilprofilesconfig")
                 }
                 Modules.ClockStylesModule {
@@ -1105,11 +1493,18 @@ PlasmoidItem {
                     // The popup is its own window, so it does not inherit the dock's override.
                     Kirigami.Theme.highlightColor: root.accent
                     readonly property bool launcher: root.popupMode === "launcher"
+                    readonly property bool dashboard: root.popupMode === "dashboard"
                     readonly property bool notes: root.popupMode === "notes"
                     readonly property bool todos: root.popupMode === "todos"
                     readonly property bool gallery: root.popupMode === "gallery"
-                    implicitWidth: launcher ? root.launcherWidth
-                        : Kirigami.Units.gridUnit * (gallery ? 30 : notes ? 30 : todos ? 20 : 17)
+                    readonly property bool notifs: root.popupMode === "notifications"
+                    readonly property bool jobs: root.popupMode === "jobs"
+                    readonly property bool weatherView: root.popupMode === "weather"
+                    readonly property bool statsView: root.popupMode === "stats"
+                    readonly property bool clipboardView: root.popupMode === "clipboard"
+                    implicitWidth: dashboard ? Kirigami.Units.gridUnit * 1040 / 18
+                        : launcher ? root.launcherWidth
+                        : Kirigami.Units.gridUnit * (gallery ? 30 : notes ? 30 : notifs ? 22 : jobs ? 20 : weatherView ? 21 : statsView ? 18 : clipboardView ? 20 : todos ? 20 : 17)
                     implicitHeight: launcher ? Kirigami.Units.gridUnit * 24
                         : gallery ? Kirigami.Units.gridUnit * 26
                         : notes ? Kirigami.Units.gridUnit * 18
@@ -1121,10 +1516,41 @@ PlasmoidItem {
                         id: content
                         anchors.fill: parent
                         active: popupWindow.visible
+                        // Content fades in and rises a few pixels on the enter curve.
+                        opacity: 0
+                        transform: Translate { id: rise; y: 0 }
+                        onLoaded: enterAnim.restart()
+                        ParallelAnimation {
+                            id: enterAnim
+                            NumberAnimation {
+                                target: content
+                                property: "opacity"
+                                from: 0
+                                to: 1
+                                duration: Motion.ms(Motion.enterMs, Kirigami.Units.longDuration)
+                                easing.type: Easing.BezierSpline
+                                easing.bezierCurve: Motion.enter
+                            }
+                            NumberAnimation {
+                                target: rise
+                                property: "y"
+                                from: Kirigami.Units.gridUnit * 0.6
+                                to: 0
+                                duration: Motion.ms(Motion.enterMs, Kirigami.Units.longDuration)
+                                easing.type: Easing.BezierSpline
+                                easing.bezierCurve: Motion.enter
+                            }
+                        }
                         sourceComponent: parent.launcher ? launcherComp
+                            : parent.dashboard ? dashboardComp
                             : parent.notes ? notesComp
                             : parent.todos ? todosComp
-                            : parent.gallery ? galleryComp : infoComp
+                            : parent.gallery ? galleryComp
+                            : parent.notifs ? notificationsComp
+                            : parent.jobs ? jobsComp
+                            : parent.weatherView ? weatherComp
+                            : parent.statsView ? statsComp
+                            : parent.clipboardView ? clipboardComp : infoComp
                     }
                 }
             }
@@ -1154,6 +1580,24 @@ PlasmoidItem {
     }
 
     Component {
+        id: dashboardComp
+
+        Launcher.DashboardPanel {
+            applet: root
+            onCloseRequested: {
+                root.expanded = false;
+                if (root.dockItem)
+                    root.dockItem.hide();
+            }
+            // "All apps" or typing: switch this popup to the Lumen launcher, in place.
+            onClassicRequested: query => {
+                root.launcherInitialQuery = query ?? "";
+                root.popupMode = "launcher";
+            }
+        }
+    }
+
+    Component {
         id: notesComp
         Popups.NotesPanel {
             applet: root
@@ -1168,6 +1612,36 @@ PlasmoidItem {
                     root.dockItem.hide();
                 Plasmoid.internalAction("configure").trigger();
             }
+        }
+    }
+    Component {
+        id: notificationsComp
+        Popups.NotificationsPanel {
+            applet: root
+        }
+    }
+    Component {
+        id: clipboardComp
+        Popups.ClipboardPanel {
+            applet: root
+        }
+    }
+    Component {
+        id: statsComp
+        Popups.StatsPanel {
+            applet: root
+        }
+    }
+    Component {
+        id: weatherComp
+        Popups.WeatherPanel {
+            applet: root
+        }
+    }
+    Component {
+        id: jobsComp
+        Popups.JobsPanel {
+            applet: root
         }
     }
     Component {

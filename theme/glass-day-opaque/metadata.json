@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/Theme",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "aryan"
+            }
+        ],
+        "Category": "Plasma Theme",
+        "Description": "Solid light glass: popups, notifications, tooltips and panels matching Dockyard Day",
+        "EnabledByDefault": true,
+        "Id": "glass-day-opaque",
+        "Name": "Glass Day (opaque)",
+        "Version": "1.3",
+        "License": "GPL-2.0+"
+    }
+}

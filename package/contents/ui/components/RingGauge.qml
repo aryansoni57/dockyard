@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Shapes
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
+import "motion.js" as Motion
 
 // Ring tile content (docs/STYLE.md, "Icons and widget content"):
 // 15% track, accent arc from 12 o'clock with round caps, number + label centered.
@@ -11,6 +12,8 @@ Item {
     property real value // 0..100
     property string label
     property string suffix: ""
+    // Shown in the middle instead of the rounded value, when set (a UV index, say).
+    property string text: ""
     property color accent: Kirigami.Theme.highlightColor
 
     readonly property real thickness: Math.max(2, width * 0.1)
@@ -20,7 +23,11 @@ Item {
     implicitHeight: Kirigami.Units.iconSizes.medium
 
     Behavior on value {
-        NumberAnimation { duration: 300; easing.type: Easing.InOutCubic }
+        NumberAnimation {
+            duration: Motion.ms(300, Kirigami.Units.longDuration)
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: Motion.enter
+        }
     }
 
     Shape {
@@ -61,7 +68,7 @@ Item {
 
         PlasmaComponents.Label {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: Math.round(ring.value) + ring.suffix
+            text: ring.text !== "" ? ring.text : Math.round(ring.value) + ring.suffix
             font.pixelSize: Math.max(8, ring.height * 0.3)
             font.weight: Font.Bold
             font.features: { "tnum": 1 }

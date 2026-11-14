@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install everything: plasmoid + glass desktop themes (frosted and opaque), then restart plasmashell.
+# Install everything: plasmoid + glass desktop themes (frosted and opaque, dark and Day), then restart plasmashell.
 # Usage: ./install-all.sh [--apply-theme] [--apply-global] [--no-restart]
 #   --apply-theme   activate the Plasma desktop theme glass
 #   --apply-global  install and activate the Dockyard set: Kvantum, color scheme, Aurorae
@@ -23,7 +23,7 @@ done
 
 themes="${XDG_DATA_HOME:-$HOME/.local/share}/plasma/desktoptheme"
 mkdir -p "$themes"
-for t in glass glass-opaque; do
+for t in glass glass-opaque glass-day glass-day-opaque; do
     rm -rf "$themes/$t"
     cp -r "theme/$t" "$themes/$t"
     echo "Installed theme: $themes/$t"

@@ -26,6 +26,23 @@ PlasmaCore.Dialog {
     property string health: ""
     property string state: ""
     property string timeLeft: ""
+    // Other devices' batteries: [{kind, name, percent, charging}] from scripts/devices.sh.
+    property var devices: []
+    // False hides the Devices section and skips the lookup.
+    property bool showDevices: true
+    readonly property string devicesScript: Qt.resolvedUrl("../../scripts/devices.sh").toString().replace("file://", "")
+
+    function iconForKind(kind) {
+        switch (kind) {
+        case "mouse": return "input-mouse-symbolic";
+        case "keyboard": return "input-keyboard-symbolic";
+        case "headset": case "headphones": return "audio-headset-symbolic";
+        case "gaming-input": return "input-gamepad-symbolic";
+        case "phone": case "smartphone": return "smartphone-symbolic";
+        case "tablet": return "tablet-symbolic";
+        default: return "battery-symbolic";
+        }
+    }
 
     readonly property var profileLabels: ({
         "power-saver": i18n("Power Save"),
@@ -46,11 +63,27 @@ PlasmaCore.Dialog {
         shell.run("p=$(upower -e | grep -m1 -i battery); powerprofilesctl get; echo '--'; "
                   + "powerprofilesctl list | grep -oE '^[ *]+[a-z-]+:' | tr -d ' *:'; echo '--'; "
                   + "upower -i \"$p\" | grep -E 'state:|capacity:|time to'");
+        if (showDevices)
+            devicesShell.run("sh '" + devicesScript + "'");
     }
 
     function setProfile(name) {
         profile = name;
         shell.run("powerprofilesctl set " + name);
+    }
+
+    ShellRunner {
+        id: devicesShell
+        onFinished: (cmd, out) => {
+            const list = [];
+            for (const line of out.split("\n")) {
+                const f = line.split("\t");
+                if (f.length < 4)
+                    continue;
+                list.push({ kind: f[0], name: f[1], percent: parseInt(f[2], 10), charging: f[3] === "1" });
+            }
+            fly.devices = list;
+        }
     }
 
     ShellRunner {
@@ -218,6 +251,77 @@ PlasmaCore.Dialog {
                         text: fly.health
                         font.pixelSize: Kirigami.Theme.smallFont.pixelSize
                         opacity: 0.6
+                    }
+                }
+            }
+
+            // ---- other devices ----
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.smallSpacing
+                visible: fly.showDevices && fly.devices.length > 0
+
+                QQC2.Label {
+                    text: i18n("Devices")
+                    font.bold: true
+                }
+
+                Repeater {
+                    model: fly.devices
+
+                    delegate: RowLayout {
+                        id: dev
+                        required property var modelData
+                        Layout.fillWidth: true
+                        spacing: Kirigami.Units.smallSpacing
+
+                        Kirigami.Icon {
+                            Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
+                            Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium
+                            source: fly.iconForKind(dev.modelData.kind)
+                            isMask: true
+                            color: Kirigami.Theme.textColor
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                QQC2.Label {
+                                    Layout.fillWidth: true
+                                    text: dev.modelData.name
+                                    elide: Text.ElideRight
+                                }
+                                Kirigami.Icon {
+                                    visible: dev.modelData.charging
+                                    source: "battery-charging-symbolic"
+                                    Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                                    Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                                    color: Kirigami.Theme.positiveTextColor
+                                    isMask: true
+                                }
+                                QQC2.Label {
+                                    text: dev.modelData.percent + "%"
+                                    font.bold: true
+                                    font.features: { "tnum": 1 }
+                                }
+                            }
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: Math.round(fly.unit * 0.3)
+                                radius: height / 2
+                                color: Qt.alpha(Kirigami.Theme.textColor, 0.12)
+
+                                Rectangle {
+                                    width: parent.width * Math.max(0, Math.min(100, dev.modelData.percent)) / 100
+                                    height: parent.height
+                                    radius: height / 2
+                                    color: dev.modelData.charging ? Kirigami.Theme.positiveTextColor
+                                        : dev.modelData.percent < 20 ? Kirigami.Theme.negativeTextColor : fly.accent
+                                }
+                            }
+                        }
                     }
                 }
             }

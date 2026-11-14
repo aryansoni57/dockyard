@@ -1,0 +1,15 @@
+{
+    "KPackageStructure": "Plasma/LookAndFeel",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "aryan"
+            }
+        ],
+        "Description": "Dockyard Day light glass: color scheme, Kvantum, Aurorae and the glass-day Plasma theme.",
+        "Id": "dev.aryan.dockyard.day",
+        "License": "GPL-2.0+",
+        "Name": "Dockyard Day",
+        "Version": "1.1"
+    }
+}

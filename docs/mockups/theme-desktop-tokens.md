@@ -131,3 +131,7 @@ Use `library=org.kde.kwin.aurorae`, not `.v2`. The v2 plugin draws this theme of
 The look-and-feel ships its own splash. Lock screen, logout and OSD fall back to Breeze. It cannot select a Kvantum theme, so install through the script.
 
 The Opaque dock bar switch also swaps the Kvantum theme, between `Dockyard` (opaque) and `DockyardGlass` (frosted), but only while Dockyard is the app style.
+
+## Day set
+
+The light counterpart (`DockyardDay`, `glass-day`, `glass-day-opaque`, `DockyardDayGlass`, Aurorae `DockyardDay`, look-and-feel `dev.aryan.dockyard.day`) is written by the same `theme/gen.py`. Its tokens, files and contrast results are in `docs/theme-day.md`. The dock's Day and night look switches between the two sets through `package/contents/scripts/day-night.sh`.

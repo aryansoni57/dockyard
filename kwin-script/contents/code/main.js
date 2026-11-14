@@ -5,10 +5,21 @@
 // taskShortcut setting, which the dock watches. The time makes each press a change.
 
 function notifyDock(index) {
-    const script = "for (const c of panels().concat(desktops()))"
+    // With a dock on each monitor, write to one dock only: the dock on the screen where the
+    // focused window is, else the first dock found. Otherwise every dock would act on the
+    // press, and the second one would toggle the window back (minimise it again).
+    const g = workspace.activeScreen ? workspace.activeScreen.geometry : null;
+    const cx = g ? Math.round(g.x + g.width / 2) : 0;
+    const cy = g ? Math.round(g.y + g.height / 2) : 0;
+    const script = "var hit = null, first = null;"
+        + " for (const c of panels().concat(desktops()))"
         + " for (const w of c.widgets('dev.aryan.dock')) {"
-        + " w.currentConfigGroup = ['General'];"
-        + " w.writeConfig('taskShortcut', '" + index + ":' + Date.now()); }";
+        + " if (!first) first = w;"
+        + " const r = screenGeometry(c.screen);"
+        + " if (!hit && r.x <= " + cx + " && " + cx + " < r.x + r.width && r.y <= " + cy + " && " + cy + " < r.y + r.height) hit = w; }"
+        + " const target = hit || first;"
+        + " if (target) { target.currentConfigGroup = ['General'];"
+        + " target.writeConfig('taskShortcut', '" + index + ":' + Date.now()); }";
     callDBus("org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell", "evaluateScript", script);
 }
 

@@ -1,0 +1,807 @@
+<title>Dockyard Next</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a live desktop stage with the dock on it, then the feature list that drives it.
+   Single dark look on purpose: it matches site/styles.css and the dock's Glass theme. */
+:root {
+  color-scheme: dark;
+  --bg: #07080b;
+  --raise: #101217;
+  --ink: #ffffff;
+  --ink-2: rgba(255, 255, 255, .62);
+  --ink-3: rgba(255, 255, 255, .42);
+  --line: rgba(255, 255, 255, .09);
+  --accent: #0a84ff;
+  --green: #30d158;
+  --red: #ff3b30;
+  --amber: #ffb340;
+  --pink: #ff2d78;
+
+  --sans: Inter, "Noto Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "Noto Sans Mono", ui-monospace, monospace;
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+
+  /* Glass, dark (Dockyard Glass) */
+  --g-ink: #fff;
+  --g-ink-2: rgba(255, 255, 255, .58);
+  --g-bar: rgba(16, 17, 24, .55);
+  --g-rim: rgba(255, 255, 255, .14);
+  --g-tile: rgba(255, 255, 255, .055);
+  --g-tile-h: rgba(255, 255, 255, .095);
+  --g-tile-rim: rgba(255, 255, 255, .13);
+  --g-pop: rgba(22, 23, 31, .78);
+  --g-track: rgba(255, 255, 255, .14);
+}
+*, *::before, *::after { box-sizing: border-box }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 15px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0 }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px }
+.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 28px }
+
+/* Header */
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px 32px }
+header h1 { margin: 0; font-size: clamp(28px, 2vw + 18px, 40px); font-weight: 600; letter-spacing: -.035em; line-height: 1.05; text-wrap: balance }
+header p { margin: 6px 0 0; color: var(--ink-2); max-width: 62ch }
+.switches { display: flex; flex-wrap: wrap; gap: 8px }
+.sw {
+  display: inline-flex; align-items: center; gap: 10px; height: 36px; padding: 0 14px 0 6px;
+  border-radius: 999px; background: var(--raise); border: 1px solid var(--line); font-size: 13px; font-weight: 500;
+}
+.sw i { width: 34px; height: 22px; border-radius: 999px; background: rgba(255,255,255,.14); position: relative; transition: background .25s var(--ease) }
+.sw i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .3s var(--spring) }
+.sw[aria-pressed="true"] i { background: var(--accent) }
+.sw[aria-pressed="true"] i::after { transform: translateX(12px) }
+
+/* Stage */
+.stage-scroll { overflow-x: auto; border-radius: 18px; border: 1px solid var(--line) }
+.stage-fit { position: relative; width: 100%; aspect-ratio: 1680 / 720; overflow: hidden }
+.stage {
+  position: absolute; top: 0; left: 0; width: 1680px; height: 720px; overflow: hidden; transform-origin: 0 0;
+  color: var(--g-ink); isolation: isolate;
+  transition: color .8s ease-in-out;
+}
+.wall, .wall-day { position: absolute; inset: 0; z-index: -1; transition: opacity .8s ease-in-out }
+.wall {
+  background:
+    radial-gradient(60% 70% at 18% 30%, rgba(233, 30, 99, .55), transparent 60%),
+    radial-gradient(50% 60% at 82% 20%, rgba(103, 58, 183, .6), transparent 62%),
+    radial-gradient(70% 60% at 60% 95%, rgba(10, 132, 255, .35), transparent 60%),
+    linear-gradient(160deg, #0b0a14, #12081a 55%, #05060a);
+}
+.wall-day {
+  opacity: 0;
+  background:
+    radial-gradient(60% 70% at 18% 30%, rgba(255, 170, 150, .9), transparent 60%),
+    radial-gradient(50% 60% at 82% 20%, rgba(196, 170, 255, .9), transparent 62%),
+    radial-gradient(70% 60% at 60% 95%, rgba(140, 200, 255, .8), transparent 60%),
+    linear-gradient(160deg, #fbe9e4, #efe3f7 55%, #e2ecfa);
+}
+.wall::after {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-radial-gradient(circle at 50% 120%, transparent 0 46px, rgba(255,255,255,.035) 47px 48px);
+}
+.stage[data-look="day"] .wall-day { opacity: 1 }
+.stage[data-look="day"] {
+  --g-ink: #1c1c1e;
+  --g-ink-2: rgba(28, 28, 30, .58);
+  --g-bar: rgba(255, 255, 255, .62);
+  --g-rim: rgba(0, 0, 0, .08);
+  --g-tile: rgba(0, 0, 0, .043);
+  --g-tile-h: rgba(0, 0, 0, .075);
+  --g-tile-rim: rgba(0, 0, 0, .085);
+  --g-pop: rgba(255, 255, 255, .8);
+  --g-track: rgba(0, 0, 0, .1);
+}
+.desk-label {
+  position: absolute; top: 18px; left: 22px; font: 500 12px/1 var(--mono); color: var(--g-ink-2);
+  letter-spacing: .02em; transition: color .8s;
+}
+
+/* Dock */
+.dock {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px; padding: 6px; height: 64px;
+  border-radius: 18px; background: var(--g-bar); border: 1px solid var(--g-rim);
+  -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%);
+  box-shadow: 0 4px 18px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+  transition: gap .6s var(--ease), background .6s var(--ease), border-color .6s, box-shadow .6s, padding .6s var(--ease);
+  white-space: nowrap;
+}
+.island {
+  display: flex; align-items: center; gap: 6px; height: 52px; border-radius: 16px;
+  transition: padding .6s var(--ease), background .6s var(--ease), border-color .6s, box-shadow .6s;
+  border: 1px solid transparent;
+}
+.stage[data-islands="on"] .dock { gap: 14px; background: transparent; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; padding: 0 }
+.stage[data-islands="on"] .island {
+  height: 64px; padding: 0 6px; border-radius: 22px; background: var(--g-bar); border-color: var(--g-rim);
+  -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%);
+  box-shadow: 0 10px 30px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.tile {
+  position: relative; height: 52px; border-radius: 13px; display: flex; align-items: center; gap: 10px; padding: 0 12px;
+  background: var(--g-tile); border: 1px solid var(--g-tile-rim); text-align: left;
+  transition: background .12s, transform .08s, box-shadow .3s, border-color .3s;
+}
+.tile:hover { background: var(--g-tile-h) }
+.tile:active { transform: scale(.97) }
+.tile.sq { width: 52px; justify-content: center; padding: 0 }
+.tile.new::before {
+  content: ""; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--pink); box-shadow: 0 0 0 2px rgba(0,0,0,.35);
+}
+.tile.flash { animation: flash 1.4s var(--ease) }
+@keyframes flash { 0%, 60% { box-shadow: 0 0 0 2px var(--pink), 0 0 24px rgba(255,45,120,.55) } 100% { box-shadow: 0 0 0 0 transparent } }
+.big { font-weight: 700; font-size: 20px; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums }
+.small { font-size: 11.5px; color: var(--g-ink-2); line-height: 1.25; transition: color .8s }
+.lbl { font-size: 13px; font-weight: 500; line-height: 1.2 }
+.col { display: flex; flex-direction: column; gap: 4px; min-width: 0 }
+.ico { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+
+/* Apps */
+.apps { display: flex; align-items: center; gap: 4px; padding: 0 4px }
+.app {
+  position: relative; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; flex: none;
+  transition: width .45s var(--ease), opacity .3s, margin .45s var(--ease), transform .2s var(--spring);
+}
+.app:hover { transform: scale(1.12) translateY(-2px) }
+.app svg { width: 21px; height: 21px; stroke: #fff; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round }
+.app.run::after { content: ""; position: absolute; bottom: -7px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent) }
+.apps.collapsed .app:not(.run) { width: 0; opacity: 0; margin: 0 -2px; pointer-events: none }
+.chev { width: 22px; height: 38px; border-radius: 8px; display: grid; place-items: center; color: var(--g-ink-2) }
+.chev:hover { background: var(--g-tile) }
+.chev svg { transition: transform .45s var(--ease) }
+.apps.collapsed .chev svg { transform: rotate(180deg) }
+
+/* Job pill */
+.job { width: 214px }
+.job .art { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, #ff6b3d, #ff2d78); display: grid; place-items: center; flex: none }
+.job .art svg { width: 18px; height: 18px; stroke: #fff }
+.bar { height: 4px; border-radius: 4px; background: var(--g-track); overflow: hidden }
+.bar > b { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .6s linear }
+.job .bar > b { background: linear-gradient(90deg, #0a84ff, #5ac8fa); box-shadow: 0 0 10px rgba(90,200,250,.5) }
+
+/* Rings */
+.rings svg { display: block }
+.ring-bg { stroke: var(--g-track); fill: none }
+.ring { fill: none; stroke-linecap: round; transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset 1s var(--ease) }
+
+/* Desktop dots */
+.vds { display: grid; grid-template-columns: repeat(2, 15px); gap: 4px }
+.vd { width: 15px; height: 11px; border-radius: 3px; border: 1.5px solid var(--g-ink-2); transition: background .25s, border-color .25s }
+.vd.on { background: var(--accent); border-color: var(--accent) }
+
+/* Popup */
+.pop {
+  position: absolute; z-index: 10; width: 380px; max-height: 560px; font-size: 15px; overflow: auto;
+  border-radius: 22px; padding: 16px; background: var(--g-pop); border: 1px solid var(--g-rim);
+  -webkit-backdrop-filter: blur(36px) saturate(180%); backdrop-filter: blur(36px) saturate(180%);
+  box-shadow: 0 24px 64px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.08);
+  opacity: 0; transform: scale(.92) translateY(10px); pointer-events: none;
+  transition: opacity .25s var(--ease), transform .45s var(--ease);
+  display: grid; gap: 12px; scrollbar-width: thin;
+}
+.pop.open { opacity: 1; transform: none; pointer-events: auto }
+.pop.open .st { animation: rise .45s var(--ease) both; animation-delay: calc(var(--i, 0) * 40ms + 60ms) }
+@keyframes rise { from { opacity: 0; transform: translateY(10px) } }
+.pop h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em; display: flex; align-items: center; justify-content: space-between; gap: 8px }
+.pop h3 small { font: 500 11px/1 var(--mono); color: var(--g-ink-2) }
+.card { border-radius: 14px; padding: 12px; background: var(--g-tile); border: 1px solid var(--g-tile-rim) }
+.row { display: flex; align-items: center; gap: 10px; min-width: 0 }
+.row .grow { flex: 1; min-width: 0 }
+.trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.ibtn { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: var(--g-ink-2); flex: none }
+.ibtn:hover { background: var(--g-tile-h); color: var(--g-ink) }
+.ibtn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+.chip { font: 500 10.5px/1 var(--mono); padding: 4px 6px; border-radius: 6px; background: var(--g-tile-h); color: var(--g-ink-2) }
+.fields { font: 400 10.5px/1.5 var(--mono); color: var(--g-ink-2) }
+.hours { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center }
+.hours div { display: grid; gap: 6px; justify-items: center; padding: 8px 0; border-radius: 10px; font-size: 12px }
+.hours div.now { background: var(--g-tile-h) }
+.hours b { font-size: 14px; font-weight: 600 }
+.hours em { font-style: normal; font-size: 10.5px; color: #5ac8fa; min-height: 1em }
+.days { display: grid; gap: 8px }
+.day { display: grid; grid-template-columns: 38px 22px 26px 1fr 26px; align-items: center; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums }
+.day .rng { height: 5px; border-radius: 5px; background: var(--g-track); position: relative }
+.day .rng b { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: linear-gradient(90deg, #5ac8fa, #ffd60a, #ff9f0a) }
+.hint { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.4 }
+.hint svg { flex: none; margin-top: 1px }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px }
+.mini { aspect-ratio: 16 / 10; border-radius: 9px; border: 1.5px solid var(--g-tile-rim); background: rgba(0,0,0,.18); position: relative; overflow: hidden }
+.mini i { position: absolute; border-radius: 3px; background: rgba(255,255,255,.28) }
+.stage[data-look="day"] .mini { background: rgba(255,255,255,.4) }
+.stage[data-look="day"] .mini i { background: rgba(0,0,0,.18) }
+.vdcard { display: grid; gap: 6px; font-size: 12px; text-align: center; border-radius: 12px; padding: 4px }
+.vdcard.on .mini { border-color: var(--pink); box-shadow: 0 0 0 1px var(--pink), 0 0 18px rgba(255,45,120,.35) }
+.vdcard.on span { font-weight: 600 }
+.vdcard:hover .mini { border-color: var(--g-ink-2) }
+.add { display: grid; place-items: center; color: var(--g-ink-2); font-size: 22px; font-weight: 300 }
+.swatch { width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center }
+.swatch svg { width: 15px; height: 15px; stroke: #fff; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round }
+.list { display: grid; gap: 4px }
+.list .row { padding: 7px 8px; border-radius: 10px }
+.list .row:hover { background: var(--g-tile) }
+.search { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 12px; background: var(--g-tile); border: 1px solid var(--g-tile-rim); color: var(--g-ink-2); font-size: 13.5px }
+.btn-sm { height: 30px; padding: 0 12px; border-radius: 9px; background: var(--g-tile-h); font-size: 12.5px; font-weight: 500 }
+.btn-sm.pri { background: var(--accent); color: #fff }
+.preset { display: grid; gap: 6px; padding: 6px; border-radius: 12px; font-size: 11.5px; text-align: left; transition: transform .2s var(--ease), background .2s }
+.preset:hover { background: var(--g-tile); transform: translateY(-3px) }
+.preset .mini { display: flex; gap: 3px; padding: 4px; border-width: 1px }
+.preset .mini span { flex: 1; border-radius: 4px; display: grid; place-items: center }
+.preset .mini span svg { width: 12px; height: 12px; stroke: #fff; fill: none; stroke-width: 2 }
+.agenda { display: grid; gap: 8px }
+.ev { display: grid; grid-template-columns: 4px 1fr auto; gap: 10px; align-items: center; font-size: 13px }
+.ev i { height: 30px; border-radius: 4px }
+.ev small { color: var(--g-ink-2); font-variant-numeric: tabular-nums }
+
+.toast {
+  position: absolute; z-index: 20; top: 16px; left: 50%; transform: translate(-50%, -60px);
+  padding: 10px 16px; border-radius: 999px; background: rgba(12,12,16,.82); color: #fff; font-size: 13px; font-weight: 500;
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.12);
+  transition: transform .35s var(--ease), opacity .25s; opacity: 0; display: flex; gap: 8px; align-items: center;
+}
+.toast.show { transform: translate(-50%, 0); opacity: 1 }
+
+/* Features */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--ink-2); align-items: center }
+.legend .dotnew { width: 9px; height: 9px; border-radius: 50%; background: var(--pink); display: inline-block; margin-right: 6px; vertical-align: 0 }
+.groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px }
+.group h2 { margin: 0 0 4px; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2) }
+.group > p { margin: 0 0 12px; font-size: 13px; color: var(--ink-3) }
+.feats { display: grid; gap: 8px }
+.feat {
+  display: grid; gap: 6px; padding: 14px 16px; border-radius: 14px; background: var(--raise); border: 1px solid var(--line);
+  text-align: left; transition: border-color .2s, background .2s;
+}
+.feat:hover { border-color: rgba(255,255,255,.22); background: #14161c }
+.feat .t { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-weight: 600; font-size: 14.5px }
+.feat .t span { font: 500 11px/1 var(--mono); color: var(--accent); white-space: nowrap }
+.feat p { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.45 }
+.feat code { font: 400 11.5px/1.4 var(--mono); color: var(--ink-3); overflow-wrap: anywhere }
+.note { font-size: 13px; color: var(--ink-3); margin: 0 }
+
+@media (max-width: 960px) { .groups { grid-template-columns: 1fr } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-delay: 0ms !important }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-start" viewBox="0 0 24 24"><path d="M12 3 21 19H3Z"/><path d="M12 10.5 15.5 16.5H8.5Z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></symbol>
+    <symbol id="i-term" viewBox="0 0 24 24"><path d="m5 8 4 4-4 4M12 17h7"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16Z"/><path d="m13.5 6.5 4 4"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 20 12Z"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0 1 20 0M5 12.4a10 10 0 0 1 14 0M8.5 15.9a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r=".8"/></symbol>
+    <symbol id="i-bt" viewBox="0 0 24 24"><path d="m7 7 10 10-5 4V3l5 4L7 17"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-cloudsun" viewBox="0 0 24 24"><path d="M12 3v1.5M5.6 5.6l1 1M3 12h1.5M18.4 5.6l-1 1"/><path d="M8.2 11a4 4 0 0 1 7.6-1.6"/><path d="M7 20h10a3.5 3.5 0 0 0 0-7h-.3A5 5 0 0 0 7 14.5 2.8 2.8 0 0 0 7 20Z"/></symbol>
+    <symbol id="i-rain" viewBox="0 0 24 24"><path d="M7 15h10a3.5 3.5 0 0 0 0-7h-.3A5 5 0 0 0 7 9.5 2.8 2.8 0 0 0 7 15Z"/><path d="M9 18l-1 2.5M13 18l-1 2.5M17 18l-1 2.5"/></symbol>
+    <symbol id="i-clip" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h4"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+    <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v3"/></symbol>
+    <symbol id="i-head" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/></symbol>
+    <symbol id="i-pad" viewBox="0 0 24 24"><path d="M7 7h10a5 5 0 0 1 4.8 6.4l-1 3.3a2.4 2.4 0 0 1-4.2.8L15 16H9l-1.6 1.5a2.4 2.4 0 0 1-4.2-.8l-1-3.3A5 5 0 0 1 7 7Z"/><path d="M7 10v3M5.5 11.5h3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 6 4 3v2H6v-2l4-3ZM12 15v6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5Z"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M18 6v12l-9-6ZM6 6v12"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M6 6v12l9-6ZM18 6v12"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6Z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7Z"/></symbol>
+    <symbol id="i-umb" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9ZM12 12v7a2 2 0 0 0 4 0"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Dockyard Next</h1>
+      <p>Twelve ideas from the AvdanOS research, drawn on the dock as it is today. Pink dots mark new tiles. Click any tile, or use the list below the desktop.</p>
+    </div>
+    <div class="switches">
+      <button class="sw" id="sw-islands" aria-pressed="false"><i></i>Island layout</button>
+      <button class="sw" id="sw-day" aria-pressed="false"><i></i>Day look</button>
+    </div>
+  </header>
+
+  <div class="stage-scroll">
+    <div class="stage-fit" id="fit"><div class="stage" id="stage" data-look="night" data-islands="off">
+      <div class="wall"></div>
+      <div class="wall-day"></div>
+      <div class="desk-label" id="desk-label">Desktop 2 · Work</div>
+      <div class="toast" id="toast"><svg class="ico" style="width:16px;height:16px"><use href="#i-bolt"/></svg><span id="toast-text"></span></div>
+
+      <div class="dock" id="dock">
+        <div class="island">
+          <button class="tile sq" data-pop="start" id="t-start" aria-label="Start"><svg class="ico" style="width:24px;height:24px"><use href="#i-start"/></svg></button>
+          <button class="tile new" data-pop="desktops" id="t-desktops" aria-label="Virtual desktops" style="padding:0 12px 0 14px">
+            <div class="vds" id="vds"><span class="vd"></span><span class="vd on"></span><span class="vd"></span><span class="vd"></span></div>
+            <div class="col"><span class="lbl" id="vd-name">Work</span><span class="small">2 of 4</span></div>
+          </button>
+        </div>
+
+        <div class="island">
+          <div class="apps" id="apps">
+            <span class="app run" style="background:linear-gradient(135deg,#3d9bff,#0a64d6)" title="Files"><svg><use href="#i-folder"/></svg></span>
+            <span class="app run" style="background:linear-gradient(135deg,#ff9f0a,#ff5e3a)" title="Browser"><svg><use href="#i-globe"/></svg></span>
+            <span class="app run" style="background:linear-gradient(135deg,#3a3a44,#1d1d24)" title="Konsole"><svg><use href="#i-term"/></svg></span>
+            <span class="app" style="background:linear-gradient(135deg,#5ac8fa,#2b7fd9)" title="Kate"><svg><use href="#i-pen"/></svg></span>
+            <span class="app run" style="background:linear-gradient(135deg,#34c759,#1f9d48)" title="Messages"><svg><use href="#i-chat"/></svg></span>
+            <span class="app" style="background:linear-gradient(135deg,#ff375f,#c2185b)" title="Music"><svg><use href="#i-note"/></svg></span>
+            <button class="chev" id="chev" aria-label="Hide apps that are not running"><svg class="ico" style="width:16px;height:16px"><use href="#i-chev"/></svg></button>
+          </div>
+        </div>
+
+        <div class="island">
+          <button class="tile job new" data-pop="jobs" id="t-jobs">
+            <span class="art"><svg class="ico"><use href="#i-film"/></svg></span>
+            <div class="col" style="flex:1">
+              <div class="row" style="justify-content:space-between;gap:6px"><span class="lbl trunc">reel.mp4</span><span class="small" id="job-pct" style="font-variant-numeric:tabular-nums">63%</span></div>
+              <div class="bar"><b id="job-bar" style="width:63%"></b></div>
+              <span class="small trunc">Rendering · 2 more jobs</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="island">
+          <button class="tile new" data-pop="weather" id="t-weather" style="padding-right:10px">
+            <svg class="ico" style="width:30px;height:30px;stroke-width:1.5"><use href="#i-cloudsun"/></svg>
+            <div class="col"><span class="big">24°</span><span class="small">H 29° L 23°</span></div>
+            <div class="col" style="gap:5px;margin-left:2px">
+              <span class="chip" style="color:#ffd60a">UV 3</span>
+              <span class="chip" style="color:#5ac8fa">70% 17h</span>
+            </div>
+          </button>
+          <button class="tile" data-pop="clock" id="t-clock" style="padding:0 14px">
+            <div class="col"><span class="big" style="font-size:22px">8:09<span style="font-size:13px;color:var(--g-ink-2);font-weight:600">:37</span></span><span class="small">Fri 13 Nov · 2 events</span></div>
+          </button>
+        </div>
+
+        <div class="island">
+          <div class="tile" style="gap:9px;padding:0 11px">
+            <svg class="ico" style="color:var(--accent)"><use href="#i-wifi"/></svg>
+            <svg class="ico" style="color:var(--accent)"><use href="#i-bt"/></svg>
+            <svg class="ico"><use href="#i-moon"/></svg>
+            <svg class="ico"><use href="#i-sun"/></svg>
+          </div>
+          <button class="tile new" data-pop="clipboard" id="t-clipboard" style="width:136px">
+            <svg class="ico"><use href="#i-clip"/></svg>
+            <div class="col" style="flex:1"><span class="lbl trunc" style="font-family:var(--mono);font-size:12px">git push -u ori…</span><span class="small">Clipboard · 6</span></div>
+          </button>
+          <button class="tile new" data-pop="devices" id="t-devices" aria-label="Device batteries" style="gap:8px;padding:0 10px">
+            <span id="dev-rings"></span>
+          </button>
+          <button class="tile new rings" data-pop="stats" id="t-stats" aria-label="CPU, memory and disk" style="padding:0 10px 0 6px;gap:8px">
+            <span id="stat-ring-small"></span>
+            <div class="col"><span class="lbl" style="font-variant-numeric:tabular-nums">CPU <b id="cpu-txt">34</b>%</span><span class="small">RAM 48 · Disk 25</span></div>
+          </button>
+        </div>
+      </div>
+
+      <div class="pop" id="pop" role="dialog" aria-live="polite"></div>
+    </div></div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dotnew"></span>New tile</span>
+    <span>Popups open over the tapped tile with the research's enter curve: scale 92% to 100%, rows rising 40 ms apart.</span>
+  </div>
+
+  <section class="groups" id="groups"></section>
+  <p class="note">Effort labels assume the current code: <code>NotificationService.qml</code>, <code>WeatherSource.qml</code>, <code>AppsModule.qml</code>, <code>RingGauge</code>, <code>ClipboardService.qml</code> and the Meta+1..9 KWin script. Mockup only; numbers are examples.</p>
+</div>
+
+<!-- Popup templates -->
+<template id="tpl-jobs">
+  <h3 class="st">Running jobs <small>kuiserver · 3</small></h3>
+  <div class="card st">
+    <div class="row">
+      <span class="swatch" style="background:linear-gradient(135deg,#ff6b3d,#ff2d78)"><svg><use href="#i-film"/></svg></span>
+      <div class="grow"><div class="lbl trunc">Rendering reel.mp4</div><div class="small">Kdenlive · <span data-live="eta">2 min left</span></div></div>
+      <button class="ibtn" aria-label="Pause"><svg><use href="#i-pause"/></svg></button>
+      <button class="ibtn" aria-label="Cancel"><svg><use href="#i-x"/></svg></button>
+    </div>
+    <div class="bar" style="margin-top:10px"><b data-live="bar" style="width:63%"></b></div>
+  </div>
+  <div class="card st">
+    <div class="row">
+      <span class="swatch" style="background:linear-gradient(135deg,#3d9bff,#0a64d6)"><svg><use href="#i-folder"/></svg></span>
+      <div class="grow"><div class="lbl trunc">Copying 214 files to Backup</div><div class="small">Dolphin · 2.7 of 4.2 GB · 118 MB/s</div></div>
+      <button class="ibtn" aria-label="Pause"><svg><use href="#i-pause"/></svg></button>
+      <button class="ibtn" aria-label="Cancel"><svg><use href="#i-x"/></svg></button>
+    </div>
+    <div class="bar" style="margin-top:10px"><b style="width:64%;background:var(--green)"></b></div>
+  </div>
+  <div class="card st">
+    <div class="row">
+      <span class="swatch" style="background:linear-gradient(135deg,#ff9f0a,#ff5e3a)"><svg><use href="#i-down"/></svg></span>
+      <div class="grow"><div class="lbl trunc">plasma-6.9-beta.iso</div><div class="small">Browser · 812 MB of 3.1 GB</div></div>
+      <button class="ibtn" aria-label="Cancel"><svg><use href="#i-x"/></svg></button>
+    </div>
+    <div class="bar" style="margin-top:10px"><b style="width:26%;background:var(--amber)"></b></div>
+  </div>
+  <div class="fields st">Source: Plasma notification model with showJobs: true. The tile hides when no job runs.</div>
+</template>
+
+<template id="tpl-weather">
+  <h3 class="st">Eskişehir <small>open-meteo</small></h3>
+  <div class="row st" style="gap:14px">
+    <svg class="ico" style="width:46px;height:46px;stroke-width:1.3"><use href="#i-cloudsun"/></svg>
+    <div class="grow"><div style="font-size:38px;font-weight:600;letter-spacing:-.03em;line-height:1">24°</div><div class="small">Partly cloudy · H 29° L 23°</div></div>
+    <svg width="64" height="64" viewBox="0 0 64 64" aria-label="UV index 3, moderate">
+      <circle cx="32" cy="32" r="26" class="ring-bg" stroke-width="6" stroke-dasharray="122.5 200" transform="rotate(135 32 32)" stroke-linecap="round"/>
+      <circle cx="32" cy="32" r="26" fill="none" stroke="#ffd60a" stroke-width="6" stroke-dasharray="33.4 200" transform="rotate(135 32 32)" stroke-linecap="round"/>
+      <text x="32" y="33" text-anchor="middle" font-size="16" font-weight="700" fill="currentColor">3</text>
+      <text x="32" y="46" text-anchor="middle" font-size="8" fill="currentColor" opacity=".6">UV</text>
+    </svg>
+  </div>
+  <div class="card st" style="padding:6px">
+    <div class="hours">
+      <div class="now"><span>Now</span><svg class="ico"><use href="#i-cloudsun"/></svg><b>24°</b><em></em></div>
+      <div><span>14</span><svg class="ico"><use href="#i-sun"/></svg><b>27°</b><em></em></div>
+      <div><span>15</span><svg class="ico"><use href="#i-sun"/></svg><b>29°</b><em>10%</em></div>
+      <div><span>16</span><svg class="ico"><use href="#i-cloudsun"/></svg><b>27°</b><em>35%</em></div>
+      <div><span>17</span><svg class="ico"><use href="#i-rain"/></svg><b>25°</b><em>70%</em></div>
+      <div><span>18</span><svg class="ico"><use href="#i-rain"/></svg><b>24°</b><em>80%</em></div>
+      <div><span>19</span><svg class="ico"><use href="#i-rain"/></svg><b>23°</b><em>55%</em></div>
+    </div>
+  </div>
+  <div class="card hint st" style="border-color:rgba(90,200,250,.35)">
+    <svg class="ico" style="color:#5ac8fa"><use href="#i-umb"/></svg>
+    <span>Rain likely from 17:00, 70% chance. Take an umbrella if you head out.</span>
+  </div>
+  <div class="days st">
+    <div class="day"><span>Sat</span><svg class="ico"><use href="#i-rain"/></svg><span class="small">21°</span><span class="rng"><b style="left:20%;right:30%"></b></span><span>27°</span></div>
+    <div class="day"><span>Sun</span><svg class="ico"><use href="#i-cloudsun"/></svg><span class="small">22°</span><span class="rng"><b style="left:28%;right:18%"></b></span><span>29°</span></div>
+    <div class="day"><span>Mon</span><svg class="ico"><use href="#i-sun"/></svg><span class="small">23°</span><span class="rng"><b style="left:36%;right:6%"></b></span><span>31°</span></div>
+    <div class="day"><span>Tue</span><svg class="ico"><use href="#i-sun"/></svg><span class="small">23°</span><span class="rng"><b style="left:36%;right:12%"></b></span><span>30°</span></div>
+    <div class="day"><span>Wed</span><svg class="ico"><use href="#i-rain"/></svg><span class="small">20°</span><span class="rng"><b style="left:12%;right:36%"></b></span><span>26°</span></div>
+  </div>
+  <div class="fields st">+ hourly=temperature_2m,precipitation_probability,weather_code<br>+ daily=uv_index_max,weather_code&amp;forecast_days=6</div>
+</template>
+
+<template id="tpl-desktops">
+  <h3 class="st">Desktops <small>Meta+Ctrl+←/→</small></h3>
+  <div class="grid2 st" id="vd-grid"></div>
+  <div class="fields st">Source: TaskManager.VirtualDesktopInfo, already used by AppsModule.qml.</div>
+</template>
+
+<template id="tpl-clipboard">
+  <h3 class="st">Clipboard <small>Klipper · Meta+V</small></h3>
+  <div class="search st"><svg class="ico" style="width:16px;height:16px"><use href="#i-search"/></svg>Search history</div>
+  <div class="list st">
+    <div class="row"><svg class="ico" style="width:15px;height:15px;color:var(--pink)"><use href="#i-pin"/></svg><span class="grow trunc" style="font-size:13px">Wi-Fi: dockyard-5G · tide-pool-42</span><button class="ibtn" aria-label="Copy"><svg><use href="#i-copy"/></svg></button></div>
+    <div class="row"><span class="grow trunc" style="font:12px var(--mono)">git push -u origin feat/job-pill</span><button class="ibtn" aria-label="Copy"><svg><use href="#i-copy"/></svg></button><button class="ibtn" aria-label="Pin"><svg><use href="#i-pin"/></svg></button></div>
+    <div class="row"><span class="swatch" style="width:18px;height:18px;border-radius:5px;background:#ff2d78"></span><span class="grow trunc" style="font:12px var(--mono)">#FF2D78</span><button class="ibtn" aria-label="Copy"><svg><use href="#i-copy"/></svg></button><button class="ibtn" aria-label="Pin"><svg><use href="#i-pin"/></svg></button></div>
+    <div class="row"><span class="grow trunc" style="font-size:13px;color:var(--accent)">https://develop.kde.org/docs/plasma/widget/</span><button class="ibtn" aria-label="Copy"><svg><use href="#i-copy"/></svg></button><button class="ibtn" aria-label="Pin"><svg><use href="#i-pin"/></svg></button></div>
+    <div class="row"><span class="grow trunc" style="font:12px var(--mono)">~/Development/plasma-dock/package/contents/ui</span><button class="ibtn" aria-label="Copy"><svg><use href="#i-copy"/></svg></button><button class="ibtn" aria-label="Pin"><svg><use href="#i-pin"/></svg></button></div>
+    <div class="row"><span class="grow trunc" style="font-size:13px">Popups open over the tapped tile.</span><button class="ibtn" aria-label="Copy"><svg><use href="#i-copy"/></svg></button><button class="ibtn" aria-label="Pin"><svg><use href="#i-pin"/></svg></button></div>
+  </div>
+  <div class="row st" style="justify-content:space-between"><span class="small">Klipper keeps 20 entries</span><button class="btn-sm">Clear history</button></div>
+</template>
+
+<template id="tpl-devices">
+  <h3 class="st">Devices <small>KDE Connect · UPower</small></h3>
+  <div class="list st" id="dev-list"></div>
+  <div class="fields st">Phone over KDE Connect. Mouse, headphones and controller from UPower peripheral batteries.</div>
+</template>
+
+<template id="tpl-stats">
+  <h3 class="st">System <small>ksystemstats</small></h3>
+  <div class="row st" style="gap:20px;justify-content:center;padding:6px 0">
+    <span id="stat-ring-big"></span>
+    <div class="list" style="gap:10px">
+      <div class="row"><i style="width:10px;height:10px;border-radius:50%;background:#ff6b5a"></i><span class="grow">CPU</span><b data-live="cpu">34%</b></div>
+      <div class="row"><i style="width:10px;height:10px;border-radius:50%;background:#ff2d78"></i><span class="grow">Memory</span><b>48% · 15.2 GB</b></div>
+      <div class="row"><i style="width:10px;height:10px;border-radius:50%;background:#5ac8fa"></i><span class="grow">Disk /</span><b>25% · 240 GB</b></div>
+    </div>
+  </div>
+  <div class="fields st">Style option for the Stats tile, drawn with the existing RingGauge.</div>
+</template>
+
+<template id="tpl-clock">
+  <h3 class="st">Friday, 13 November <small>today</small></h3>
+  <div class="agenda st">
+    <div class="ev"><i style="background:var(--pink)"></i><span>Dockyard release review</span><small>12:00–13:00</small></div>
+    <div class="ev"><i style="background:#5ac8fa"></i><span>Call with the KDE promo team</span><small>17:30–18:00</small></div>
+    <div class="ev" style="opacity:.5"><i style="background:var(--g-ink-2)"></i><span>Gym</span><small>07:00 · done</small></div>
+  </div>
+  <div class="fields st">Extends CalendarModule: next-event.py returns the whole day, not only the next event.</div>
+</template>
+
+<template id="tpl-media">
+  <h3 class="st">Now playing <small>MPRIS</small></h3>
+  <div class="row st" style="gap:14px">
+    <span class="swatch" style="width:72px;height:72px;border-radius:14px;background:linear-gradient(135deg,#ff2d78,#6a3df0)"><svg style="width:30px;height:30px"><use href="#i-note"/></svg></span>
+    <div class="grow"><div class="lbl" style="font-size:15px">Night Signals</div><div class="small">Lumen Avenue · Afterglow</div>
+      <div class="bar" style="margin-top:10px"><b style="width:38%"></b></div>
+      <div class="row small" style="justify-content:space-between;margin-top:4px"><span>1:24</span><span>-2:16</span></div>
+    </div>
+  </div>
+  <div class="row st" style="justify-content:center;gap:18px">
+    <button class="ibtn" aria-label="Previous"><svg style="fill:currentColor;stroke:none"><use href="#i-prev"/></svg></button>
+    <button class="ibtn" aria-label="Play" style="width:40px;height:40px;background:var(--g-tile-h);border-radius:50%;color:var(--g-ink)"><svg style="fill:currentColor;stroke:none"><use href="#i-play"/></svg></button>
+    <button class="ibtn" aria-label="Next"><svg style="fill:currentColor;stroke:none"><use href="#i-next"/></svg></button>
+  </div>
+</template>
+
+<template id="tpl-start">
+  <div class="search st"><svg class="ico" style="width:16px;height:16px"><use href="#i-search"/></svg>Search apps, files, math</div>
+  <h3 class="st">Pick up where you left off <small>recent</small></h3>
+  <div class="list st">
+    <div class="row"><span class="swatch" style="background:linear-gradient(135deg,#ff2d78,#6a3df0)"><svg><use href="#i-note"/></svg></span><div class="grow"><div class="lbl trunc">Night Signals</div><div class="small">Music · paused at 1:24</div></div><button class="btn-sm pri">Resume</button></div>
+    <div class="row"><span class="swatch" style="background:linear-gradient(135deg,#5ac8fa,#2b7fd9)"><svg><use href="#i-doc"/></svg></span><div class="grow"><div class="lbl trunc">PLAN-roadmap.md</div><div class="small">Kate · 12 min ago</div></div><button class="btn-sm">Open</button></div>
+    <div class="row"><span class="swatch" style="background:linear-gradient(135deg,#ff6b3d,#ff2d78)"><svg><use href="#i-film"/></svg></span><div class="grow"><div class="lbl trunc">dockyard-reel.kdenlive</div><div class="small">Kdenlive · 1 h ago</div></div><button class="btn-sm">Open</button></div>
+    <div class="row"><span class="swatch" style="background:linear-gradient(135deg,#bf5af2,#7d3cc9)"><svg><use href="#i-image"/></svg></span><div class="grow"><div class="lbl trunc">thumbnail-update-1.png</div><div class="small">Krita · 3 h ago</div></div><button class="btn-sm">Open</button></div>
+  </div>
+  <h3 class="st">App Setups <small>KWin tiles</small></h3>
+  <div class="grid4 st" id="presets"></div>
+</template>
+
+<script>
+(() => {
+  const stage = document.getElementById('stage');
+  const pop = document.getElementById('pop');
+  const toast = document.getElementById('toast');
+  let openId = null, toastT, K = 1;
+  const fitEl = document.getElementById('fit');
+  const sc0 = document.querySelector('.stage-scroll');
+  function fit() {
+    const cw = Math.max(sc0.clientWidth, 900);
+    K = cw / 1680;
+    fitEl.style.width = cw + 'px';
+    fitEl.style.height = 720 * K + 'px';
+    stage.style.transform = `scale(${K})`;
+  }
+  fit();
+  addEventListener('resize', () => { fit(); closePop() });
+
+  /* Rings */
+  function rings(size, vals, colors, w, gap) {
+    let s = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
+    vals.forEach((v, i) => {
+      const r = size / 2 - w / 2 - i * (w + gap);
+      const c = 2 * Math.PI * r;
+      s += `<circle cx="${size/2}" cy="${size/2}" r="${r}" class="ring-bg" stroke-width="${w}"/>`;
+      s += `<circle cx="${size/2}" cy="${size/2}" r="${r}" class="ring" data-ring="${i}" stroke="${colors[i]}" stroke-width="${w}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - v / 100)}"/>`;
+    });
+    return s + '</svg>';
+  }
+  const statColors = ['#ff6b5a', '#ff2d78', '#5ac8fa'];
+  let stat = [34, 48, 25];
+  const drawStats = () => {
+    document.getElementById('stat-ring-small').innerHTML = rings(40, stat, statColors, 4, 2);
+    const big = document.getElementById('stat-ring-big');
+    if (big) big.innerHTML = rings(120, stat, statColors, 11, 4);
+  };
+  drawStats();
+
+  /* Devices */
+  const devices = [
+    { n: 'Pixel 8', s: 'KDE Connect · charging', v: 82, i: 'i-phone', c: 'var(--green)', chg: true },
+    { n: 'MX Master 3S', s: 'Bluetooth mouse', v: 45, i: 'i-mouse', c: 'var(--accent)' },
+    { n: 'WH-1000XM5', s: 'Headphones · 18 h left', v: 60, i: 'i-head', c: 'var(--accent)' },
+    { n: 'DualSense', s: 'Controller · low', v: 12, i: 'i-pad', c: 'var(--red)' },
+  ];
+  document.getElementById('dev-rings').innerHTML = devices.slice(0, 2).map(d => {
+    const r = 15, c = 2 * Math.PI * r;
+    return `<span style="position:relative;display:inline-grid;place-items:center;width:36px;height:36px">
+      <svg width="36" height="36" viewBox="0 0 36 36" style="position:absolute;inset:0"><circle cx="18" cy="18" r="${r}" class="ring-bg" stroke-width="3"/><circle cx="18" cy="18" r="${r}" class="ring" stroke="${d.c}" stroke-width="3" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - d.v / 100)}"/></svg>
+      <svg class="ico" style="width:15px;height:15px"><use href="#${d.i}"/></svg></span>`;
+  }).join('') + `<span class="small" style="margin-left:2px">+2</span>`;
+
+  /* Desktops */
+  const vds = [
+    { n: 'Main', w: [[8, 10, 50, 60], [55, 20, 38, 55]] },
+    { n: 'Work', w: [[6, 8, 44, 82], [52, 8, 42, 82]] },
+    { n: 'Media', w: [[15, 12, 70, 70]] },
+    { n: 'Chat', w: [[30, 15, 40, 65]] },
+  ];
+  let curVd = 1;
+  function setVd(i) {
+    curVd = i;
+    document.querySelectorAll('#vds .vd').forEach((d, k) => d.classList.toggle('on', k === i));
+    document.getElementById('vd-name').textContent = vds[i].n;
+    document.querySelector('#t-desktops .small').textContent = `${i + 1} of ${vds.length}`;
+    document.getElementById('desk-label').textContent = `Desktop ${i + 1} · ${vds[i].n}`;
+    const g = document.getElementById('vd-grid');
+    if (g) fillVd(g);
+  }
+  function fillVd(g) {
+    g.innerHTML = vds.map((d, i) => `<button class="vdcard${i === curVd ? ' on' : ''}" data-vd="${i}">
+      <div class="mini">${d.w.map(w => `<i style="left:${w[0]}%;top:${w[1]}%;width:${w[2]}%;height:${w[3]}%"></i>`).join('')}</div>
+      <span>${i + 1} · ${d.n}</span></button>`).join('') +
+      `<button class="vdcard" data-add><div class="mini add">+</div><span>New desktop</span></button>`;
+  }
+
+  /* Presets */
+  const presets = [
+    { n: 'Code', a: [['#5ac8fa', 'i-pen'], ['#3a3a44', 'i-term']] },
+    { n: 'Edit', a: [['#ff5e3a', 'i-film'], ['#bf5af2', 'i-image']] },
+    { n: 'Research', a: [['#ff9f0a', 'i-globe'], ['#5ac8fa', 'i-pen'], ['#34c759', 'i-chat']] },
+    { n: 'Mail day', a: [['#3d9bff', 'i-doc'], ['#ff9f0a', 'i-globe'], ['#ff375f', 'i-note']] },
+  ];
+  function fillPresets(g) {
+    g.innerHTML = presets.map((p, i) => `<button class="preset" data-preset="${i}">
+      <div class="mini">${p.a.map(a => `<span style="background:${a[0]}"><svg><use href="#${a[1]}"/></svg></span>`).join('')}</div>${p.n}</button>`).join('');
+  }
+
+  function showToast(t) {
+    document.getElementById('toast-text').textContent = t;
+    toast.classList.add('show');
+    clearTimeout(toastT);
+    toastT = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  /* Popup */
+  function openPop(id, tile) {
+    if (openId === id) return closePop();
+    const tpl = document.getElementById('tpl-' + id);
+    if (!tpl) return;
+    pop.classList.remove('open');
+    pop.innerHTML = '';
+    pop.appendChild(tpl.content.cloneNode(true));
+    pop.querySelectorAll('.st').forEach((el, i) => el.style.setProperty('--i', i));
+    if (id === 'desktops') fillVd(pop.querySelector('#vd-grid'));
+    if (id === 'start') fillPresets(pop.querySelector('#presets'));
+    if (id === 'stats') drawStats();
+    if (id === 'devices') pop.querySelector('#dev-list').innerHTML = devices.map(d => `
+      <div class="row" style="padding:9px 8px">
+        <svg class="ico"><use href="#${d.i}"/></svg>
+        <div class="grow"><div class="row" style="justify-content:space-between"><span class="lbl">${d.n}</span><span class="small" style="font-variant-numeric:tabular-nums;color:${d.v < 20 ? 'var(--red)' : ''}">${d.chg ? '⚡ ' : ''}${d.v}%</span></div>
+        <div class="bar" style="margin:6px 0 3px"><b style="width:${d.v}%;background:${d.c}"></b></div><span class="small">${d.s}</span></div>
+      </div>`).join('');
+    pop.style.width = id === 'start' ? '460px' : id === 'weather' ? '440px' : '400px';
+    const s = stage.getBoundingClientRect(), t = tile.getBoundingClientRect();
+    const w = pop.offsetWidth;
+    const cx = (t.left + t.width / 2 - s.left) / K;
+    const left = Math.max(16, Math.min(1680 - w - 16, cx - w / 2));
+    pop.style.left = left + 'px';
+    pop.style.bottom = ((s.bottom - t.top) / K + 12) + 'px';
+    pop.style.transformOrigin = `${cx - left}px 100%`;
+    void pop.offsetWidth;
+    pop.classList.add('open');
+    openId = id;
+  }
+  function closePop() { pop.classList.remove('open'); openId = null }
+
+  stage.addEventListener('click', e => {
+    const tile = e.target.closest('[data-pop]');
+    if (tile) return openPop(tile.dataset.pop, tile);
+    const vd = e.target.closest('[data-vd]');
+    if (vd) { setVd(+vd.dataset.vd); return }
+    if (e.target.closest('[data-add]')) { showToast('Desktop 5 added'); return }
+    const pr = e.target.closest('[data-preset]');
+    if (pr) {
+      const p = presets[+pr.dataset.preset];
+      closePop();
+      showToast(`Opening ${p.n}: ${p.a.length} apps, tiled side by side`);
+      return;
+    }
+    if (!e.target.closest('#pop')) closePop();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop() });
+
+  /* Apps chevron */
+  document.getElementById('chev').addEventListener('click', e => {
+    e.stopPropagation();
+    const a = document.getElementById('apps');
+    a.classList.toggle('collapsed');
+    e.currentTarget.setAttribute('aria-label', a.classList.contains('collapsed') ? 'Show all pinned apps' : 'Hide apps that are not running');
+    closePop();
+  });
+
+  /* Switches */
+  function bindSwitch(id, fn) {
+    const b = document.getElementById(id);
+    b.addEventListener('click', () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on); fn(on) });
+    return b;
+  }
+  const swIslands = bindSwitch('sw-islands', on => { closePop(); stage.dataset.islands = on ? 'on' : 'off' });
+  const swDay = bindSwitch('sw-day', on => {
+    stage.dataset.look = on ? 'day' : 'night';
+    showToast(on ? 'Sunrise 06:52: switched to the light set' : 'Sunset 17:21: switched to Glass');
+  });
+
+  /* Live job + stats */
+  let pct = 63;
+  setInterval(() => {
+    pct = pct >= 100 ? 8 : Math.min(100, pct + 1);
+    document.getElementById('job-pct').textContent = pct + '%';
+    document.getElementById('job-bar').style.width = pct + '%';
+    pop.querySelectorAll('[data-live="bar"]').forEach(b => b.style.width = pct + '%');
+    pop.querySelectorAll('[data-live="eta"]').forEach(b => b.textContent = pct >= 100 ? 'Done' : `${Math.max(1, Math.round((100 - pct) / 18))} min left`);
+  }, 900);
+  setInterval(() => {
+    stat[0] = Math.round(22 + Math.random() * 40);
+    document.getElementById('cpu-txt').textContent = stat[0];
+    document.querySelectorAll('[data-ring="0"]').forEach(c => {
+      const ca = +c.getAttribute('stroke-dasharray');
+      c.setAttribute('stroke-dashoffset', ca * (1 - stat[0] / 100));
+    });
+    pop.querySelectorAll('[data-live="cpu"]').forEach(b => b.textContent = stat[0] + '%');
+  }, 1600);
+
+  /* Feature list */
+  const groups = [
+    { h: 'Easy', p: 'The dock already has most of the pieces.', f: [
+      { t: 'Job progress pill', src: 'NotificationService.qml: showJobs', d: 'Renders, copies and downloads with progress, pause and cancel. Hides when nothing runs.', go: () => openPop('jobs', tEl('t-jobs')) },
+      { t: 'Weather upgrade', src: 'WeatherSource.qml: hourly, uv_index_max', d: 'Hourly strip, UV gauge, 5-day ranges and a plain rain hint.', go: () => openPop('weather', tEl('t-weather')) },
+      { t: 'Virtual desktops tile', src: 'TaskManager.VirtualDesktopInfo', d: 'Dots on the dock, thumbnails in the popup. Click to switch, + to add.', go: () => openPop('desktops', tEl('t-desktops')) },
+      { t: 'Concentric resource rings', src: 'RingGauge in StatsModule', d: 'CPU, memory and disk as three rings, a style option for Stats.', go: () => openPop('stats', tEl('t-stats')) },
+      { t: 'Motion pass', src: 'cubic-bezier(.16,1,.3,1) · 450 ms', d: 'Popups grow from the tile, rows rise 40 ms apart. Open any popup to see it.', go: () => openPop('clock', tEl('t-clock')) },
+    ]},
+    { h: 'Medium', p: 'New data sources, existing tile patterns.', f: [
+      { t: 'Clipboard history', src: 'org.kde.plasma.private.clipboard', d: 'Klipper already runs. Show its history with copy, pin and search.', go: () => openPop('clipboard', tEl('t-clipboard')) },
+      { t: 'Device batteries', src: 'KDE Connect + UPower', d: 'Phone, mouse, headphones and controller charge in one tile.', go: () => openPop('devices', tEl('t-devices')) },
+      { t: 'Pick up where you left off', src: 'kicker RecentUsageModel', d: 'Recent files and the paused track at the top of the launcher.', go: () => openPop('start', tEl('t-start')) },
+      { t: 'Collapse pinned apps', src: 'AppsModule.qml', d: 'A chevron hides pinned apps that are not running.', go: () => { tEl('chev').click(); flash(tEl('chev')) } },
+      { t: 'Day and night look', src: 'sunrise/sunset from weather', d: 'Swap the light and Glass sets on a schedule.', go: () => swDay.click() },
+      { t: 'Whole-day agenda', src: 'next-event.py', d: 'The clock popup lists all of today, not just the next event.', go: () => openPop('clock', tEl('t-clock')) },
+    ]},
+    { h: 'Bigger', p: 'New layout code or a KWin side.', f: [
+      { t: 'Island layout', src: 'main.qml layout groups', d: 'The bar splits into floating glass pills: launch, apps, media, time, system.', go: () => swIslands.click() },
+      { t: 'App Setups', src: 'kwin-script + launch', d: 'One click opens a saved set of apps and tiles them. Try one in the launcher.', go: () => openPop('start', tEl('t-start')) },
+    ]},
+  ];
+  const tEl = id => document.getElementById(id);
+  function flash(el) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash') }
+  const gWrap = document.getElementById('groups');
+  groups.forEach(g => {
+    const sec = document.createElement('div');
+    sec.className = 'group';
+    sec.innerHTML = `<h2>${g.h}</h2><p>${g.p}</p><div class="feats"></div>`;
+    g.f.forEach(f => {
+      const b = document.createElement('button');
+      b.className = 'feat';
+      b.innerHTML = `<div class="t">${f.t}<span>Show</span></div><p>${f.d}</p><code>${f.src}</code>`;
+      b.addEventListener('click', e => {
+        e.stopPropagation();
+        document.querySelector('.stage-scroll').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (openId) closePop();
+        setTimeout(() => {
+          f.go();
+          const tid = { 'Job progress pill': 't-jobs' }[f.t];
+          if (tid) flash(tEl(tid));
+        }, 120);
+      });
+      sec.querySelector('.feats').appendChild(b);
+    });
+    gWrap.appendChild(sec);
+  });
+
+  // On narrow screens, start the stage scrolled to its middle, where the dock is.
+  const sc = document.querySelector('.stage-scroll');
+  sc.scrollLeft = (sc.scrollWidth - sc.clientWidth) / 2;
+
+  // Start with the job popup open so the first frame shows a new feature.
+  setTimeout(() => openPop('jobs', tEl('t-jobs')), 300);
+})();
+</script>

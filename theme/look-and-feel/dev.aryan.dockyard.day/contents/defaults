@@ -1,0 +1,12 @@
+[kdeglobals][General]
+ColorScheme=DockyardDay
+
+[kdeglobals][KDE]
+widgetStyle=kvantum
+
+[kwinrc][org.kde.kdecoration2]
+library=org.kde.kwin.aurorae
+theme=__aurorae__svg__DockyardDay
+
+[plasmarc][Theme]
+name=glass-day

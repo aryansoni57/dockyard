@@ -13,6 +13,9 @@ Tile {
     // Screen edge the dock sits on, so the flyout opens away from it.
     property int edge: PlasmaCore.Types.BottomEdge
 
+    // Show other devices' batteries in the flyout.
+    property bool showDevices: true
+
     signal settingsRequested()
 
     readonly property real contentHeight: height - padding * 2
@@ -33,6 +36,7 @@ Tile {
         location: root.edge
         percent: root.percent
         charging: root.charging
+        showDevices: root.showDevices
         onSettingsRequested: root.settingsRequested()
     }
 

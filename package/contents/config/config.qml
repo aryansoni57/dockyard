@@ -13,6 +13,11 @@ ConfigModel {
         source: "configApps.qml"
     }
     ConfigCategory {
+        name: i18n("App Setups")
+        icon: "view-split-left-right"
+        source: "configSetups.qml"
+    }
+    ConfigCategory {
         name: i18n("Clock & Calendar")
         icon: "preferences-system-time"
         source: "configClock.qml"

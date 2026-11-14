@@ -1,5 +1,6 @@
 import QtQuick
 import org.kde.kirigami as Kirigami
+import "motion.js" as Motion
 
 // Drop inside a layout-managed item: when the layout moves its parent sideways
 // (a reorder, or a neighbour showing or hiding), the parent glides from where it
@@ -20,8 +21,9 @@ Item {
         target: shift
         property: "x"
         to: 0
-        duration: Kirigami.Units.longDuration
-        easing.type: Easing.OutCubic
+        duration: Motion.ms(Motion.snapMs, Kirigami.Units.longDuration)
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: Motion.snap
     }
 
     Connections {
