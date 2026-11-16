@@ -7,7 +7,7 @@ import org.kde.ksysguard.sensors as Sensors
 import "settings"
 import "components"
 
-// Sensor tiles, the battery source and the quick toggles.
+// Options for individual widgets: notifications, sensors, battery, script output and quick toggles.
 KCM.SimpleKCM {
     id: page
 
@@ -23,10 +23,6 @@ KCM.SimpleKCM {
     property alias cfg_notificationPopups: notificationPopups.checked
     property alias cfg_statsConcentric: statsConcentric.checked
     property alias cfg_showDevices: showDevices.checked
-    property alias cfg_dayNightLook: dayNightLook.checked
-    property string cfg_dayScheme
-    property string cfg_nightScheme
-    property var schemes: []
 
     readonly property var intervals: [
         { ms: 1000, text: i18n("Every second") },
@@ -66,16 +62,8 @@ KCM.SimpleKCM {
 
     readonly property string batteryCmd: "kstatsviewer --list 2>/dev/null | sed -n 's#^power/\\([^/ ]*\\)/chargePercentage .*#\\1#p'"
 
-    readonly property string schemeCmd: "plasma-apply-colorscheme --list-schemes 2>/dev/null | sed -n 's/^ *\\* \\([^ ]*\\).*/\\1/p'"
-
     Component.onCompleted: {
         shell.run(batteryCmd);
-        schemeShell.run(schemeCmd);
-    }
-
-    ShellRunner {
-        id: schemeShell
-        onFinished: (cmd, out) => page.schemes = out.split("\n").map(s => s.trim()).filter(s => s !== "")
     }
 
     ShellRunner {
@@ -112,41 +100,6 @@ KCM.SimpleKCM {
                 QQC2.CheckBox {
                     id: notificationPopups
                     text: i18n("Show new notifications in the screen corner")
-                }
-            }
-        }
-
-        Card {
-            title: i18n("Day and night look")
-            subtitle: i18n("Switches the Plasma color scheme at sunrise and sunset. The times come from the weather location, so set one in the Weather settings.")
-
-            FormRow {
-                label: i18n("Schedule:")
-                QQC2.CheckBox {
-                    id: dayNightLook
-                    text: i18n("Follow sunrise and sunset")
-                }
-            }
-            FormRow {
-                label: i18n("Day:")
-                enabled: dayNightLook.checked
-                QQC2.ComboBox {
-                    Layout.fillWidth: true
-                    model: page.schemes
-                    currentIndex: page.schemes.indexOf(page.cfg_dayScheme)
-                    displayText: currentIndex < 0 ? page.cfg_dayScheme : currentText
-                    onActivated: index => page.cfg_dayScheme = page.schemes[index]
-                }
-            }
-            FormRow {
-                label: i18n("Night:")
-                enabled: dayNightLook.checked
-                QQC2.ComboBox {
-                    Layout.fillWidth: true
-                    model: page.schemes
-                    currentIndex: page.schemes.indexOf(page.cfg_nightScheme)
-                    displayText: currentIndex < 0 ? page.cfg_nightScheme : currentText
-                    onActivated: index => page.cfg_nightScheme = page.schemes[index]
                 }
             }
         }

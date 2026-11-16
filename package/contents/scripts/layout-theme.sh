@@ -46,6 +46,15 @@ for path in glob.glob(os.path.join(root, "**", "panel-background.svg"), recursiv
     s = open(path, encoding="utf-8").read()
     s = re.sub(r'<g id="mask-[^"]*">.*?</g>', "", s, flags=re.S)
     s = re.sub(r'fill-opacity="[^"]*"', 'fill-opacity="0"', s)
+    # No background also means no panel margins: pills sit flush with the panel edges.
+    s = re.sub(r'(<rect id="hint-(?:left|right)-margin"[^>]*?width=")[^"]*"', r'\g<1>0"', s)
+    s = re.sub(r'(<rect id="hint-(?:top|bottom)-margin"[^>]*?height=")[^"]*"', r'\g<1>0"', s)
+    open(path, "w", encoding="utf-8").write(s)
+# A panel also insets each applet by the widget background's top and bottom margins, which would
+# leave a strip above and below the pills. Zero those two (left and right are left alone).
+for path in glob.glob(os.path.join(root, "**", "widgets", "background.svg"), recursive=True):
+    s = open(path, encoding="utf-8").read()
+    s = re.sub(r'(<rect id="hint-(?:top|bottom)-margin"[^>]*?height=")[^"]*"', r'\g<1>0"', s)
     open(path, "w", encoding="utf-8").write(s)
 meta = os.path.join(root, "metadata.json")
 d = json.load(open(meta, encoding="utf-8"))

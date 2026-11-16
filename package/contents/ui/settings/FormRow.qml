@@ -36,7 +36,7 @@ GridLayout {
         visible: row.hint !== ""
         text: row.hint
         font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-        opacity: 0.6
+        opacity: 0.75
         wrapMode: Text.Wrap
         Layout.fillWidth: true
     }

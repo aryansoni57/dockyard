@@ -61,6 +61,9 @@ if [ -n "$kvwant" ] && [ "$kv" != "$kvwant" ] && [ -d "$config/Kvantum/$kvwant" 
     kvantummanager --set "$kvwant"
 fi
 
+# Icon theme: light-background or dark-background sibling, so button icons stay visible.
+sh "$here/icon-tone.sh" "$tone" >/dev/null 2>&1 || true
+
 # Aurorae window decoration.
 deco=$(kreadconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme)
 case "$deco" in

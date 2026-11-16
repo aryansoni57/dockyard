@@ -3,6 +3,7 @@ import QtQuick.Shapes
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
 import "motion.js" as Motion
+import "accent"
 
 // Ring tile content (docs/STYLE.md, "Icons and widget content"):
 // 15% track, accent arc from 12 o'clock with round caps, number + label centered.
@@ -14,7 +15,7 @@ Item {
     property string suffix: ""
     // Shown in the middle instead of the rounded value, when set (a UV index, say).
     property string text: ""
-    property color accent: Kirigami.Theme.highlightColor
+    property color accent: DockAccent.color
 
     readonly property real thickness: Math.max(2, width * 0.1)
     readonly property real arcRadius: (width - thickness) / 2
@@ -78,7 +79,7 @@ Item {
             visible: ring.label !== "" && ring.height >= Kirigami.Units.gridUnit * 2
             text: ring.label
             font.pixelSize: Math.max(6, ring.height * 0.15)
-            opacity: 0.6
+            opacity: 0.78
         }
     }
 }

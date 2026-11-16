@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
 import "../components"
+import "../components/accent"
 
 // Media tile (docs/STYLE.md, "Icons and widget content"): rounded album art,
 // title over artist, flat prev/next around a filled accent play button.
@@ -13,7 +14,7 @@ Tile {
     property var player
     property bool playing
     // With no player the tile shows idleText/idleIcon and a launch button instead.
-    property color accent: Kirigami.Theme.highlightColor
+    property color accent: DockAccent.color
     property string idleText
     property string idleIcon: "folder-music-symbolic"
     property bool launchable: false
@@ -55,7 +56,7 @@ Tile {
                 source: media.idleIcon
                 isMask: media.idleIcon.endsWith("-symbolic")
                 color: media.player ? Kirigami.Theme.textColor : media.accent
-                opacity: media.player ? 0.6 : 1
+                opacity: media.player ? 0.78 : 1
             }
         }
 
@@ -77,7 +78,7 @@ Tile {
                 visible: text !== "" && media.inner >= Kirigami.Units.gridUnit * 1.5
                 text: media.player ? media.player.artist : (media.launchable ? i18n("Click to open") : "")
                 font.pixelSize: Math.max(Kirigami.Theme.smallFont.pixelSize, media.inner * 0.3)
-                opacity: 0.6
+                opacity: 0.78
                 elide: Text.ElideRight
             }
         }
@@ -106,7 +107,7 @@ Tile {
             background: Rectangle {
                 radius: width / 2
                 color: media.accent
-                opacity: playButton.enabled ? 1 : 0.4
+                opacity: playButton.enabled ? 1 : 0.5
             }
             contentItem: Kirigami.Icon {
                 source: media.playing ? "media-playback-pause" : "media-playback-start"

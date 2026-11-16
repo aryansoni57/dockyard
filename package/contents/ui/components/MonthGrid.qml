@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
+import "accent"
 
 // Month grid for the popup (docs/STYLE.md, "Popups"): weekday letters, rounded
 // day cells, today in a 2 px blue outline with a blue number.
@@ -37,7 +38,7 @@ Item {
                 text: Qt.locale().dayName((grid.firstDay + index) % 7, Locale.NarrowFormat).toUpperCase()
                 font.pixelSize: Kirigami.Theme.smallFont.pixelSize
                 font.weight: Font.DemiBold
-                opacity: 0.5
+                opacity: 0.78
             }
         }
 
@@ -60,12 +61,12 @@ Item {
                     radius: width * 0.28
                     color: Qt.alpha(Kirigami.Theme.textColor, 0.05)
                     border.width: parent.today ? 2 : 0
-                    border.color: Kirigami.Theme.highlightColor
+                    border.color: DockAccent.color
 
                     PlasmaComponents.Label {
                         anchors.centerIn: parent
                         text: parent.parent.day
-                        color: parent.parent.today ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                        color: parent.parent.today ? DockAccent.color : Kirigami.Theme.textColor
                         font.weight: parent.parent.today ? Font.Bold : Font.Normal
                         font.features: { "tnum": 1 }
                     }

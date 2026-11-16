@@ -2,6 +2,7 @@ import QtQuick
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
 import "../components"
+import "../components/accent"
 
 // Storage tile (website "Storage"): a red drive icon and "Storage" with the used
 // percent at the right, the free space big underneath, and a thin usage bar that
@@ -16,7 +17,7 @@ Tile {
     readonly property real inner: height - padding * 2
     readonly property real percent: total > 0 ? Math.max(0, Math.min(100, used / total * 100)) : 0
     readonly property real freeGib: Math.max(0, (total - used) / gib)
-    readonly property color barColor: percent >= 85 ? "#FF453A" : Kirigami.Theme.highlightColor
+    readonly property color barColor: percent >= 85 ? "#FF453A" : DockAccent.color
 
     implicitWidth: Math.round(height * 2.9)
 
@@ -69,7 +70,7 @@ Tile {
             PlasmaComponents.Label {
                 anchors.baseline: freeText.baseline
                 text: i18n("free of %1 GB", Math.round(root.total / root.gib))
-                opacity: 0.6
+                opacity: 0.78
                 font.pixelSize: Math.max(7, root.inner * 0.2)
             }
         }

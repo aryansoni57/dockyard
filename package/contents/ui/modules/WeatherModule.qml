@@ -59,7 +59,7 @@ Tile {
                       : ""
                 font.pixelSize: Math.max(Kirigami.Theme.smallFont.pixelSize, weather.inner * 0.2)
                 font.features: { "tnum": 1 }
-                opacity: 0.6
+                opacity: 0.78
                 elide: Text.ElideRight
             }
         }
@@ -72,7 +72,7 @@ Tile {
         visible: !weather.hasLocation
         text: "Set location"
         font.pixelSize: Math.max(Kirigami.Theme.smallFont.pixelSize, weather.inner * 0.2)
-        opacity: 0.6
+        opacity: 0.78
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
     }

@@ -9,6 +9,7 @@ import org.kde.taskmanager as TaskManager
 import org.kde.pipewire as PipeWire
 import "../components"
 import "../components/motion.js" as Motion
+import "../components/accent"
 
 // Pinned and running apps (docs/STYLE.md): app icons sit loose between tiles,
 // with no tile behind them. A small accent dot marks a running app.
@@ -134,6 +135,11 @@ Item {
     WheelHandler {
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: event => {
+            // Sideways swipes (trackpad) belong to the dock's own scrolling; only vertical wheel cycles apps.
+            if (Math.abs(event.angleDelta.x) > Math.abs(event.angleDelta.y) || (event.angleDelta.y === 0 && event.pixelDelta.x !== 0)) {
+                event.accepted = false;
+                return;
+            }
             apps.wheelAccum += event.angleDelta.y;
             while (Math.abs(apps.wheelAccum) >= 120) {
                 apps.cycleTasks(apps.wheelAccum > 0 ? -1 : 1);
@@ -273,30 +279,47 @@ Item {
                         anchors.fill: parent
                         anchors.margins: -Kirigami.Units.smallSpacing
                         radius: Kirigami.Units.cornerRadius
-                        color: Qt.alpha(Kirigami.Theme.highlightColor, 0.25)
+                        color: Qt.alpha(DockAccent.color, 0.25)
                         border.width: 1
-                        border.color: Qt.alpha(Kirigami.Theme.highlightColor, 0.7)
+                        border.color: Qt.alpha(DockAccent.color, 0.7)
                         opacity: winHover.hovered ? 1 : 0
                         Behavior on opacity { NumberAnimation { duration: 100 } }
                     }
 
+                    // The task model index of this window.
+                    function windowIndex() {
+                        const a = card.entry;
+                        if (!a)
+                            return null;
+                        return win.modelData.child >= 0
+                            ? apps.tasks.makeModelIndex(a.index, win.modelData.child)
+                            : apps.tasks.makeModelIndex(a.index);
+                    }
+                    // Setting tipVisible false empties the Repeater, which destroys this delegate on the spot;
+                    // after that the id `apps` no longer resolves (ReferenceError). So the window action runs
+                    // first and everything is taken from locals captured up front.
+                    function act(close) {
+                        const idx = win.windowIndex();
+                        if (idx === null)
+                            return;
+                        const host = apps;
+                        const tasks = host.tasks;
+                        if (close)
+                            tasks.requestClose(idx);
+                        else
+                            tasks.requestActivate(idx);
+                        host.tipVisible = false;
+                        host.hoveredApp = null;
+                    }
+
                     // Click raises that window; middle click closes it.
                     TapHandler {
-                        acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-                        onTapped: (eventPoint, button) => {
-                            const a = card.entry;
-                            if (!a)
-                                return;
-                            const idx = win.modelData.child >= 0
-                                ? apps.tasks.makeModelIndex(a.index, win.modelData.child)
-                                : apps.tasks.makeModelIndex(a.index);
-                            if (button === Qt.MiddleButton)
-                                apps.tasks.requestClose(idx);
-                            else
-                                apps.tasks.requestActivate(idx);
-                            apps.tipVisible = false;
-                            apps.hoveredApp = null;
-                        }
+                        acceptedButtons: Qt.LeftButton
+                        onTapped: if (!closeHover.hovered) win.act(false)
+                    }
+                    TapHandler {
+                        acceptedButtons: Qt.MiddleButton
+                        onTapped: win.act(true)
                     }
 
                     ColumnLayout {
@@ -330,6 +353,40 @@ Item {
                             height: width
                             source: card.entry ? card.entry.model.decoration : ""
                             visible: !pw.visible
+                        }
+
+                        // Close button, top right, while the pointer is over this window's preview.
+                        Rectangle {
+                            id: closeBtn
+                            anchors { top: parent.top; right: parent.right; margins: Kirigami.Units.smallSpacing }
+                            width: Kirigami.Units.iconSizes.smallMedium
+                            height: width
+                            radius: width / 2
+                            z: 10
+                            visible: opacity > 0
+                            opacity: winHover.hovered ? 1 : 0
+                            color: closeTap.pressed ? "#c43a3f" : closeHover.hovered ? "#e5484d" : Qt.alpha("black", 0.55)
+                            border.width: 1
+                            border.color: Qt.alpha("white", 0.25)
+                            Behavior on opacity { NumberAnimation { duration: 100 } }
+                            Behavior on color { ColorAnimation { duration: 80 } }
+                            Kirigami.Icon {
+                                anchors.centerIn: parent
+                                width: parent.width * 0.6
+                                height: width
+                                source: "window-close-symbolic"
+                                isMask: true
+                                color: "white"
+                            }
+                            HoverHandler { id: closeHover }
+                            TapHandler {
+                                id: closeTap
+                                acceptedButtons: Qt.LeftButton
+                                onTapped: win.act(true)
+                            }
+                            QQC2.ToolTip.visible: closeHover.hovered
+                            QQC2.ToolTip.text: i18n("Close window")
+                            QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
                         }
                     }
                     QQC2.Label {
@@ -722,7 +779,7 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     radius: width * 0.24
-                    color: Qt.alpha(Kirigami.Theme.highlightColor, 0.35)
+                    color: Qt.alpha(DockAccent.color, 0.35)
                     visible: app.model.IsDemandingAttention === true
                     SequentialAnimation on opacity {
                         running: app.model.IsDemandingAttention === true
@@ -749,7 +806,7 @@ Item {
                     width: 4
                     height: 4
                     radius: 2
-                    color: Kirigami.Theme.highlightColor
+                    color: DockAccent.color
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: Math.round(parent.height - (parent.height - apps.iconSize) / 4 - 2)
                     visible: !app.model.IsLauncher

@@ -3,10 +3,9 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.kcmutils as KCM
-import org.kde.kquickcontrols as KQuickControls
 import "settings"
 
-// Which tiles are on the dock. Each tile's own options live on the other pages.
+// Which tiles are on the dock. Each tile's own options live on the Widget options and other pages.
 KCM.SimpleKCM {
     id: page
 
@@ -43,10 +42,6 @@ KCM.SimpleKCM {
     property alias cfg_showClipboard: showClipboard.checked
     property alias cfg_showCalendar: showCalendar.checked
     property bool cfg_tilePopups
-    property bool cfg_barOpaque
-    property string cfg_dockLayout
-    property string cfg_accentColor
-    property bool cfg_syncSystemAccent
 
     // Every widget switch, for the counter and the presets.
     readonly property var switches: [showStart, showClock, showStats, showMedia, showTemperature, showNetwork,
@@ -117,9 +112,9 @@ KCM.SimpleKCM {
         }
         background: Rectangle {
             radius: height / 2
-            color: Qt.alpha(Kirigami.Theme.textColor, chip.down ? 0.16 : chip.hovered ? 0.11 : 0.06)
+            color: Qt.alpha(Kirigami.Theme.textColor, chip.down ? 0.2 : chip.hovered ? 0.15 : 0.09)
             border.width: 1
-            border.color: Qt.alpha(Kirigami.Theme.textColor, 0.08)
+            border.color: Qt.alpha(Kirigami.Theme.textColor, 0.18)
         }
     }
 
@@ -144,13 +139,13 @@ KCM.SimpleKCM {
                     implicitWidth: countLabel.implicitWidth + Kirigami.Units.largeSpacing * 1.5
                     implicitHeight: countLabel.implicitHeight + Kirigami.Units.smallSpacing
                     radius: height / 2
-                    color: Qt.alpha(Kirigami.Theme.highlightColor, 0.18)
+                    color: Qt.alpha(Kirigami.Theme.highlightColor, 0.22)
 
                     QQC2.Label {
                         id: countLabel
                         anchors.centerIn: parent
                         text: i18n("%1 of %2 on", page.enabledCount, page.switches.length)
-                        color: Kirigami.Theme.highlightColor
+                        color: Kirigami.Theme.textColor
                         font.weight: Font.DemiBold
                         font.pixelSize: Kirigami.Theme.smallFont.pixelSize
                     }
@@ -158,7 +153,7 @@ KCM.SimpleKCM {
             }
             QQC2.Label {
                 text: i18n("Turn widgets on to add them to the dock. Drag tiles on the dock to reorder them.")
-                opacity: 0.6
+                opacity: 0.75
                 wrapMode: Text.Wrap
                 Layout.fillWidth: true
             }
@@ -173,7 +168,7 @@ KCM.SimpleKCM {
 
                 QQC2.Label {
                     text: i18n("Presets")
-                    opacity: 0.55
+                    opacity: 0.75
                     height: minimalBtn.height
                     verticalAlignment: Text.AlignVCenter
                     rightPadding: Kirigami.Units.smallSpacing
@@ -246,14 +241,14 @@ KCM.SimpleKCM {
             columns: 2
             columnSpacing: Kirigami.Units.smallSpacing
             rowSpacing: 0
-            WidgetCheck { id: showStats; iconName: "cpu-symbolic"; accent: page.systemAccent; description: i18n("CPU, RAM and disk rings"); text: i18n("System stats"); keywords: "cpu ram memory disk usage stats"; optionsPage: i18n("System") }
-            WidgetCheck { id: showTemperature; iconName: "temperature-normal-symbolic"; accent: page.systemAccent; description: i18n("CPU heat and load"); text: i18n("CPU temperature"); optionsPage: i18n("System") }
-            WidgetCheck { id: showNetwork; iconName: "network-wireless-symbolic"; accent: page.systemAccent; description: i18n("Download and upload speed"); text: i18n("Network speed"); keywords: "download upload"; optionsPage: i18n("System") }
+            WidgetCheck { id: showStats; iconName: "cpu-symbolic"; accent: page.systemAccent; description: i18n("CPU, RAM and disk rings"); text: i18n("System stats"); keywords: "cpu ram memory disk usage stats"; optionsPage: i18n("Widget options") }
+            WidgetCheck { id: showTemperature; iconName: "temperature-normal-symbolic"; accent: page.systemAccent; description: i18n("CPU heat and load"); text: i18n("CPU temperature"); optionsPage: i18n("Widget options") }
+            WidgetCheck { id: showNetwork; iconName: "network-wireless-symbolic"; accent: page.systemAccent; description: i18n("Download and upload speed"); text: i18n("Network speed"); keywords: "download upload"; optionsPage: i18n("Widget options") }
             WidgetCheck { id: showStorage; iconName: "drive-harddisk-symbolic"; accent: page.systemAccent; description: i18n("Used space on your disk"); text: i18n("Disk usage"); keywords: "storage" }
-            WidgetCheck { id: showScript; iconName: "utilities-terminal-symbolic"; accent: page.systemAccent; description: i18n("Your own command, on a timer"); text: i18n("Script output"); keywords: "custom command shell"; optionsPage: i18n("System") }
-            WidgetCheck { id: showBattery; iconName: "battery-good-symbolic"; accent: page.systemAccent; description: i18n("Charge level and charging"); text: i18n("Battery"); keywords: "power"; optionsPage: i18n("System") }
+            WidgetCheck { id: showScript; iconName: "utilities-terminal-symbolic"; accent: page.systemAccent; description: i18n("Your own command, on a timer"); text: i18n("Script output"); keywords: "custom command shell"; optionsPage: i18n("Widget options") }
+            WidgetCheck { id: showBattery; iconName: "battery-good-symbolic"; accent: page.systemAccent; description: i18n("Charge level and charging"); text: i18n("Battery"); keywords: "power"; optionsPage: i18n("Widget options") }
             WidgetCheck { id: showVolume; iconName: "audio-volume-high-symbolic"; accent: page.systemAccent; description: i18n("Output level slider"); text: i18n("Volume slider"); keywords: "sound audio" }
-            WidgetCheck { id: showToggles; iconName: "network-wireless-connected-symbolic"; accent: page.systemAccent; description: i18n("Wi-Fi, Bluetooth, Do Not Disturb"); text: i18n("Quick toggles"); keywords: "wifi bluetooth dnd night"; optionsPage: i18n("System") }
+            WidgetCheck { id: showToggles; iconName: "network-wireless-connected-symbolic"; accent: page.systemAccent; description: i18n("Wi-Fi, Bluetooth, Do Not Disturb"); text: i18n("Quick toggles"); keywords: "wifi bluetooth dnd night"; optionsPage: i18n("Widget options") }
             WidgetCheck { id: showNotifications; iconName: "preferences-desktop-notification-bell-symbolic"; accent: page.systemAccent; description: i18n("Unread count and history"); text: i18n("Notifications"); keywords: "alerts dnd bell" }
             WidgetCheck { id: showClipboard; iconName: "edit-paste-symbolic"; accent: page.systemAccent; description: i18n("Search and reuse what you copied"); text: i18n("Clipboard history"); keywords: "copy paste klipper" }
             WidgetCheck { id: showJobs; iconName: "folder-download-symbolic"; accent: page.systemAccent; description: i18n("Progress of file copies, while they run"); text: i18n("Job progress"); keywords: "copy download transfer progress" }
@@ -271,60 +266,6 @@ KCM.SimpleKCM {
             WidgetCheck { id: showWeather; iconName: "weather-few-clouds-symbolic"; accent: page.appsAccent; description: i18n("Current conditions"); text: i18n("Weather"); optionsPage: i18n("Weather") }
             WidgetCheck { id: showRecycleBin; iconName: "user-trash-symbolic"; accent: page.appsAccent; description: i18n("Trash at a glance"); text: i18n("Recycle bin"); keywords: "trash" }
             WidgetCheck { id: showScreenshot; iconName: "spectacle-symbolic"; accent: page.appsAccent; description: i18n("Capture the screen or a region"); text: i18n("Screenshot capture") }
-        }
-
-        Card {
-            title: i18n("Dock bar")
-            visible: page.query === ""
-            WidgetRow {
-                text: i18n("Opaque dock bar")
-                description: i18n("Solid instead of frosted glass")
-                iconName: "preferences-desktop-theme-global-symbolic"
-                accent: "#8E8E93"
-                checked: page.cfg_barOpaque
-                onToggled: page.cfg_barOpaque = checked
-                QQC2.ToolTip.visible: hovered
-                QQC2.ToolTip.text: i18n("Changes the dock bar when it is a desktop widget, and switches the Glass Plasma theme to Glass (opaque) if that is your theme. Run install-all.sh once to install both.")
-                QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay * 2
-            }
-            FormRow {
-                label: i18n("Layout")
-                hint: i18n("Islands split the dock into floating pills: tiles before the apps, the apps, and tiles after. Switches the Glass Plasma theme to a variant with no panel background, if Glass is your theme.")
-                QQC2.RadioButton {
-                    text: i18n("Bar")
-                    checked: page.cfg_dockLayout !== "islands"
-                    onToggled: if (checked) page.cfg_dockLayout = "bar"
-                }
-                QQC2.RadioButton {
-                    text: i18n("Islands")
-                    checked: page.cfg_dockLayout === "islands"
-                    onToggled: if (checked) page.cfg_dockLayout = "islands"
-                }
-            }
-            FormRow {
-                label: i18n("Accent color")
-                hint: i18n("Colors the dock's buttons and highlights. Reset follows your Plasma theme.")
-                KQuickControls.ColorButton {
-                    color: /^#[0-9a-fA-F]{6}$/.test(page.cfg_accentColor) ? page.cfg_accentColor : Kirigami.Theme.highlightColor
-                    showAlphaChannel: false
-                    onAccepted: page.cfg_accentColor = Qt.color(color).toString().toLowerCase()
-                }
-                QQC2.Button {
-                    text: i18n("Reset")
-                    icon.name: "edit-undo"
-                    enabled: page.cfg_accentColor !== ""
-                    onClicked: page.cfg_accentColor = ""
-                }
-            }
-            FormRow {
-                label: i18n("System theme")
-                hint: i18n("Also sets the Plasma accent color and the Dockyard Plasma theme colors (volume pop-up and more), so apps and Plasma follow. Changing it restarts plasmashell. Reset puts the originals back. Kvantum-styled widgets keep their blue.")
-                QQC2.CheckBox {
-                    text: i18n("Sync accent with the system")
-                    checked: page.cfg_syncSystemAccent
-                    onToggled: page.cfg_syncSystemAccent = checked
-                }
-            }
         }
     }
 }

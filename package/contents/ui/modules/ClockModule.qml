@@ -20,6 +20,8 @@ Tile {
     readonly property var weather: weatherSource ? weatherSource.current : null
     readonly property real band: height * 0.5
 
+    // Fixed colors (docs/STYLE.md): no accent glass.
+    accentTint: false
     color: "#000000"
     border.color: Qt.alpha("white", 0.14)
     implicitWidth: Math.round(height * 1.12)

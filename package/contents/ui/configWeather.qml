@@ -91,7 +91,7 @@ KCM.SimpleKCM {
                     QQC2.Label {
                         text: page.hasLocation ? i18n("%1, %2", page.cfg_latitude, page.cfg_longitude)
                             : i18n("Weather stays empty until you pick a city.")
-                        opacity: 0.6
+                        opacity: 0.75
                         font.pixelSize: Kirigami.Theme.smallFont.pixelSize
                     }
                 }
@@ -196,7 +196,7 @@ KCM.SimpleKCM {
 
         QQC2.Label {
             text: i18n("Forecast data from Open-Meteo.")
-            opacity: 0.5
+            opacity: 0.75
             font.pixelSize: Kirigami.Theme.smallFont.pixelSize
             Layout.alignment: Qt.AlignHCenter
         }

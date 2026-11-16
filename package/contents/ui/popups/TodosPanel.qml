@@ -5,6 +5,7 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
+import "../components/accent"
 
 // Todos popup: progress on top, open todos, completed ones folded away, and the
 // input at the bottom, next to the dock. Tap the circle to complete or restore,
@@ -18,7 +19,7 @@ ColumnLayout {
     readonly property var openRows: rows(false)
     readonly property var doneRows: rows(true)
     readonly property bool allDone: items.length > 0 && openRows.length === 0
-    readonly property color barColor: allDone ? "#30D158" : Kirigami.Theme.highlightColor
+    readonly property color barColor: allDone ? "#30D158" : DockAccent.color
     property bool showDone: false
     property int editing: -1
 
@@ -75,10 +76,10 @@ ColumnLayout {
                 contentItem: Item {}
                 background: Rectangle {
                     radius: width / 2
-                    color: row.modelData.done ? Kirigami.Theme.highlightColor
-                        : Qt.alpha(Kirigami.Theme.highlightColor, check.hovered ? 0.2 : 0)
+                    color: row.modelData.done ? DockAccent.color
+                        : Qt.alpha(DockAccent.color, check.hovered ? 0.2 : 0)
                     border.width: 1.5
-                    border.color: row.modelData.done || check.hovered ? Kirigami.Theme.highlightColor
+                    border.color: row.modelData.done || check.hovered ? DockAccent.color
                         : Qt.alpha(Kirigami.Theme.textColor, 0.5)
 
                     Kirigami.Icon {
@@ -302,7 +303,7 @@ ColumnLayout {
             radius: height / 2
             color: Qt.alpha(Kirigami.Theme.textColor, 0.06)
             border.width: 1
-            border.color: input.activeFocus ? Kirigami.Theme.highlightColor : Qt.alpha(Kirigami.Theme.textColor, 0.12)
+            border.color: input.activeFocus ? DockAccent.color : Qt.alpha(Kirigami.Theme.textColor, 0.12)
         }
 
         QQC2.AbstractButton {
@@ -318,7 +319,7 @@ ColumnLayout {
             contentItem: Item {}
             background: Rectangle {
                 radius: width / 2
-                color: addButton.enabled ? Kirigami.Theme.highlightColor : Qt.alpha(Kirigami.Theme.textColor, 0.1)
+                color: addButton.enabled ? DockAccent.color : Qt.alpha(Kirigami.Theme.textColor, 0.1)
 
                 Kirigami.Icon {
                     anchors.centerIn: parent

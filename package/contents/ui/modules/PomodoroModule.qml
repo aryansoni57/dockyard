@@ -139,7 +139,7 @@ Tile {
                     text: (pomo.completed % 4) + "/4"
                     font.pixelSize: pomo.inner * 0.22
                     font.features: { "tnum": 1 }
-                    opacity: 0.6
+                    opacity: 0.78
                 }
             }
         }

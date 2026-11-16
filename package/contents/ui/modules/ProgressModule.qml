@@ -65,7 +65,7 @@ Tile {
             PlasmaComponents.Label {
                 text: tile.caption
                 font.pixelSize: Math.max(8, tile.inner * 0.3)
-                opacity: 0.6
+                opacity: 0.78
             }
             Item {
                 Layout.fillWidth: true

@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
 import "../components"
+import "../components/accent"
 
 // Todos tile: "N left" over the first two items, each with a round checkbox.
 // `json` is the saved list ([{text, done}]). Changes emit `jsonEdited` so the
@@ -147,7 +148,7 @@ Tile {
                     Layout.preferredWidth: todos.rowH * 0.7
                     Layout.preferredHeight: Layout.preferredWidth
                     radius: width / 2
-                    color: row.done ? Kirigami.Theme.highlightColor : "transparent"
+                    color: row.done ? DockAccent.color : "transparent"
                     border.width: 1
                     border.color: Qt.alpha(Kirigami.Theme.textColor, 0.5)
 

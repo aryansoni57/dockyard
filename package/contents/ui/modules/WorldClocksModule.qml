@@ -103,7 +103,7 @@ Tile {
                 PlasmaComponents.Label {
                     text: wc.cityName(clockColumn.modelData)
                     font.pixelSize: wc.inner * 0.2
-                    opacity: 0.6
+                    opacity: 0.78
                 }
             }
         }

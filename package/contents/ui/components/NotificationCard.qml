@@ -8,6 +8,7 @@ import org.kde.plasma.extras as PlasmaExtras
 import org.kde.kirigami as Kirigami
 import org.kde.kquickcontrolsaddons as KQCAddons
 import org.kde.notificationmanager as NotificationManager
+import "accent"
 
 // One notification: app line with time and close, icon or image, summary, body and
 // action buttons. Used by the toast popups and the history panel. `model` is the
@@ -21,7 +22,7 @@ Item {
     property var notifications
     property int row: 0
     property bool popup: false
-    property color accent: Kirigami.Theme.highlightColor
+    property color accent: DockAccent.color
     // Milliseconds a popup stays when the sender leaves the timeout to the server.
     property int defaultTimeout: 5000
 
@@ -202,7 +203,7 @@ Item {
                 text: card.timeText(card?.m?.updated || card?.m?.created)
                 font.pointSize: Kirigami.Theme.smallFont.pointSize
                 font.features: { "tnum": 1 }
-                opacity: 0.55
+                opacity: 0.78
             }
             PlasmaComponents.ToolButton {
                 visible: card?.m?.closable !== false

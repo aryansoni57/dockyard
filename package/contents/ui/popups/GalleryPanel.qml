@@ -6,6 +6,7 @@ import QtQuick.Layouts
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
 import "../settings"
+import "../components/accent"
 
 // Widget gallery: every tile the dock can show, grouped by category. Tap a card
 // to add it to the dock or take it off. Each tile's options stay in Settings.
@@ -97,13 +98,13 @@ ColumnLayout {
             implicitWidth: countLabel.implicitWidth + Kirigami.Units.largeSpacing * 1.5
             implicitHeight: countLabel.implicitHeight + Kirigami.Units.smallSpacing
             radius: height / 2
-            color: Qt.alpha(Kirigami.Theme.highlightColor, 0.18)
+            color: Qt.alpha(DockAccent.color, 0.18)
 
             QQC2.Label {
                 id: countLabel
                 anchors.centerIn: parent
                 text: i18n("%1 in bar", panel.onCount)
-                color: Kirigami.Theme.highlightColor
+                color: DockAccent.color
                 font.weight: Font.DemiBold
                 font.pixelSize: Kirigami.Theme.smallFont.pixelSize
                 font.features: { "tnum": 1 }
@@ -157,7 +158,7 @@ ColumnLayout {
                 }
                 background: Rectangle {
                     radius: height / 2
-                    color: chip.current ? Kirigami.Theme.highlightColor
+                    color: chip.current ? DockAccent.color
                         : Qt.alpha(Kirigami.Theme.textColor, chip.hovered ? 0.12 : 0.06)
                 }
             }

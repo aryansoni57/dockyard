@@ -30,16 +30,16 @@ ColumnLayout {
         font.pixelSize: Kirigami.Theme.smallFont.pixelSize
         font.weight: Font.DemiBold
         font.letterSpacing: 0.6
-        opacity: 0.55
+        opacity: 0.75
         Layout.leftMargin: Kirigami.Units.smallSpacing
     }
     Rectangle {
         Layout.fillWidth: true
         Layout.preferredHeight: inner.implicitHeight + Kirigami.Units.largeSpacing * 2
         radius: Kirigami.Units.cornerRadius * 2
-        color: Qt.alpha(Kirigami.Theme.textColor, 0.04)
+        color: Qt.alpha(Kirigami.Theme.textColor, 0.06)
         border.width: 1
-        border.color: Qt.alpha(Kirigami.Theme.textColor, 0.1)
+        border.color: Qt.alpha(Kirigami.Theme.textColor, 0.18)
 
         ColumnLayout {
             id: inner
@@ -51,7 +51,7 @@ ColumnLayout {
             QQC2.Label {
                 visible: card.subtitle !== ""
                 text: card.subtitle
-                opacity: 0.6
+                opacity: 0.75
                 wrapMode: Text.Wrap
                 Layout.fillWidth: true
             }

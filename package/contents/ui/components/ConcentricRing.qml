@@ -3,6 +3,7 @@ import QtQuick.Shapes
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
 import "motion.js" as Motion
+import "accent"
 
 // Three nested rings, after the AvdanOS resource gauge: CPU outside, RAM in the middle,
 // disk inside. Same look as RingGauge (15% track, round caps, arc from 12 o'clock).
@@ -13,7 +14,7 @@ Item {
     property real cpu   // 0..100
     property real mem   // 0..100
     property real disk  // 0..100
-    property color cpuColor: Kirigami.Theme.highlightColor
+    property color cpuColor: DockAccent.color
     property color memColor: "#30D158"
     property color diskColor: "#FF9F0A"
 

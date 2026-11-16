@@ -38,7 +38,7 @@ QQC2.AbstractButton {
             Layout.preferredWidth: Kirigami.Units.iconSizes.medium
             Layout.preferredHeight: Kirigami.Units.iconSizes.medium
             radius: width * 0.28
-            color: row.checked ? row.accent : Qt.alpha(Kirigami.Theme.textColor, 0.12)
+            color: row.checked ? row.accent : Qt.alpha(Kirigami.Theme.textColor, 0.16)
             Behavior on color { ColorAnimation { duration: Kirigami.Units.longDuration } }
 
             Kirigami.Icon {
@@ -47,7 +47,7 @@ QQC2.AbstractButton {
                 height: width
                 source: row.iconName
                 isMask: true
-                color: row.checked ? "white" : Qt.alpha(Kirigami.Theme.textColor, 0.6)
+                color: row.checked ? "white" : Qt.alpha(Kirigami.Theme.textColor, 0.78)
             }
         }
 
@@ -65,18 +65,38 @@ QQC2.AbstractButton {
                 visible: row.description !== ""
                 text: row.description
                 font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                opacity: 0.55
+                opacity: 0.75
                 elide: Text.ElideRight
                 Layout.fillWidth: true
             }
         }
 
-        QQC2.Switch {
+        // Drawn here, not QQC2.Switch: the Plasma switch is near-invisible on the light theme.
+        Item {
             id: toggle
+            readonly property bool light: Kirigami.Theme.textColor.hslLightness < 0.5
+            readonly property color onColor: light ? Qt.darker(Kirigami.Theme.highlightColor, 1.3) : Kirigami.Theme.highlightColor
             Layout.rightMargin: Kirigami.Units.smallSpacing
-            checked: row.checked
-            focusPolicy: Qt.NoFocus
+            implicitWidth: Kirigami.Units.gridUnit * 2.2
+            implicitHeight: Kirigami.Units.gridUnit * 1.25
             Accessible.ignored: true
+            Rectangle {
+                anchors.fill: parent
+                radius: height / 2
+                color: row.checked ? toggle.onColor : Qt.alpha(Kirigami.Theme.textColor, 0.14)
+                border.width: 1
+                border.color: row.checked ? toggle.onColor : Qt.alpha(Kirigami.Theme.textColor, 0.5)
+                Behavior on color { ColorAnimation { duration: Kirigami.Units.shortDuration } }
+            }
+            Rectangle {
+                width: parent.height - 6
+                height: width
+                radius: width / 2
+                y: 3
+                x: row.checked ? parent.width - width - 3 : 3
+                color: row.checked || !toggle.light ? "white" : Qt.alpha(Kirigami.Theme.textColor, 0.6)
+                Behavior on x { NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic } }
+            }
             // The row owns the state; a tap on the switch counts as a tap on the row.
             MouseArea {
                 anchors.fill: parent

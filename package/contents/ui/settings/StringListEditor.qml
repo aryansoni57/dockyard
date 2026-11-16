@@ -57,7 +57,7 @@ ColumnLayout {
     QQC2.Label {
         visible: editor.items.length === 0 && editor.emptyText !== ""
         text: editor.emptyText
-        opacity: 0.6
+        opacity: 0.75
         Layout.fillWidth: true
     }
 
@@ -85,7 +85,7 @@ ColumnLayout {
 
                 QQC2.Label {
                     text: itemRow.index + 1
-                    opacity: 0.45
+                    opacity: 0.65
                     horizontalAlignment: Text.AlignRight
                     Layout.preferredWidth: Kirigami.Units.gridUnit
                 }

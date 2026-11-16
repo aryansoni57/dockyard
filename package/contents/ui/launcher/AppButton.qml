@@ -4,6 +4,7 @@ import QtQuick.Controls as QQC2
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.plasma.plasmoid
 import org.kde.kirigami as Kirigami
+import "../components/accent"
 
 // One app: icon over name in the grid, icon beside name in the list.
 // Focusable, so arrow keys and Enter work; right-click asks for its menu.
@@ -17,7 +18,7 @@ QQC2.AbstractButton {
     readonly property real iconSize: listMode ? Kirigami.Units.iconSizes.smallMedium : Math.round(Kirigami.Units.gridUnit * 1.9)
     // The icon sits on a faint rounded-square tile, so theme icons of any shape read as one set.
     readonly property real tileSize: listMode ? Math.round(Kirigami.Units.gridUnit * 1.75) : Math.round(iconSize * 1.25)
-    property color accent: Plasmoid.configuration.accentColor !== "" ? Plasmoid.configuration.accentColor : "#0A84FF"
+    property color accent: DockAccent.color
     // Set by the launcher on the first search match, so Enter launches it.
     property bool searchHit: false
     readonly property bool selected: app.visualFocus || app.activeFocus || app.searchHit

@@ -11,6 +11,7 @@ import org.kde.taskmanager as TaskManager
 import "modules" as Modules
 import "popups" as Popups
 import "components"
+import "components/accent"
 import "launcher" as Launcher
 import "components/progress.js" as Progress
 import "components/motion.js" as Motion
@@ -62,7 +63,10 @@ PlasmoidItem {
 
     // Always show the tile row; the detail view opens as a popup.
     preferredRepresentation: compactRepresentation
-    Plasmoid.backgroundHints: onDesktop ? PlasmaCore.Types.NoBackground : PlasmaCore.Types.DefaultBackground
+    // Islands draw their own pills: a widget background would only inset the dock by its margins.
+    // Islands fill the panel's whole thickness instead of sitting in its margin areas.
+    Plasmoid.constraintHints: islands ? Plasmoid.CanFillArea : Plasmoid.NoHint
+    Plasmoid.backgroundHints: (onDesktop || islands) ? PlasmaCore.Types.NoBackground : PlasmaCore.Types.DefaultBackground
 
     // Fire on each minute boundary instead of polling every second.
     Timer {
@@ -369,36 +373,88 @@ PlasmoidItem {
     }
 
     // Island layout: the bar splits into floating glass pills. Tiles before the apps are
-    // one pill, the apps another, the tiles after them a third. A Plasma panel draws its own
+    // five pills grouped by islandGroup(): launch, apps, jobs, time, system. A Plasma panel draws its own
     // background, so switching on islands also applies the glass-islands Plasma theme (a
     // glass copy with no panel background), when a Dockyard theme is active.
     readonly property bool islands: cfg.dockLayout === "islands"
-    readonly property real islandGap: Kirigami.Units.gridUnit * 1.1
+    readonly property real islandGap: Kirigami.Units.gridUnit * 0.8
     readonly property real islandPad: Kirigami.Units.smallSpacing * 1.5
     property var islandRects: []
     // The tile row, set by the row itself (ids inside the dock's component are not visible here).
     property Item tileRow: null
+    // Which pill a tile belongs to: 0 launch, 1 apps, 2 jobs, 3 time, 4 system.
+    function islandGroup(key) {
+        switch (key) {
+        case "start": return 0;
+        case "apps": return 1;
+        case "jobs": case "media": return 2;
+        case "weather": case "pomodoro": case "timer": case "stopwatch": case "worldclocks":
+        case "todos": case "notes": case "monthprogress": case "dayprogress": case "yearprogress":
+        case "date": case "daynumber": case "calendar": case "clockstyle": case "clock":
+            return 3;
+        default: return 4;
+        }
+    }
+    function isSep(k) {
+        return /^sep\d+$/.test(k);
+    }
     function updateIslands() {
+        if (!tileRow)
+            return;
+        // row.children is a QML list, not an array: copy it before filtering.
+        const byName = {};
+        const tiles = [];
+        for (let i = 0; i < tileRow.children.length; ++i) {
+            const c = tileRow.children[i];
+            if (c.objectName === "")
+                continue;
+            byName[c.objectName] = c;
+            if (!isSep(c.objectName) && c.Layout)
+                tiles.push(c);
+        }
+        for (const c of tiles) {
+            c.Layout.leftMargin = 0;
+            c.Layout.rightMargin = 0;
+        }
+        // A separator shows only between two visible tiles; extra ones next to it collapse.
+        const toks = layoutOrder;
+        const vis = toks.map(k => isSep(k) ? null : !!(byName[k] && byName[k].visible && byName[k].width > 0));
+        let seen = false;
+        const shownSeps = {};
+        toks.forEach((k, i) => {
+            if (!isSep(k)) {
+                if (vis[i])
+                    seen = true;
+                return;
+            }
+            const more = vis.slice(i + 1).some(v => v === true);
+            shownSeps[k] = seen && more;
+            if (shownSeps[k])
+                seen = false;
+        });
+        for (const k in byName)
+            if (isSep(k))
+                byName[k].shown = shownSeps[k] === true;
         if (!islands) {
             islandRects = [];
             return;
         }
-        // row.children is a QML list, not an array: copy it before filtering.
-        const items = [];
-        if (!tileRow)
-            return;
-        for (let i = 0; i < tileRow.children.length; ++i) {
-            const c = tileRow.children[i];
-            if (c.visible && c.objectName !== "" && c.width > 0)
-                items.push(c);
+        const shown = tiles.filter(c => c.visible && c.width > 0).sort((a, b) => a.x - b.x);
+        const groups = [];
+        for (const c of shown) {
+            const g = pillOf(c.objectName);
+            if (groups.length === 0 || groups[groups.length - 1].g !== g)
+                groups.push({ g: g, items: [] });
+            groups[groups.length - 1].items.push(c);
         }
-        const appsItem = items.find(c => c.objectName === "apps");
-        const groups = appsItem
-            ? [items.filter(c => c !== appsItem && c.x < appsItem.x), [appsItem], items.filter(c => c !== appsItem && c.x > appsItem.x)]
-            : [items];
-        islandRects = groups.filter(g => g.length > 0).map(g => {
-            const x0 = Math.min(...g.map(c => c.x));
-            const x1 = Math.max(...g.map(c => c.x + c.width));
+        if (groups.length > 0) {
+            groups[0].items[0].Layout.leftMargin = islandPad;
+            const lg = groups[groups.length - 1].items;
+            lg[lg.length - 1].Layout.rightMargin = islandPad;
+        }
+        islandRects = groups.map(grp => {
+            const x0 = Math.min(...grp.items.map(c => c.x));
+            const x1 = Math.max(...grp.items.map(c => c.x + c.width));
             return { x: x0 - islandPad, w: x1 - x0 + islandPad * 2 };
         });
     }
@@ -409,6 +465,7 @@ PlasmoidItem {
     }
     onIslandsChanged: islandTimer.restart()
     onOrderChanged: islandTimer.restart()
+    onLayoutOrderChanged: islandTimer.restart()
     Connections {
         target: root.cfg
         function onDockLayoutChanged() {
@@ -420,6 +477,12 @@ PlasmoidItem {
     // Run a command detached, so a long-lived app never blocks the runner.
     function launch(cmd) {
         shell.run("(" + cmd + ") >/dev/null 2>&1 &");
+    }
+
+    // Settings open in Dockyard Settings, which hosts the System Settings modules itself. Falls back to System Settings if it is not installed.
+    function openSettings(kcm) {
+        const a = kcm ? " " + kcm : "";
+        launch("dockyard-settings" + a + " || \"$HOME/.local/bin/dockyard-settings\"" + a + " || systemsettings" + a);
     }
 
     // App Setups: named sets of apps that open and tile together (settings: App Setups page).
@@ -566,6 +629,11 @@ PlasmoidItem {
     // Dock context menu (demo video 0:57): Plasma adds Configure and Remove itself.
     Plasmoid.contextualActions: [
         PlasmaCore.Action {
+            text: i18n("Add Separator")
+            icon.name: "view-split-left-right"
+            onTriggered: root.addSeparator()
+        },
+        PlasmaCore.Action {
             text: i18n("Widgets…")
             icon.name: "view-app-grid"
             onTriggered: root.togglePopup("gallery", root.dockItem)
@@ -578,7 +646,7 @@ PlasmoidItem {
         PlasmaCore.Action {
             text: i18n("System Settings")
             icon.name: "preferences-system"
-            onTriggered: shell.run("systemsettings")
+            onTriggered: root.openSettings("")
         }
     ]
 
@@ -592,15 +660,105 @@ PlasmoidItem {
     property var dragOrder: null // full order while a tile is being dragged
     readonly property var order: dragOrder !== null
         ? dragOrder : cfg.tileOrder.split(",").map(k => k.trim()).filter(k => k !== "")
+    // Separators ("sep1", "sep2", …) live in the order list beside the tiles. In islands mode
+    // they are the gaps between pills (so the pill count is up to you); in bar mode they draw
+    // as thin dividers. With none saved, islands start from the islandGroup() defaults.
+    readonly property var layoutOrder: {
+        if (!islands)
+            return order.filter(k => k !== "|");
+        if (order.some(k => isSep(k))) {
+            const list = order.slice();
+            for (const k of tileKeys)
+                if (list.indexOf(k) < 0)
+                    list.push(k);
+            return list;
+        }
+        const base = k => {
+            const i = order.indexOf(k);
+            return islandGroup(k) * 200 + (i >= 0 ? i + 1 : (k === "start" ? 0 : 100 + tileKeys.indexOf(k)));
+        };
+        const sorted = tileKeys.slice().sort((a, b) => base(a) - base(b));
+        const out = [];
+        let n = 0;
+        sorted.forEach((k, idx) => {
+            if (idx > 0 && islandGroup(k) !== islandGroup(sorted[idx - 1]))
+                out.push("sep" + (++n));
+            out.push(k);
+        });
+        return out;
+    }
+    // Highest separator number in use; the dock keeps one slot item per number.
+    readonly property int sepCount: layoutOrder.reduce((m, k) => isSep(k) ? Math.max(m, parseInt(k.slice(3))) : m, 0)
+    // Pill number of a tile: separators before it in layoutOrder.
+    function pillOf(key) {
+        let n = 0;
+        for (const k of layoutOrder) {
+            if (k === key)
+                return n;
+            if (isSep(k))
+                n++;
+        }
+        return n;
+    }
     function colOf(key) {
-        const i = order.indexOf(key);
+        const j = layoutOrder.indexOf(key);
+        if (islands)
+            return j >= 0 ? j + 1 : 1000;
         // Start sits first until it is dragged somewhere else.
-        if (i < 0 && key === "start")
+        if (j < 0 && key === "start")
             return 0;
-        return i >= 0 ? i + 1 : 100 + tileKeys.indexOf(key);
+        return j >= 0 ? j + 1 : 100 + tileKeys.indexOf(key);
     }
     function fullOrder() {
-        return tileKeys.slice().sort((a, b) => colOf(a) - colOf(b));
+        if (islands)
+            return layoutOrder.slice();
+        const seps = layoutOrder.filter(k => isSep(k));
+        return tileKeys.concat(seps).sort((a, b) => colOf(a) - colOf(b));
+    }
+    // Drop separators that do nothing: leading, trailing and doubled ones.
+    function saveOrder(list) {
+        const out = [];
+        for (const k of list) {
+            if (isSep(k) && (out.length === 0 || isSep(out[out.length - 1])))
+                continue;
+            out.push(k);
+        }
+        while (out.length > 0 && isSep(out[out.length - 1]))
+            out.pop();
+        Plasmoid.configuration.tileOrder = out.join(",");
+    }
+    function tileShown(key) {
+        if (!tileRow)
+            return false;
+        for (let i = 0; i < tileRow.children.length; ++i) {
+            const c = tileRow.children[i];
+            if (c.objectName === key)
+                return c.visible && c.width > 0;
+        }
+        return false;
+    }
+    // Add a separator in the middle of the run with the most visible tiles, so it splits that
+    // pill in two. Runs with fewer than two visible tiles cannot be split.
+    function addSeparator() {
+        const list = fullOrder();
+        let best = null, run = [];
+        for (let i = 0; i <= list.length; ++i) {
+            if (i === list.length || isSep(list[i])) {
+                if (run.length >= 2 && (!best || run.length > best.length))
+                    best = run;
+                run = [];
+            } else if (tileShown(list[i])) {
+                run.push(i);
+            }
+        }
+        if (!best)
+            return;
+        // Insert right after the middle visible tile.
+        list.splice(best[Math.ceil(best.length / 2) - 1] + 1, 0, "sep" + (sepCount + 1));
+        saveOrder(list);
+    }
+    function removeSeparator(key) {
+        saveOrder(fullOrder().filter(k => k !== key));
     }
 
     // The popup shows either the info panel (most tiles) or the launcher (Start tile).
@@ -819,27 +977,19 @@ PlasmoidItem {
     toolTipMainText: ""
     toolTipSubText: ""
 
-    // Keeps the Plasma accent in step with the dock's, when asked. Runs on change only, never at startup.
-    Connections {
-        target: Plasmoid.configuration
-        function onAccentColorChanged() {
-            if (!root.cfg.syncSystemAccent)
-                return;
-            const c = root.cfg.accentColor;
-            const script = Qt.resolvedUrl("../scripts/system-accent.sh").toString().replace("file://", "");
-            shell.run("sh '" + script + "' " + (/^#[0-9a-fA-F]{6}$/.test(c) ? "'" + c + "'" : "reset") + " >/dev/null 2>&1");
-        }
-    }
-
-    // Dock accent: the picked color, else the theme's own highlight.
-    SystemPalette {
-        id: themePalette
-    }
-    readonly property color accent: /^#[0-9a-fA-F]{6}$/.test(cfg.accentColor) ? cfg.accentColor : themePalette.highlight
+    // Dock accent: the picked colour, else the Plasma theme's own highlight (read here, on the root,
+    // where nothing overrides it). Published through DockAccent for every item inside the dock.
+    readonly property color accent: !cfg.syncSystemTheme && /^#[0-9a-fA-F]{6}$/.test(cfg.accentColor) ? cfg.accentColor : Kirigami.Theme.highlightColor
+    Binding { target: DockAccent; property: "color"; value: root.accent }
+    Binding { target: DockAccent; property: "tint"; value: root.cfg.accentSurfaces }
+    // Dock glass (bar, island pills, edge buttons) hue-shifted toward the accent when tinting is on.
+    readonly property color glassBase: cfg.accentSurfaces ? Qt.tint(Kirigami.Theme.backgroundColor, Qt.alpha(accent, 0.14)) : Kirigami.Theme.backgroundColor
+    readonly property color glassFill: Qt.alpha(glassBase, cfg.barOpaque ? 0.96 : 0.55)
+    readonly property color glassEdge: cfg.accentSurfaces ? Qt.alpha(Qt.tint(Kirigami.Theme.textColor, Qt.alpha(accent, 0.55)), 0.18) : Qt.alpha(Kirigami.Theme.textColor, 0.12)
 
     compactRepresentation: Item {
         id: dock
-        // Everything in the dock reads Kirigami.Theme.highlightColor, so overriding it here recolors the lot.
+        // Plasma controls drawn directly in the dock read this; our own items read DockAccent.color.
         Kirigami.Theme.highlightColor: root.accent
         Component.onCompleted: root.dockItem = dock
 
@@ -866,9 +1016,9 @@ PlasmoidItem {
                 visible: root.onDesktop && !root.islands
                 anchors.fill: parent
                 radius: height * 0.25
-                color: Qt.alpha(Kirigami.Theme.backgroundColor, root.cfg.barOpaque ? 0.96 : 0.55)
+                color: root.glassFill
                 border.width: 1
-                border.color: Qt.alpha(Kirigami.Theme.textColor, 0.12)
+                border.color: root.glassEdge
             }
         }
 
@@ -892,8 +1042,8 @@ PlasmoidItem {
             id: scroller
             anchors.fill: bar
             anchors.margins: root.onDesktop ? dock.inset : 0
-            anchors.topMargin: dock.inset
-            anchors.bottomMargin: dock.inset
+            anchors.topMargin: root.islands ? 0 : dock.inset
+            anchors.bottomMargin: root.islands ? 0 : dock.inset
             clip: contentWidth > width
             interactive: false // dragging a tile reorders; the wheel scrolls
             contentWidth: row.implicitWidth
@@ -920,11 +1070,30 @@ PlasmoidItem {
                         required property var modelData
                         x: modelData.x
                         width: modelData.w
-                        height: row.height
-                        radius: height * 0.25
-                        color: Qt.alpha(Kirigami.Theme.backgroundColor, root.cfg.barOpaque ? 0.96 : 0.55)
+                        height: scroller.height
+                        radius: height * 0.34
+                        color: root.glassFill
                         border.width: 1
-                        border.color: Qt.alpha(Kirigami.Theme.textColor, 0.12)
+                        border.color: root.glassEdge
+
+                        // Soft inner top highlight and bottom shade stand in for the mockup's shadow.
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: 1
+                            radius: parent.radius - 1
+                            color: "transparent"
+                            border.width: 1
+                            border.color: Qt.alpha(Qt.tint("white", Qt.alpha(root.accent, 0.5)), 0.1)
+                        }
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.margins: parent.radius * 0.5
+                            height: 2
+                            radius: 1
+                            color: Qt.alpha("black", 0.18)
+                        }
 
                         Behavior on x {
                             NumberAnimation { duration: Motion.ms(Motion.snapMs, Kirigami.Units.longDuration); easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.snap }
@@ -942,11 +1111,52 @@ PlasmoidItem {
                 onImplicitWidthChanged: islandTimer.restart()
                 onWidthChanged: islandTimer.restart()
                 rows: 1
-                columnSpacing: Kirigami.Units.smallSpacing
+                columnSpacing: root.islands ? Kirigami.Units.smallSpacing * 1.5 : Kirigami.Units.smallSpacing
                 rowSpacing: 0
                 width: Math.max(implicitWidth, scroller.width)
-                height: scroller.height
+                // In islands the tiles sit 8px inside each pill, top and bottom; the pills stay full height.
+                y: root.islands ? 8 : 0
+                height: root.islands ? scroller.height - 16 : scroller.height
 
+                // Separators: pill gaps in islands, thin dividers in the bar. Drag to move,
+                // right-click to remove.
+                Repeater {
+                    model: root.sepCount
+                    delegate: Item {
+                        id: sep
+                        required property int index
+                        readonly property string key: "sep" + (index + 1)
+                        property bool shown: false
+                        objectName: key
+                        visible: shown
+                        Layout.column: root.colOf(key)
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: root.islands
+                            ? Math.max(Kirigami.Units.smallSpacing, root.islandGap + root.islandPad * 2 - row.columnSpacing * 2)
+                            : Kirigami.Units.smallSpacing * 2
+
+                        // Divider line in the bar; in islands only a faint grip on hover or drag.
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: root.islands ? 3 : 1
+                            height: parent.height * (root.islands ? 0.4 : 0.55)
+                            radius: width / 2
+                            color: Qt.alpha(Kirigami.Theme.textColor, root.islands ? 0.35 : 0.2)
+                            opacity: root.islands ? (sepHover.hovered || sep.opacity < 1 ? 1 : 0) : 1
+                            Behavior on opacity {
+                                NumberAnimation { duration: Kirigami.Units.shortDuration }
+                            }
+                        }
+                        HoverHandler {
+                            id: sepHover
+                            cursorShape: Qt.OpenHandCursor
+                        }
+                        TapHandler {
+                            acceptedButtons: Qt.RightButton
+                            onTapped: root.removeSeparator(sep.key)
+                        }
+                    }
+                }
                 Modules.StartModule {
                     id: startModule
                     objectName: "start"
@@ -996,9 +1206,6 @@ PlasmoidItem {
                     Layout.column: root.colOf("apps")
                     Layout.fillHeight: true
                     visible: root.cfg.showApps
-                    // Room around the apps for the gap between islands.
-                    Layout.leftMargin: root.islands ? root.islandGap : 0
-                    Layout.rightMargin: root.islands ? root.islandGap : 0
                     tasks: tasksLoader.item
                     magnify: root.cfg.appMagnify
                     collapsed: root.cfg.appsCollapsed
@@ -1102,7 +1309,7 @@ PlasmoidItem {
                     visible: root.cfg.showNetwork
                     down: netDownSensor.value ?? 0
                     up: netUpSensor.value ?? 0
-                    onClicked: root.launch("systemsettings kcm_networkmanagement")
+                    onClicked: root.openSettings("kcm_networkmanagement")
                 }
                 Modules.StorageModule {
                     objectName: "storage"
@@ -1140,7 +1347,7 @@ PlasmoidItem {
                     layoutStyle: root.cfg.toggleStyle
                     edge: Plasmoid.location
                     onToggled: key => togglesLoader.item.toggle(key)
-                    onMoreRequested: root.launch("systemsettings")
+                    onMoreRequested: root.openSettings("")
                 }
                 Modules.TrayModule {
                     objectName: "tray"
@@ -1157,7 +1364,7 @@ PlasmoidItem {
                     visible: root.cfg.showVolume
                     active: root.cfg.showVolume
                     // Taps off the slider open the audio settings; the slider keeps its own taps.
-                    onClicked: root.launch("systemsettings kcm_pulseaudio")
+                    onClicked: root.openSettings("kcm_pulseaudio")
                 }
                 Modules.ClipboardModule {
                     objectName: "clipboard"
@@ -1181,8 +1388,14 @@ PlasmoidItem {
                     title: notificationService.jobTitle
                     percent: notificationService.jobsPercent
                     iconName: notificationService.jobIcon
+                    service: notificationService
+                    onOpenRequested: (url, entry) => root.openJob(url, entry)
+                    onListRequested: src => root.togglePopup("jobs", src)
                     // A finished job opens its app; a running one opens the list with pause and stop.
                     onClicked: src => {
+                        // The click that dismisses the menu can land on the pill.
+                        if (Date.now() - src.menuClosedAt < 250)
+                            return;
                         if (notificationService.jobsDone) {
                             root.openJob(notificationService.jobDestUrl, notificationService.jobDesktopEntry);
                             notificationService.sweepFinishedJobs();
@@ -1199,7 +1412,7 @@ PlasmoidItem {
                     unread: notificationService.unreadCount
                     doNotDisturb: notificationService.inhibited
                     service: notificationService
-                    onConfigureRequested: root.launch("systemsettings kcm_notifications")
+                    onConfigureRequested: root.openSettings("kcm_notifications")
                     onClicked: src => root.togglePopup("notifications", src)
                 }
                 Modules.RecycleBinModule {
@@ -1307,7 +1520,7 @@ PlasmoidItem {
                     charging: (batteryRateSensor.value ?? 0) > 0
                     edge: Plasmoid.location
                     showDevices: root.cfg.showDevices
-                    onSettingsRequested: root.launch("systemsettings kcm_powerdevilprofilesconfig")
+                    onSettingsRequested: root.openSettings("kcm_powerdevilprofilesconfig")
                 }
                 Modules.ClockStylesModule {
                     objectName: "clockstyle"
@@ -1359,7 +1572,7 @@ PlasmoidItem {
                         }
                         if (item) {
                             item.opacity = 1;
-                            Plasmoid.configuration.tileOrder = root.dragOrder.join(",");
+                            root.saveOrder(root.dragOrder);
                             root.dragOrder = null;
                         }
                         item = null;
@@ -1401,9 +1614,9 @@ PlasmoidItem {
                 height: width
                 radius: width / 2
                 z: 5
-                color: Qt.alpha(Kirigami.Theme.backgroundColor, tap.pressed ? 0.95 : 0.8)
+                color: Qt.alpha(root.glassBase, tap.pressed ? 0.95 : 0.8)
                 border.width: 1
-                border.color: Qt.alpha(Kirigami.Theme.textColor, 0.2)
+                border.color: Qt.alpha(Qt.tint(Kirigami.Theme.textColor, Qt.alpha(root.accent, 0.55)), 0.24)
 
                 Kirigami.Icon {
                     anchors.centerIn: parent

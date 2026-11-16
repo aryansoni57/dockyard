@@ -34,8 +34,12 @@
         <entry name="accentColor" type="String">
             <default></default>
         </entry>
-        <!-- Also set the Plasma accent color (system-wide) when the dock accent changes. -->
-        <entry name="syncSystemAccent" type="Bool">
+        <!-- Follow the system theme: the dock takes the Plasma accent and the picker in Configure Dockyard is locked. -->
+        <entry name="syncSystemTheme" type="Bool">
+            <default>true</default>
+        </entry>
+        <!-- Tint the dock's glass (tiles, bar, islands) with the accent. Off keeps the plain glass. -->
+        <entry name="accentSurfaces" type="Bool">
             <default>true</default>
         </entry>
         <entry name="showClock" type="Bool">

@@ -88,7 +88,7 @@ KCM.SimpleKCM {
                             QQC2.Label {
                                 text: chip.modelData.hint
                                 font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                                opacity: 0.6
+                                opacity: 0.75
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
                             }

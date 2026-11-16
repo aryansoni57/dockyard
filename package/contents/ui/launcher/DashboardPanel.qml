@@ -11,6 +11,7 @@ import org.kde.plasma.private.sessions as Sessions
 import org.kde.kirigami as Kirigami
 import "../components"
 import "../components/motion.js" as Motion
+import "../components/accent"
 
 // Dashboard start panel, after the AvdanOS home dashboard: weather, today's agenda and
 // device batteries across the top, your pinned apps on the left, "Pick up where you left
@@ -37,7 +38,7 @@ Item {
     }
 
     readonly property var cfg: Plasmoid.configuration
-    readonly property color accent: applet ? applet.accent : Kirigami.Theme.highlightColor
+    readonly property color accent: applet ? applet.accent : DockAccent.color
     readonly property var weather: applet.weatherSource
     readonly property var favList: cfg.launcherFavorites.split(",").map(s => s.trim()).filter(s => s !== "")
     // The design (docs/mockups/dockyard-dashboard.html) is in pixels at 18 px per grid unit;
@@ -452,11 +453,11 @@ Item {
     // else (mouse, headset, controller) opens Bluetooth settings.
     function openDevice(kind) {
         if (kind === "laptop")
-            applet.launch("systemsettings kcm_powerdevilprofilesconfig");
+            applet.openSettings("kcm_powerdevilprofilesconfig");
         else if (kind === "phone" || kind === "smartphone" || kind === "tablet")
             applet.launch("kdeconnect-app");
         else
-            applet.launch("systemsettings kcm_bluetooth");
+            applet.openSettings("kcm_bluetooth");
         closeRequested();
     }
     function openWidgetSettings() {
@@ -1695,12 +1696,16 @@ Item {
                 }
 
                 RowLayout {
+                    // Left-aligned, so the pill growing does not re-center the row and shift Shut down.
+                    Layout.alignment: Qt.AlignLeft
                     spacing: panel.px(8)
+                    // Above the storage row, so the power pill can grow over it.
+                    z: 1
                     FooterButton {
                         iconName: "configure-symbolic"
                         text: i18n("Settings")
                         onClicked: {
-                            panel.applet.launch("systemsettings");
+                            panel.applet.openSettings("");
                             panel.closeRequested();
                         }
                     }
@@ -1709,15 +1714,13 @@ Item {
                         text: i18n("All apps")
                         onClicked: panel.classicRequested("")
                     }
-                    FooterButton {
-                        iconName: "system-shutdown-symbolic"
-                        tip: i18n("Shut down…")
-                        danger: true
-                        enabled: sm.canShutdown
-                        onClicked: {
-                            panel.closeRequested();
-                            sm.requestShutdown();
-                        }
+                    PowerPill {
+                        // Fixed slot: the open pill overflows to the right and moves nothing else.
+                        Layout.preferredWidth: panel.px(40)
+                        Layout.maximumWidth: panel.px(40)
+                        dash: panel
+                        session: sm
+                        onChosen: panel.closeRequested()
                     }
                 }
 

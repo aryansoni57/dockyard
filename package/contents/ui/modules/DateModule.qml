@@ -28,7 +28,7 @@ Tile {
                 ? Qt.locale().dayName(tile.now.getDay(), Locale.ShortFormat).toUpperCase()
                 : Qt.locale().dayName(tile.now.getDay(), Locale.LongFormat)
             color: tile.isNumber ? "#FF3B30" : Kirigami.Theme.textColor
-            opacity: tile.isNumber ? 1 : 0.6
+            opacity: tile.isNumber ? 1 : 0.78
             font.pixelSize: Math.max(8, tile.inner * (tile.isNumber ? 0.26 : 0.27))
             font.weight: tile.isNumber ? Font.DemiBold : Font.Normal
         }

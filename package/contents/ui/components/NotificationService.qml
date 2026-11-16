@@ -9,6 +9,7 @@ import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
 import org.kde.kquickcontrolsaddons as KQCAddons
 import org.kde.notificationmanager as NotificationManager
+import "accent"
 
 // Notification server for setups with no stock Notifications applet (the dock replaces
 // the panel that held it). Plasma only owns org.freedesktop.Notifications while a
@@ -20,7 +21,7 @@ Item {
     // Popups off still keeps the server and history, so apps never lose notifications.
     property bool popupsEnabled: true
     // Accent for the unread dot and buttons.
-    property color accent: Kirigami.Theme.highlightColor
+    property color accent: DockAccent.color
 
     readonly property alias settings: notifSettings
     readonly property alias history: historyModel
@@ -51,6 +52,85 @@ Item {
         const det = jobsModel.data(idx, NotificationManager.Notifications.JobDetailsRole);
         const u = det ? (det.effectiveDestUrl || det.destUrl) : "";
         return u ? u.toString() : "";
+    }
+
+    // True while the pill's right-click menu is open, so the sweep cannot remove its job.
+    property bool holdSweep: false
+
+    // What the pill's menu acts on: the first running job, else the first finished one.
+    // A plain snapshot, so it stays valid when the model changes under an open menu.
+    function pillJob() {
+        const N = NotificationManager.Notifications;
+        let pick = -1;
+        for (let i = 0; i < jobsModel.count; ++i) {
+            const state = jobsModel.data(jobsModel.index(i, 0), N.JobStateRole);
+            if (state !== N.JobStateStopped) {
+                pick = i;
+                break;
+            }
+            if (pick < 0)
+                pick = i;
+        }
+        if (pick < 0)
+            return null;
+        const idx = jobsModel.index(pick, 0);
+        const det = jobsModel.data(idx, N.JobDetailsRole);
+        const stringOf = u => u ? u.toString() : "";
+        const dest = det ? stringOf(det.destUrl) : "";
+        const urls = jobsModel.data(idx, N.UrlsRole) || [];
+        const files = det ? det.totalFiles : 0;
+        // The received file itself: the first url that is not just the destination folder.
+        let file = "";
+        if (files <= 1) {
+            const cands = [urls.length > 0 ? stringOf(urls[0]) : "", det ? stringOf(det.descriptionUrl) : "",
+                           det ? stringOf(det.effectiveDestUrl) : ""];
+            for (const c of cands) {
+                if (c.startsWith("file:") && c.replace(/\/$/, "") !== dest.replace(/\/$/, "")) {
+                    file = c;
+                    break;
+                }
+            }
+        }
+        let folder = dest;
+        if (folder === "" && file !== "")
+            folder = file.substring(0, file.lastIndexOf("/"));
+        const state = jobsModel.data(idx, N.JobStateRole);
+        return {
+            id: jobsModel.data(idx, N.IdRole),
+            title: String(jobsModel.data(idx, N.SummaryRole) || jobsModel.data(idx, N.ApplicationNameRole) || ""),
+            entry: String(jobsModel.data(idx, N.DesktopEntryRole) || ""),
+            stopped: state === N.JobStateStopped,
+            suspended: state === N.JobStateSuspended,
+            killable: !!jobsModel.data(idx, N.KillableRole),
+            suspendable: !!jobsModel.data(idx, N.SuspendableRole),
+            error: det ? (det.error || 0) : 0,
+            errorText: det ? String(det.errorText || "") : "",
+            file: file,
+            folder: folder
+        };
+    }
+    // Row of a job by id, -1 when it is gone. Rows move, so a menu action finds it again here.
+    function rowOfId(id) {
+        for (let i = 0; i < jobsModel.count; ++i) {
+            if (jobsModel.data(jobsModel.index(i, 0), NotificationManager.Notifications.IdRole) === id)
+                return i;
+        }
+        return -1;
+    }
+    // what: "kill", "suspend", "resume" or "close".
+    function jobAction(id, what) {
+        const row = rowOfId(id);
+        if (row < 0)
+            return;
+        const idx = jobsModel.index(row, 0);
+        if (what === "kill")
+            jobsModel.killJob(idx);
+        else if (what === "suspend")
+            jobsModel.suspendJob(idx);
+        else if (what === "resume")
+            jobsModel.resumeJob(idx);
+        else
+            jobsModel.close(idx);
     }
 
     function refreshJobs() {
@@ -108,7 +188,12 @@ Item {
     Timer {
         id: sweepJobs
         interval: 15000
-        onTriggered: service.sweepFinishedJobs()
+        onTriggered: {
+            if (service.holdSweep)
+                restart();
+            else
+                service.sweepFinishedJobs();
+        }
     }
     Component.onCompleted: refreshJobs()
     Connections {

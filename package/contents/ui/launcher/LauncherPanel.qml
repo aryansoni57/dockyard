@@ -9,6 +9,7 @@ import org.kde.plasma.private.kicker as Kicker
 import org.kde.plasma.private.sessions as Sessions
 import org.kde.kirigami as Kirigami
 import "../components"
+import "../components/accent"
 
 // Lumen Launcher panel (docs/PLAN-launcher.md): pinned apps, categories, live search,
 // recent files and the session buttons. Data comes from the same Kicker models Plasma's
@@ -23,7 +24,7 @@ Item {
     readonly property var cfg: Plasmoid.configuration
     // System blue from docs/STYLE.md (so selection matches the dock whatever the theme accent is),
     // unless an accent is picked in settings.
-    readonly property color accent: cfg.accentColor !== "" ? cfg.accentColor : "#0A84FF"
+    readonly property color accent: DockAccent.color
     readonly property var favList: cfg.launcherFavorites.split(",").map(s => s.trim()).filter(s => s !== "")
     property string searchText: ""
     readonly property string query: searchText.trim()

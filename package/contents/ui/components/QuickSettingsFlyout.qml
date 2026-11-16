@@ -203,7 +203,7 @@ PlasmaCore.Dialog {
                                     Layout.fillWidth: true
                                     text: card.modelData.sub
                                     font.pixelSize: Math.round(fly.unit * 0.66)
-                                    opacity: 0.6
+                                    opacity: 0.78
                                     elide: Text.ElideRight
                                 }
                             }
@@ -218,7 +218,7 @@ PlasmaCore.Dialog {
                                 source: fly.iconUrl("chevron-right")
                                 isMask: true
                                 color: Kirigami.Theme.textColor
-                                opacity: 0.4
+                                opacity: 0.78
                             }
 
                             TapHandler {
@@ -283,7 +283,7 @@ PlasmaCore.Dialog {
                             source: "arrow-down"
                             isMask: true
                             color: Kirigami.Theme.textColor
-                            opacity: 0.5
+                            opacity: 0.78
                         }
                     }
 
@@ -326,7 +326,7 @@ PlasmaCore.Dialog {
                     text: Math.round(fly.source && fly.source.displays.length > 0 ? fly.source.displays[fly.source.displayIndex].value : 0) + "%"
                     font.pixelSize: Math.round(fly.unit * 0.66)
                     font.features: { "tnum": 1 }
-                    opacity: 0.6
+                    opacity: 0.78
                 }
             }
 
@@ -381,7 +381,7 @@ PlasmaCore.Dialog {
                     text: fly.source && fly.source.muted ? i18n("Muted") : (fly.source ? fly.source.volume : 0) + "%"
                     font.pixelSize: Math.round(fly.unit * 0.66)
                     font.features: { "tnum": 1 }
-                    opacity: 0.6
+                    opacity: 0.78
                 }
             }
 
@@ -489,7 +489,7 @@ PlasmaCore.Dialog {
                     visible: !!fly.source && fly.source.scanning
                     text: i18n("Scanning…")
                     font.pixelSize: Math.round(fly.unit * 0.66)
-                    opacity: 0.6
+                    opacity: 0.78
                 }
                 QQC2.Switch {
                     checked: fly.source ? (detailView.isWifi ? fly.source.wifiOn : fly.source.btOn) : false
@@ -599,7 +599,7 @@ PlasmaCore.Dialog {
                                 source: "object-locked-symbolic"
                                 isMask: true
                                 color: Kirigami.Theme.textColor
-                                opacity: 0.45
+                                opacity: 0.78
                             }
                             Kirigami.Icon {
                                 visible: entry.connected
@@ -699,7 +699,7 @@ PlasmaCore.Dialog {
                     width: parent.width - fly.unit * 2
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
-                    opacity: 0.55
+                    opacity: 0.78
                     visible: list.count === 0
                     text: !fly.source ? "" : detailView.isWifi
                         ? (fly.source.wifiOn ? (fly.source.scanning ? i18n("Looking for networks…") : i18n("No networks found")) : i18n("Wi-Fi is off"))

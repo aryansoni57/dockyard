@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
 import "../components"
+import "../components/accent"
 
 // Temperature tile (website "Temperature"): CPU temperature as a ring gauge, with
 // CPU and memory load as thin bars beside it. The ring goes green, amber, red.
@@ -52,7 +53,7 @@ Tile {
 
                     PlasmaComponents.Label {
                         text: modelData.name
-                        opacity: 0.6
+                        opacity: 0.78
                         font.pixelSize: Math.max(7, root.inner * 0.2)
                         font.weight: Font.DemiBold
                     }
@@ -66,7 +67,7 @@ Tile {
                             width: parent.width * Math.min(100, modelData.value) / 100
                             height: parent.height
                             radius: height / 2
-                            color: Kirigami.Theme.highlightColor
+                            color: DockAccent.color
                         }
                     }
                     PlasmaComponents.Label {

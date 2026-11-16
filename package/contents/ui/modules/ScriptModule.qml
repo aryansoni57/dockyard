@@ -110,7 +110,7 @@ Tile {
             width: parent.width
             text: root.failed ? i18n("Exit code %1", root.exitCode) : (root.lines[1] ?? "")
             elide: Text.ElideRight
-            opacity: 0.6
+            opacity: 0.78
             font.pixelSize: Math.max(7, root.inner * 0.18)
         }
     }

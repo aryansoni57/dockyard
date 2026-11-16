@@ -5,6 +5,7 @@ import org.kde.plasma.components as PlasmaComponents
 import org.kde.plasma.plasma5support as Plasma5Support
 import org.kde.kirigami as Kirigami
 import "../components"
+import "../components/accent"
 
 // Countdown tile (docs/PLAN.md, "Time modules"): presets 1/5/10/25 min as small
 // pills, big mm:ss, round play/pause. Same timestamp model as the Pomodoro tile.
@@ -125,10 +126,10 @@ Tile {
 
                     background: Rectangle {
                         radius: height / 2
-                        color: pill.active ? Qt.alpha(Kirigami.Theme.highlightColor, 0.2)
+                        color: pill.active ? Qt.alpha(DockAccent.color, 0.2)
                                            : Qt.alpha(Kirigami.Theme.textColor, 0.1)
                         border.width: 1
-                        border.color: pill.active ? Kirigami.Theme.highlightColor
+                        border.color: pill.active ? DockAccent.color
                                                   : Qt.alpha(Kirigami.Theme.textColor, 0)
                     }
                     contentItem: PlasmaComponents.Label {
@@ -165,7 +166,7 @@ Tile {
 
             background: Rectangle {
                 radius: width / 2
-                color: Kirigami.Theme.highlightColor
+                color: DockAccent.color
             }
             contentItem: Kirigami.Icon {
                 source: tm.running ? "media-playback-pause" : "media-playback-start"

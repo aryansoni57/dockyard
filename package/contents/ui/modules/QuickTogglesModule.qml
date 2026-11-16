@@ -5,6 +5,7 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasmoid
 import org.kde.kirigami as Kirigami
 import "../components"
+import "../components/accent"
 
 // Quick toggles tile (docs/STYLE.md): glass tile holding a row of pills, one per
 // toggle. Toggles with a detail view (Wi-Fi, Bluetooth) are two-part pills:
@@ -34,7 +35,7 @@ Tile {
     readonly property real iconSize: Math.round(inner * 0.56)
     // System blue from docs/STYLE.md; the "on" look stays blue whatever the theme accent is.
     // The dock accent picked in settings, else the system blue.
-    readonly property color accent: Plasmoid.configuration.accentColor !== "" ? Plasmoid.configuration.accentColor : "#0A84FF"
+    readonly property color accent: DockAccent.color
 
     implicitWidth: strip ? Math.round(inner * 2.7) + padding * 2 : row.implicitWidth + padding * 2
 

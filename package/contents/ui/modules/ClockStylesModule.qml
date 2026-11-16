@@ -209,7 +209,7 @@ Tile {
                         size: 0.44
                         text: ":" + String(tile.now.getSeconds()).padStart(2, "0")
                         font.weight: Font.Bold
-                        opacity: 0.45
+                        opacity: 0.78
                     }
                     Txt {
                         visible: tile.twelveHour
@@ -224,7 +224,7 @@ Tile {
                     size: 0.3
                     text: Qt.locale().dayName(tile.now.getDay(), Locale.ShortFormat) + " "
                           + tile.now.getDate() + " " + Qt.locale().monthName(tile.now.getMonth(), Locale.ShortFormat)
-                    opacity: 0.55
+                    opacity: 0.78
                 }
             }
         }
@@ -255,7 +255,7 @@ Tile {
                     size: 0.26
                     text: tile.ampm(tile.now)
                     font.weight: Font.Bold
-                    opacity: 0.55
+                    opacity: 0.78
                 }
             }
         }
@@ -297,7 +297,7 @@ Tile {
                             size: 0.24
                             text: waCol.info.code
                             font.weight: Font.Bold
-                            opacity: 0.6
+                            opacity: 0.78
                         }
                     }
                 }
@@ -430,7 +430,7 @@ Tile {
                         Layout.alignment: Qt.AlignRight
                         size: grid.parent.rowSize
                         text: modelData.known ? tile.diffText(modelData.diff) : ""
-                        opacity: 0.55
+                        opacity: 0.78
                     }
                 }
                 Repeater {
@@ -475,7 +475,7 @@ Tile {
                     size: 0.28
                     text: tile.dayWord(wtLeft.parent.info.day)
                           + (wtLeft.parent.info.known ? ", " + tile.diffText(wtLeft.parent.info.diff) : "")
-                    opacity: 0.55
+                    opacity: 0.78
                 }
             }
             Row {

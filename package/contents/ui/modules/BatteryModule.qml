@@ -3,6 +3,7 @@ import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasmoid
 import org.kde.kirigami as Kirigami
 import "../components"
+import "../components/accent"
 
 // Battery tile: charge ring labelled BAT. Green accent while charging, red when low.
 Tile {
@@ -22,7 +23,7 @@ Tile {
     readonly property real boltSize: Math.max(8, contentHeight * 0.4)
     readonly property color accentColor: charging
         ? Kirigami.Theme.positiveTextColor
-        : (percent < 20 ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.highlightColor)
+        : (percent < 20 ? Kirigami.Theme.negativeTextColor : DockAccent.color)
 
     implicitWidth: ring.width + padding * 2 + (charging ? Kirigami.Units.smallSpacing + boltSize : 0)
 
@@ -31,7 +32,7 @@ Tile {
 
     PowerFlyout {
         id: flyout
-        accent: Plasmoid.configuration.accentColor !== "" ? Plasmoid.configuration.accentColor : "#0A84FF"
+        accent: DockAccent.color
         visualParent: root
         location: root.edge
         percent: root.percent

@@ -8,6 +8,11 @@ ConfigModel {
         source: "configWidgets.qml"
     }
     ConfigCategory {
+        name: i18n("Appearance")
+        icon: "preferences-desktop-theme-global"
+        source: "configAppearance.qml"
+    }
+    ConfigCategory {
         name: i18n("Apps")
         icon: "applications-all"
         source: "configApps.qml"
@@ -28,8 +33,8 @@ ConfigModel {
         source: "configWeather.qml"
     }
     ConfigCategory {
-        name: i18n("System")
-        icon: "preferences-system"
-        source: "configSystem.qml"
+        name: i18n("Widget options")
+        icon: "configure"
+        source: "configOptions.qml"
     }
 }

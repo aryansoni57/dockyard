@@ -244,13 +244,13 @@ PlasmaCore.Dialog {
                     QQC2.Label {
                         text: i18n("Battery Health:")
                         font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                        opacity: 0.6
+                        opacity: 0.78
                     }
                     Item { Layout.fillWidth: true }
                     QQC2.Label {
                         text: fly.health
                         font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                        opacity: 0.6
+                        opacity: 0.78
                     }
                 }
             }

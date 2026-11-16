@@ -102,7 +102,7 @@ KCM.SimpleKCM {
             QQC2.Label {
                 text: i18n("Uses the first Task Manager in your panels. Falls back to your own list when there is none.")
                 font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                opacity: 0.6
+                opacity: 0.75
                 wrapMode: Text.Wrap
                 Layout.fillWidth: true
                 Layout.leftMargin: Kirigami.Units.gridUnit * 1.5
@@ -127,7 +127,7 @@ KCM.SimpleKCM {
             QQC2.Label {
                 text: i18n("Drop a .desktop file on the dock's apps to pin it.")
                 font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                opacity: 0.6
+                opacity: 0.75
                 wrapMode: Text.Wrap
                 Layout.fillWidth: true
             }
@@ -166,7 +166,7 @@ KCM.SimpleKCM {
                     QQC2.Label {
                         text: i18n("Provided by the Dockyard Shortcuts KWin script. Meta alone opens the launcher.")
                         font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                        opacity: 0.6
+                        opacity: 0.75
                         wrapMode: Text.Wrap
                         Layout.fillWidth: true
                     }

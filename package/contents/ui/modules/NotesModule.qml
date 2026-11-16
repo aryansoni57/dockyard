@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
 import "../components"
+import "../components/accent"
 
 // Notes tile (demo video 0:12): a small yellow-topped note, the first line as
 // the title, the rest as a two-line preview, and an edit icon on the right.
@@ -62,7 +63,7 @@ Tile {
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 elide: Text.ElideRight
-                opacity: 0.6
+                opacity: 0.78
                 font.pixelSize: Math.max(7, tile.inner * 0.2)
             }
         }
@@ -73,13 +74,13 @@ Tile {
             implicitWidth: Math.max(tile.inner * 0.34, badge.implicitWidth + tile.padding)
             implicitHeight: tile.inner * 0.34
             radius: height / 2
-            color: Qt.alpha(Kirigami.Theme.highlightColor, 0.25)
+            color: Qt.alpha(DockAccent.color, 0.25)
 
             PlasmaComponents.Label {
                 id: badge
                 anchors.centerIn: parent
                 text: tile.count
-                color: Kirigami.Theme.highlightColor
+                color: DockAccent.color
                 font.pixelSize: Math.max(7, tile.inner * 0.2)
                 font.weight: Font.DemiBold
             }

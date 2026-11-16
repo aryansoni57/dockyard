@@ -161,7 +161,7 @@ Tile {
                 width: parent.width
                 text: tile.detail
                 elide: Text.ElideRight
-                opacity: 0.6
+                opacity: 0.78
                 font.pixelSize: Math.max(8, tile.inner * 0.23)
                 font.features: { "tnum": 1 }
             }

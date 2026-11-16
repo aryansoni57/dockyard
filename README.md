@@ -33,6 +33,24 @@ Click a tile to open its detail popup. Right-click the dock and choose Widgetsâ€
 
 ## Install
 
+## Full setup (recommended)
+
+One script installs the dock, the glass Plasma themes, the Dockyard look (frosted glass, night by default),
+and the Settings app:
+
+```bash
+./setup.sh            # night look; ./setup.sh --day for the Day look
+./setup.sh --check    # only check dependencies
+```
+
+Needs Plasma 6, Kvantum, and for the Settings app cmake, ninja, a C++ compiler and the KDE dev packages
+(KCMUtils, ColorScheme, WindowSystem). The looks use the Tela icon theme; `--tela` installs it, otherwise
+you get the default icons. Optional: `--decoration` (blurred Dockyard Glass title bars, log out and in afterwards),
+`--login` (login wallpaper and boot splash, needs sudo), `--no-apply` (copy files, keep your current theme),
+`--no-settings`, `--no-restart`. Your previous theme choices are saved first; `theme/restore-global.sh` undoes it.
+
+## Install only the dock
+
 Install, then add "Dock" to a panel via Add Widgets:
 
 ```bash
@@ -49,6 +67,14 @@ Or install the plasmoid and both glass desktop themes (Glass and Glass (opaque))
 ```bash
 ./install-all.sh
 ```
+
+## Login, lock and boot screens
+
+Ported from AvdanOS, in Dockyard blue:
+
+- Lock screen: `theme/look-and-feel/*/contents/lockscreen`. `theme/install-global.sh` installs it with the look-and-feel.
+- Login wallpaper (liquid shader) and Plymouth boot splash: `sudo login/install.sh`, then pick the Dockyard wallpaper in System Settings > Login Screen.
+- Greeter (optional, needs a build from the plasma-login-manager source): `login/greeter/build.sh`, then `login/greeter/install-greeter.sh` prints the root commands.
 
 ## Run
 

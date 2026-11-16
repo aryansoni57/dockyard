@@ -19,6 +19,6 @@ Rectangle {
         font.weight: Font.DemiBold
         font.capitalization: Font.AllUppercase
         font.letterSpacing: 0.6
-        opacity: 0.5
+        opacity: 0.78
     }
 }

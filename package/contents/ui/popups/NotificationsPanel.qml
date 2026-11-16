@@ -78,7 +78,7 @@ ColumnLayout {
             text: i18n("Notification settings")
             PlasmaComponents.ToolTip.text: text
             PlasmaComponents.ToolTip.visible: hovered
-            onClicked: panel.applet.launch("systemsettings kcm_notifications")
+            onClicked: panel.applet.openSettings("kcm_notifications")
         }
     }
 

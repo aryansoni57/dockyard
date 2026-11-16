@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import org.kde.plasma.components as PlasmaComponents
 import org.kde.kirigami as Kirigami
 import "../components"
+import "../components/accent"
 
 // Volume slider tile (demo video 0:15, "Brightness"/"Speakers" style): icon and
 // label with the percent on the right, a dark pill slider with a white knob below.
@@ -89,7 +90,7 @@ Tile {
                 text: tile.muted ? i18n("Muted") : Math.round(slider.value) + "%"
                 font.pixelSize: Math.max(7, tile.inner * 0.22)
                 font.features: { "tnum": 1 }
-                opacity: 0.6
+                opacity: 0.78
             }
         }
 
@@ -119,7 +120,7 @@ Tile {
                     width: Math.max(parent.height, slider.visualPosition * parent.width)
                     height: parent.height
                     radius: height / 2
-                    color: Kirigami.Theme.highlightColor
+                    color: DockAccent.color
                     opacity: tile.muted ? 0.4 : 1
                 }
             }
