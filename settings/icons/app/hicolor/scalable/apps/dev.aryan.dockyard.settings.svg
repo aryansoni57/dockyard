@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Dockyard Settings app icon (icon name dev.aryan.dockyard.settings).
+     Source of truth: the PNGs under hicolor/ are rendered from it with render.sh.
+     Plain shapes and linear gradients only, so Qt's SVG renderer draws it exactly. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="base" x1="0" y1="8" x2="0" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4a4e5c"/>
+      <stop offset="1" stop-color="#1a1b22"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="8" x2="0" y2="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="20" x2="0" y2="82" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff8ab3"/>
+      <stop offset="1" stop-color="#e03f78"/>
+    </linearGradient>
+    <linearGradient id="dock" x1="0" y1="86" x2="0" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.12"/>
+    </linearGradient>
+  </defs>
+  <!-- Tile: dark glass squircle, top sheen, thin light rim -->
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#base)"/>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#sheen)"/>
+  <rect x="9" y="9" width="110" height="110" rx="25" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="2"/>
+  <!-- Gear: the settings cue, in the accent colour (round joins soften the teeth) -->
+  <path fill="url(#accent)" stroke="url(#accent)" stroke-width="3" stroke-linejoin="round" fill-rule="evenodd" d="M67.3 29.2 71.2 22.9 78.8 26.0 77.1 33.3 81.7 37.9 89.0 36.2 92.1 43.8 85.8 47.7 85.8 54.3 92.1 58.2 89.0 65.8 81.7 64.1 77.1 68.7 78.8 76.0 71.2 79.1 67.3 72.8 60.7 72.8 56.8 79.1 49.2 76.0 50.9 68.7 46.3 64.1 39.0 65.8 35.9 58.2 42.2 54.3 42.2 47.7 35.9 43.8 39.0 36.2 46.3 37.9 50.9 33.3 49.2 26.0 56.8 22.9 60.7 29.2Z M54.5 51a9.5 9.5 0 1 0 19.0 0a9.5 9.5 0 1 0 -19.0 0Z"/>
+  <!-- Dock: a glass pill of app tiles; the middle tile is lit in the accent colour -->
+  <rect x="24" y="87" width="80" height="20" rx="10" fill="url(#dock)"/>
+  <rect x="31" y="92" width="10" height="10" rx="3" fill="#ffffff" fill-opacity="0.82"/>
+  <rect x="46" y="92" width="10" height="10" rx="3" fill="#ffffff" fill-opacity="0.82"/>
+  <rect x="72" y="92" width="10" height="10" rx="3" fill="#ffffff" fill-opacity="0.82"/>
+  <rect x="87" y="92" width="10" height="10" rx="3" fill="#ffffff" fill-opacity="0.82"/>
+  <rect x="59" y="92" width="10" height="10" rx="3" fill="#ec4f86"/>
+</svg>

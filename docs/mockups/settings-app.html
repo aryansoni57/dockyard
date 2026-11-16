@@ -1,0 +1,1228 @@
+<!doctype html>
+<!--
+  DOCKYARD SETTINGS: interactive mockup
+  =====================================
+
+  DESIGN PLAN
+
+  Information architecture
+    One floating glass window over an abstract plum/rose wallpaper. Left sidebar: search field,
+    then the seven sections of the real QML app (settings/main.qml): Appearance, Display, Sound,
+    Network, Bluetooth, Power, More settings. Each section is one scrolling page made of cards;
+    each card groups related rows (label + caption on the left, control on the right).
+    Deep links: #appearance, #display, ... and #page/setting-id for search jumps.
+
+  Layout
+    Window: max 1180 x 860, 28 px radius, titlebar row (app name left, window buttons right,
+    close button flush to the corner like the Dockyard Aurorae decoration).
+    Sidebar 248 px; content column max 760 px with 32 px side padding.
+    Under 880 px the sidebar collapses to a 72 px icon rail; its search button opens the full
+    sidebar as an overlay. A small glass dock sits under the window for context.
+
+  Tokens
+    Color   night: base #1d0820, glass rgba(32,12,34,.66), ink #fff4f8, ink-2 68%, ink-3 56%
+            day:   base #f4e6ef, glass rgba(255,250,253,.74), ink #2a1325, ink-2 72%, ink-3 58%
+            accent (user pick): rose #ec4f86 default; violet, Dockyard blue, teal, amber,
+            green, coral, graphite. Accent text uses color-mix toward ink for contrast.
+    Radius  window 28, card 20, thumbnail 14, control 12, pill 999
+    Space   4 / 8 / 12 / 16 / 24 / 32
+    Type    Inter (system-ui fallback). Page title 26/600, card title 15/600,
+            row label 14/500, caption 12.5/400 at ink-2, tabular figures for every number.
+    Glass   per docs/STYLE.md: cards 5.5% white fill + 10% rim + brighter top edge (night),
+            translucent white cards with 10% dark rim (day). Blur 40 px under the window.
+
+  Interactions
+    Sidebar: sliding active pill (260 ms, ease-out-expo), arrow keys move between sections.
+    Search: filters sections and every [data-s] setting; Enter jumps to the first hit,
+    arrows walk the list, Esc clears. A jump scrolls the row into view and flashes a ring.
+    Controls: switches (role=switch), segmented radios (roving tabindex), native selects,
+    ranges with live value labels, all with a visible 2 px focus ring.
+    Appearance mode Night / Day / Auto switches the whole mockup (wallpaper crossfade).
+    Display: monitors drag and snap edge to edge (arrow keys too); scale and rotation
+    resize the selected monitor. Sound: animated input meter driven by mic volume.
+    Network/Bluetooth: connect, disconnect, join (password), pair, with transient states.
+    Motion: 120-260 ms, transform/opacity only. prefers-reduced-motion turns it off and
+    freezes the meter.
+-->
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dockyard Settings</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --sans: Inter, "Noto Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --enter: cubic-bezier(.16, 1, .3, 1);
+  --dur: 1;
+  --accent: #ec4f86; --on-accent: #fff;
+  --r-win: 28px; --r-card: 20px; --r-ctl: 12px;
+
+  --base: #1d0820;
+  --ink: #fff4f8; --ink-2: rgba(255,244,248,.68); --ink-3: rgba(255,244,248,.56);
+  --win: rgba(32,12,34,.66); --win-rim: rgba(255,255,255,.14); --win-top: rgba(255,255,255,.12);
+  --side: rgba(255,255,255,.03);
+  --card: rgba(255,255,255,.055); --card-rim: rgba(255,255,255,.10); --card-top: rgba(255,255,255,.14);
+  --hover: rgba(255,255,255,.07); --press: rgba(255,255,255,.11);
+  --field: rgba(255,255,255,.08); --field-rim: rgba(255,255,255,.12);
+  --track: rgba(255,255,255,.16); --line: rgba(255,255,255,.08);
+  --thumb: #fff;
+  --shadow: 0 30px 80px rgba(10,0,12,.55), 0 2px 10px rgba(10,0,12,.3);
+  --pop: #2a1229;
+  --ring: #ffd2e4;
+  --accent-ink: color-mix(in srgb, var(--accent) 62%, #fff);
+  --ok: #4fd18b; --warn: #ffb547; --bad: #ff6b6b;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --base: #f4e6ef;
+  --ink: #2a1325; --ink-2: rgba(42,19,37,.72); --ink-3: rgba(42,19,37,.6);
+  --win: rgba(255,250,253,.74); --win-rim: rgba(80,20,60,.12); --win-top: rgba(255,255,255,.9);
+  --side: rgba(255,255,255,.25);
+  --card: rgba(255,255,255,.58); --card-rim: rgba(80,20,60,.09); --card-top: rgba(255,255,255,.95);
+  --hover: rgba(80,20,60,.06); --press: rgba(80,20,60,.1);
+  --field: rgba(255,255,255,.8); --field-rim: rgba(80,20,60,.14);
+  --track: rgba(80,20,60,.14); --line: rgba(80,20,60,.08);
+  --shadow: 0 30px 80px rgba(120,40,90,.22), 0 2px 10px rgba(120,40,90,.1);
+  --pop: #fff;
+  --ring: #7a1240;
+  --accent-ink: color-mix(in srgb, var(--accent) 70%, #000);
+  --ok: #1a8a4f; --warn: #9a5a00; --bad: #c43030;
+  color-scheme: light;
+}
+* { box-sizing: border-box; margin: 0; padding: 0 }
+html, body { height: 100% }
+body { font: 14px/1.45 var(--sans); color: var(--ink); background: var(--base); overflow: hidden;
+  font-feature-settings: "cv11", "ss01"; -webkit-font-smoothing: antialiased }
+button, input, select { font: inherit; color: inherit }
+button { cursor: pointer; background: none; border: 0 }
+.num, output, .tnum { font-variant-numeric: tabular-nums }
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none }
+.vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px }
+
+/* ---------- wallpaper ---------- */
+.wall { position: fixed; inset: 0; overflow: hidden; transition: opacity calc(.6s * var(--dur)) ease; z-index: 0 }
+.wall i { position: absolute; display: block; border-radius: 999px; filter: blur(1px) }
+.wall.night { background: radial-gradient(70% 60% at 15% 20%, #4a1043 0%, transparent 70%), radial-gradient(60% 70% at 90% 85%, #3b1466 0%, transparent 70%), linear-gradient(160deg, #26091f, #170619) }
+.wall.night i:nth-child(1) { width: 140vmax; height: 16vmax; left: -30vmax; top: 18vh; transform: rotate(-28deg); background: linear-gradient(90deg, transparent, #c42c6f 30%, #ff5a91 55%, transparent) ; opacity: .55 }
+.wall.night i:nth-child(2) { width: 120vmax; height: 7vmax; left: -10vmax; top: 58vh; transform: rotate(-28deg); background: linear-gradient(90deg, transparent, #ff7aa6 40%, #8e2bd1 80%, transparent); opacity: .5 }
+.wall.night i:nth-child(3) { width: 90vmax; height: 26vmax; right: -40vmax; top: -6vh; transform: rotate(-28deg); background: linear-gradient(90deg, #6b20b8, #d23a83 70%, transparent); opacity: .42 }
+.wall.night i:nth-child(4) { width: 110vmax; height: 3vmax; left: -20vmax; top: 86vh; transform: rotate(-28deg); background: linear-gradient(90deg, transparent, #ffb0cb, transparent); opacity: .35 }
+.wall.day { background: radial-gradient(70% 60% at 15% 20%, #ffd9e6 0%, transparent 70%), radial-gradient(60% 70% at 90% 85%, #dccbff 0%, transparent 70%), linear-gradient(160deg, #fbeef3, #efe4f8); opacity: 0 }
+.wall.day i:nth-child(1) { width: 140vmax; height: 16vmax; left: -30vmax; top: 18vh; transform: rotate(-28deg); background: linear-gradient(90deg, transparent, #ff9fbf 35%, #ffc3a8 60%, transparent); opacity: .6 }
+.wall.day i:nth-child(2) { width: 120vmax; height: 7vmax; left: -10vmax; top: 58vh; transform: rotate(-28deg); background: linear-gradient(90deg, transparent, #c5a8ff 45%, #ff9fbf 80%, transparent); opacity: .55 }
+.wall.day i:nth-child(3) { width: 90vmax; height: 26vmax; right: -40vmax; top: -6vh; transform: rotate(-28deg); background: linear-gradient(90deg, #cbb6ff, #ffb3cd 70%, transparent); opacity: .5 }
+.wall.day i:nth-child(4) { width: 110vmax; height: 3vmax; left: -20vmax; top: 86vh; transform: rotate(-28deg); background: linear-gradient(90deg, transparent, #fff, transparent); opacity: .6 }
+:root[data-theme="light"] .wall.day { opacity: 1 }
+:root[data-theme="light"] .wall.night { opacity: 0 }
+
+/* ---------- stage + window ---------- */
+.stage { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px 24px 16px; gap: 14px }
+.win { position: relative; width: min(1180px, 100%); height: min(860px, calc(100vh - 104px)); min-height: 520px;
+  display: grid; grid-template-columns: 248px 1fr; grid-template-rows: 48px 1fr;
+  background: var(--win); border: 1px solid var(--win-rim); border-radius: var(--r-win);
+  backdrop-filter: blur(40px) saturate(150%); -webkit-backdrop-filter: blur(40px) saturate(150%);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--win-top); overflow: hidden;
+  transition: background calc(.4s * var(--dur)) ease, border-color calc(.4s * var(--dur)) ease }
+.tbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding-left: 18px; border-bottom: 1px solid var(--line) }
+.tbar .app { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 13px }
+.tbar .app span.mark { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent) }
+.tbar .app span.mark svg { width: 14px; height: 14px; stroke-width: 2 }
+.tbar .crumb { color: var(--ink-3); font-size: 13px; display: flex; align-items: center; gap: 6px }
+.tbar .sp { flex: 1 }
+.wbtn { width: 44px; height: 48px; display: grid; place-items: center; color: var(--ink-2); transition: background calc(.12s * var(--dur)) ease-out, color .12s }
+.wbtn:hover { background: var(--hover); color: var(--ink) }
+.wbtn.close { width: 52px; border-top-right-radius: calc(var(--r-win) - 1px) }
+.wbtn.close:hover { background: #e5484d; color: #fff }
+.wbtn svg { width: 16px; height: 16px }
+
+/* ---------- sidebar ---------- */
+.side { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 16px 12px; background: var(--side); border-right: 1px solid var(--line); min-height: 0; z-index: 3 }
+.search { position: relative }
+.search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-3); width: 16px; height: 16px }
+.search input { width: 100%; height: 40px; padding: 0 34px 0 36px; border-radius: var(--r-ctl); border: 1px solid var(--field-rim); background: var(--field); outline-offset: 0 }
+.search input::placeholder { color: var(--ink-3) }
+.search input::-webkit-search-cancel-button { display: none }
+.search .clr { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 8px; display: none; place-items: center; color: var(--ink-3) }
+.search .clr svg { position: static; transform: none; width: 14px; height: 14px }
+.search.has .clr { display: grid }
+.search .clr:hover { background: var(--hover); color: var(--ink) }
+.sbtn { display: none; width: 48px; height: 44px; border-radius: var(--r-ctl); place-items: center; color: var(--ink-2); margin: 0 auto }
+.sbtn:hover { background: var(--hover) }
+nav.sections { position: relative; display: flex; flex-direction: column; gap: 2px }
+.navpill { position: absolute; left: 0; right: 0; top: 0; height: 44px; border-radius: var(--r-ctl); background: var(--card); border: 1px solid var(--card-rim); box-shadow: inset 0 1px 0 var(--card-top);
+  transition: transform calc(.26s * var(--dur)) var(--enter), height calc(.26s * var(--dur)) var(--enter); pointer-events: none }
+.navpill::before { content: ""; position: absolute; left: -1px; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; background: var(--accent) }
+.nav { position: relative; display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border-radius: var(--r-ctl); color: var(--ink-2); font-weight: 500; text-align: left; transition: color calc(.12s * var(--dur)), background calc(.12s * var(--dur)) }
+.nav:hover { color: var(--ink); background: var(--hover) }
+.nav[aria-current="page"] { color: var(--ink); background: transparent }
+.nav .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--field); flex: none }
+.nav[aria-current="page"] .ic { background: var(--accent); color: var(--on-accent) }
+.nav .ic svg { width: 16px; height: 16px }
+.nav .lbl { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.nav .meta { font-size: 12px; color: var(--ink-3) }
+.side .foot { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: var(--r-ctl) }
+.side .foot .av { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #7a3cff); color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 13px; flex: none }
+.side .foot b { display: block; font-size: 13px; font-weight: 600 }
+.side .foot span { font-size: 12px; color: var(--ink-3) }
+.results { display: none; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0 }
+.side.q .results { display: flex }
+.side.q nav.sections { display: none }
+.results h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); padding: 8px 12px 4px }
+.res { display: flex; align-items: center; gap: 10px; text-align: left; padding: 8px 12px; border-radius: 10px; color: var(--ink) }
+.res:hover, .res:focus-visible { background: var(--hover) }
+.res svg { width: 16px; height: 16px; color: var(--ink-3) }
+.res b { font-weight: 500; display: block }
+.res b mark { background: none; color: var(--accent-ink); font-weight: 600 }
+.res span { font-size: 12px; color: var(--ink-3) }
+.noresults { padding: 12px; color: var(--ink-2); font-size: 13px }
+
+/* ---------- content ---------- */
+.content { overflow-y: auto; min-height: 0; scroll-padding: 24px; position: relative }
+.content::-webkit-scrollbar { width: 10px } .content::-webkit-scrollbar-thumb { background: var(--track); border-radius: 10px; border: 3px solid transparent; background-clip: padding-box }
+.page { max-width: 800px; margin: 0 auto; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 16px }
+.page[hidden] { display: none }
+.page.enter { animation: pin calc(.24s * var(--dur)) var(--enter) both }
+@keyframes pin { from { opacity: 0; transform: translateY(8px) } }
+.ph { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 4px }
+.ph div { flex: 1 }
+.ph h1 { font-size: 26px; font-weight: 600; letter-spacing: -.015em; line-height: 1.2 }
+.ph p { color: var(--ink-2); margin-top: 4px }
+.card { background: var(--card); border: 1px solid var(--card-rim); border-radius: var(--r-card); box-shadow: inset 0 1px 0 var(--card-top); padding: 6px 20px }
+.card.pad { padding: 20px }
+.card > h2, .card-h h2 { font-size: 15px; font-weight: 600 }
+.card-h { display: flex; align-items: center; gap: 12px; padding: 14px 0 6px }
+.card-h div { flex: 1 } .card-h p { color: var(--ink-2); font-size: 12.5px }
+.row { display: flex; align-items: center; gap: 16px; min-height: 60px; padding: 10px 0; border-top: 1px solid var(--line); border-radius: 8px; transition: box-shadow calc(.3s * var(--dur)) }
+.card-h + .row, .card > .row:first-child { border-top: 0 }
+.row .rl { flex: 1; min-width: 0 }
+.row .rl b { display: block; font-weight: 500 }
+.row .rl span { display: block; color: var(--ink-2); font-size: 12.5px }
+.row .rc { display: flex; align-items: center; gap: 10px; flex: none }
+.row.wide .rc { flex: 1 1 320px; max-width: 360px }
+.row.sub { padding-left: 0 }
+.row.link { cursor: pointer; margin: 0 -12px; padding: 10px 12px; border-top-color: transparent; box-shadow: 0 -1px 0 var(--line) }
+.row.link:first-of-type { box-shadow: none }
+.row.link:hover { background: var(--hover) }
+.row.link .chev { color: var(--ink-3) }
+.row .ricon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--field); flex: none }
+.row .ricon svg { width: 17px; height: 17px }
+.flash { box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent) }
+
+/* ---------- controls ---------- */
+.sw { position: relative; width: 44px; height: 26px; border-radius: 999px; background: var(--track); flex: none; transition: background calc(.18s * var(--dur)) ease }
+.sw::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--thumb); box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform calc(.2s * var(--dur)) var(--enter) }
+.sw[aria-checked="true"] { background: var(--accent) }
+.sw[aria-checked="true"]::after { transform: translateX(18px) }
+:root[data-theme="light"] .sw:not([aria-checked="true"]) { background: rgba(80,20,60,.22) }
+
+.seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--r-ctl); background: var(--field); border: 1px solid var(--field-rim); position: relative }
+.seg button { position: relative; z-index: 1; height: 32px; padding: 0 12px; border-radius: 9px; color: var(--ink-2); font-weight: 500; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; transition: color calc(.12s * var(--dur)), background calc(.12s * var(--dur)) }
+.seg button:hover { color: var(--ink) }
+.seg button[aria-checked="true"] { background: var(--accent); color: var(--on-accent) }
+.seg button svg { width: 15px; height: 15px }
+.seg.icons button { padding: 0 10px }
+
+.sel { position: relative; display: inline-flex; min-width: 200px }
+.sel select { appearance: none; -webkit-appearance: none; width: 100%; height: 38px; padding: 0 36px 0 12px; border-radius: var(--r-ctl); border: 1px solid var(--field-rim); background: var(--field); cursor: pointer }
+.sel select option { background: var(--pop); color: var(--ink) }
+.sel svg { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--ink-3); pointer-events: none }
+.sel:hover select { border-color: color-mix(in srgb, var(--accent) 50%, var(--field-rim)) }
+
+.rng { --p: 50%; flex: 1; min-width: 120px; appearance: none; -webkit-appearance: none; height: 22px; background: transparent; cursor: pointer }
+.rng::-webkit-slider-runnable-track { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--accent) var(--p), var(--track) var(--p)) }
+.rng::-moz-range-track { height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--accent) var(--p), var(--track) var(--p)) }
+.rng::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -7px; border-radius: 50%; background: var(--thumb); box-shadow: 0 1px 4px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.06); transition: transform calc(.12s * var(--dur)) }
+.rng::-moz-range-thumb { width: 20px; height: 20px; border: 0; border-radius: 50%; background: var(--thumb); box-shadow: 0 1px 4px rgba(0,0,0,.35) }
+.rng:active::-webkit-slider-thumb { transform: scale(1.1) }
+.rng:focus-visible { outline: none }
+.rng:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--base), 0 0 0 4px var(--ring) }
+.rng:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px var(--base), 0 0 0 4px var(--ring) }
+.rng.off { --p: 0% !important; opacity: .45 }
+.val { min-width: 44px; text-align: right; color: var(--ink-2); font-size: 13px }
+.rng-wrap { display: flex; align-items: center; gap: 10px; width: 100% }
+.rng-wrap > svg { color: var(--ink-3); width: 16px; height: 16px }
+
+.btn { height: 34px; padding: 0 14px; border-radius: 10px; background: var(--field); border: 1px solid var(--field-rim); font-weight: 500; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; transition: background calc(.12s * var(--dur)), transform calc(.08s * var(--dur)) }
+.btn:hover { background: var(--press) }
+.btn:active { transform: scale(.97) }
+.btn.pri { background: var(--accent); color: var(--on-accent); border-color: transparent }
+.btn.pri:hover { background: color-mix(in srgb, var(--accent) 88%, #fff) }
+.btn[disabled] { opacity: .6; cursor: default; transform: none }
+.btn svg { width: 15px; height: 15px }
+.ibtn { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--ink-2); transition: background calc(.12s * var(--dur)), color .12s; flex: none }
+.ibtn:hover { background: var(--hover); color: var(--ink) }
+.ibtn[aria-pressed="true"] { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent) }
+.tag { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--field); color: var(--ink-2) }
+.tag.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent) }
+
+/* ---------- appearance ---------- */
+.themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px; padding: 8px 0 16px }
+.theme { display: flex; flex-direction: column; align-items: center; gap: 10px; border-radius: 16px; padding: 0; text-align: center; color: var(--ink-2); font-weight: 500 }
+.theme:hover { color: var(--ink) }
+.theme[aria-checked="true"] { color: var(--ink) }
+.theme .thumb { width: 100%; aspect-ratio: 16 / 10.5; border-radius: 14px; position: relative; overflow: hidden; box-shadow: 0 0 0 1px var(--card-rim), 0 6px 18px rgba(0,0,0,.18); transition: transform calc(.18s * var(--dur)) var(--enter), box-shadow calc(.18s * var(--dur)) }
+.theme:hover .thumb { transform: translateY(-2px) }
+.theme[aria-checked="true"] .thumb { box-shadow: 0 0 0 2px var(--accent), 0 8px 22px rgba(0,0,0,.22) }
+.theme .ind { width: 22px; height: 4px; border-radius: 4px; background: transparent; transition: width calc(.24s * var(--dur)) var(--enter), background calc(.2s * var(--dur)); margin-top: -4px }
+.theme[aria-checked="true"] .ind { width: 32px; background: var(--accent) }
+.thumb .tw { position: absolute; left: 12%; top: 11%; width: 60%; height: 60%; border-radius: 7px; background: var(--t-win); border: 1px solid var(--t-rim); padding: 7% 5%; display: grid; grid-template-columns: 34% 1fr; grid-template-rows: 9% 1fr 1fr; gap: 7% 5% }
+.thumb .tw i { border-radius: 3px; background: var(--t-blk) }
+.thumb .tw i:nth-child(1) { grid-column: 1 / -1; width: 40% }
+.thumb .tw i:nth-child(4) { grid-row: 2 / 4; grid-column: 2 }
+.thumb .td { position: absolute; left: 27%; right: 27%; bottom: 6%; height: 12%; border-radius: 7px; background: var(--t-dock); border: 1px solid var(--t-rim); display: flex; gap: 6%; align-items: center; justify-content: center }
+.thumb .td i { width: 9%; aspect-ratio: 1; border-radius: 3px; background: var(--t-blk) }
+.thumb .td i.a { background: var(--accent) }
+.thumb.panel .td { left: 0; right: 0; bottom: 0; border-radius: 0; height: 11%; border-width: 1px 0 0; justify-content: flex-start; padding-left: 4% }
+.th-dn { background: linear-gradient(150deg, transparent 30%, rgba(255,90,145,.7) 30% 42%, transparent 42% 60%, rgba(140,50,210,.6) 60% 66%, transparent 66%), linear-gradient(160deg, #3a0d33, #1a0619); --t-win: rgba(30,10,30,.72); --t-rim: rgba(255,255,255,.18); --t-blk: rgba(255,255,255,.16); --t-dock: rgba(30,10,30,.6) }
+.th-dd { background: linear-gradient(150deg, transparent 30%, rgba(255,160,190,.8) 30% 42%, transparent 42% 60%, rgba(200,170,255,.8) 60% 66%, transparent 66%), linear-gradient(160deg, #fdeef4, #ece2fb); --t-win: rgba(255,255,255,.82); --t-rim: rgba(120,40,90,.15); --t-blk: rgba(120,40,90,.13); --t-dock: rgba(255,255,255,.75) }
+.th-bd { background: linear-gradient(200deg, transparent 45%, rgba(61,174,233,.55) 45% 52%, transparent 52%), linear-gradient(20deg, #17222c 40%, #1f3a4c); --t-win: #2a2e32; --t-rim: rgba(255,255,255,.1); --t-blk: rgba(255,255,255,.12); --t-dock: #202326 }
+.th-bl { background: linear-gradient(200deg, transparent 45%, rgba(61,174,233,.6) 45% 52%, transparent 52%), linear-gradient(20deg, #cfe3ef 40%, #e9f2f8); --t-win: #eff0f1; --t-rim: rgba(0,0,0,.12); --t-blk: rgba(0,0,0,.1); --t-dock: #e3e5e7 }
+.swatches { display: flex; flex-wrap: wrap; gap: 10px }
+.swatch { width: 30px; height: 30px; border-radius: 50%; background: var(--c); position: relative; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); transition: transform calc(.12s * var(--dur)) }
+.swatch:hover { transform: scale(1.08) }
+.swatch[aria-checked="true"]::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--c) }
+.swatch svg { position: absolute; inset: 0; margin: auto; width: 14px; height: 14px; stroke-width: 2.6; color: var(--on); opacity: 0 }
+.swatch[aria-checked="true"] svg { opacity: 1 }
+.sched { display: none; gap: 12px; flex-wrap: wrap; padding: 0 0 12px }
+.sched.on { display: flex }
+.sched label { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2) }
+.sched .sel { min-width: 160px }
+
+/* ---------- display ---------- */
+.arrange { position: relative; height: 230px; margin: 4px 0 12px; border-radius: 16px; background: var(--field); border: 1px dashed var(--field-rim); overflow: hidden; touch-action: none }
+.arrange .hint { position: absolute; left: 14px; bottom: 10px; font-size: 12px; color: var(--ink-3); pointer-events: none }
+.mon { position: absolute; border-radius: 10px; border: 2px solid var(--card-rim); background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; cursor: grab; user-select: none;
+  transition: left calc(.22s * var(--dur)) var(--enter), top calc(.22s * var(--dur)) var(--enter), width calc(.22s * var(--dur)) var(--enter), height calc(.22s * var(--dur)) var(--enter), border-color .15s; padding: 6px; overflow: hidden }
+.mon.drag { transition: none; cursor: grabbing; z-index: 2; box-shadow: 0 10px 30px rgba(0,0,0,.3) }
+.mon[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--card)) }
+.mon b { font-size: 13px; font-weight: 600 } .mon span { font-size: 11.5px; color: var(--ink-2) }
+.mon .no { position: absolute; top: 6px; left: 8px; font-size: 11px; font-weight: 700; color: var(--ink-3) }
+.mon .star { position: absolute; top: 6px; right: 8px; font-size: 10.5px; font-weight: 600; color: var(--accent-ink) }
+.ctemp { display: none }
+.ctemp.on { display: flex }
+
+/* ---------- sound ---------- */
+.meter { display: flex; align-items: flex-end; gap: 3px; height: 28px; flex: 1 }
+.meter i { flex: 1; height: 100%; border-radius: 2px; background: var(--track); position: relative; overflow: hidden }
+.meter i::after { content: ""; position: absolute; inset: 0; background: var(--accent); transform: scaleY(var(--l, 0)); transform-origin: bottom; border-radius: 2px }
+.meter i.hot::after { background: var(--warn) }
+
+/* ---------- lists (network, bluetooth) ---------- */
+.item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line) }
+.item:first-child { border-top: 0 }
+.item .ricon { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: var(--field); flex: none; color: var(--ink-2) }
+.item.on .ricon { background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent-ink) }
+.item .il { flex: 1; min-width: 0 }
+.item .il b { font-weight: 500; display: flex; align-items: center; gap: 8px }
+.item .il b svg { width: 13px; height: 13px; color: var(--ink-3) }
+.item .il span { display: block; font-size: 12.5px; color: var(--ink-2) }
+.item.on .il span { color: var(--accent-ink) }
+.item .join { display: none; width: 100%; gap: 8px; padding-top: 10px; flex-wrap: wrap; align-items: center }
+.item.joining { flex-wrap: wrap }
+.item.joining .join { display: flex }
+.join input { flex: 1; min-width: 160px; height: 34px; border-radius: 10px; border: 1px solid var(--field-rim); background: var(--field); padding: 0 12px }
+.join .err { width: 100%; font-size: 12px; color: var(--bad) }
+.bars { width: 18px; height: 16px; display: flex; align-items: flex-end; gap: 2px; flex: none }
+.bars i { width: 3px; border-radius: 1px; background: var(--track) }
+.bars i:nth-child(1) { height: 25% } .bars i:nth-child(2) { height: 50% } .bars i:nth-child(3) { height: 75% } .bars i:nth-child(4) { height: 100% }
+.bars i.f { background: currentColor }
+.empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 16px; text-align: center; color: var(--ink-2) }
+.empty svg { width: 28px; height: 28px; color: var(--ink-3) }
+.empty b { color: var(--ink); font-weight: 600 }
+.spin { animation: spin calc(1s * var(--dur)) linear infinite }
+@keyframes spin { to { transform: rotate(360deg) } }
+.scan { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-3) }
+.scan svg { width: 14px; height: 14px }
+
+/* ---------- power ---------- */
+.profiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px }
+.prof { text-align: left; padding: 18px; border-radius: 18px; background: var(--card); border: 1px solid var(--card-rim); box-shadow: inset 0 1px 0 var(--card-top); display: flex; flex-direction: column; gap: 10px; transition: border-color calc(.15s * var(--dur)), background calc(.15s * var(--dur)), transform calc(.08s * var(--dur)) }
+.prof:hover { background: var(--hover) }
+.prof:active { transform: scale(.98) }
+.prof .pi { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--field) }
+.prof .pi svg { width: 20px; height: 20px }
+.prof b { font-weight: 600; font-size: 15px }
+.prof span { font-size: 12.5px; color: var(--ink-2) }
+.prof em { font-style: normal; font-size: 12px; color: var(--ink-3); margin-top: auto }
+.prof[aria-checked="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card)) }
+.prof[aria-checked="true"] .pi { background: var(--accent); color: var(--on-accent) }
+.battery { display: flex; gap: 24px; align-items: center; padding: 20px }
+.bnum { font-size: 44px; font-weight: 700; letter-spacing: -.03em; line-height: 1 }
+.bnum small { font-size: 20px; font-weight: 600; color: var(--ink-2) }
+.bmeta { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+.bbar { height: 10px; border-radius: 6px; background: var(--track); overflow: hidden; position: relative }
+.bbar b { position: absolute; inset: 0 auto 0 0; width: var(--b); background: var(--ok); border-radius: 6px; transition: width calc(.3s * var(--dur)) ease-in-out }
+.bbar u { position: absolute; top: -2px; bottom: -2px; left: 80%; width: 2px; background: var(--ink-3); display: none }
+.bbar.lim u { display: block }
+.bstats { display: flex; gap: 20px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2) }
+.bstats b { color: var(--ink); font-weight: 600 }
+
+/* ---------- more ---------- */
+.mods { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px }
+.mod { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; border-radius: 16px; text-align: left; background: var(--card); border: 1px solid var(--card-rim); box-shadow: inset 0 1px 0 var(--card-top); transition: background calc(.12s * var(--dur)), transform calc(.08s * var(--dur)) }
+.mod:hover { background: var(--hover) }
+.mod:active { transform: scale(.97) }
+.mod .mi { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: var(--field); color: var(--ink) }
+.mod .mi svg { width: 19px; height: 19px }
+.mod b { font-weight: 500 }
+.mod span { font-size: 12px; color: var(--ink-3); margin-top: -10px }
+
+/* ---------- dock + toast ---------- */
+.dock { display: flex; gap: 6px; padding: 6px; border-radius: 18px; background: var(--win); border: 1px solid var(--win-rim); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); box-shadow: 0 4px 16px rgba(0,0,0,.2), inset 0 1px 0 var(--win-top) }
+.dock span { position: relative; width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; color: var(--ink-2) }
+.dock span svg { width: 20px; height: 20px }
+.dock span.run { background: var(--card); color: var(--ink) }
+.dock span.run::after { content: ""; position: absolute; bottom: -4px; width: 4px; height: 4px; border-radius: 50%; background: var(--accent) }
+.toast { position: fixed; left: 50%; bottom: 84px; transform: translate(-50%, 12px); background: var(--pop); color: var(--ink); border: 1px solid var(--win-rim); padding: 10px 16px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity calc(.2s * var(--dur)) ease-out, transform calc(.25s * var(--dur)) var(--enter); box-shadow: var(--shadow); z-index: 10; font-size: 13px; max-width: calc(100vw - 32px) }
+.toast.show { opacity: 1; transform: translate(-50%, 0) }
+.toast code { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 12px; color: var(--accent-ink) }
+
+/* ---------- responsive ---------- */
+@media (max-width: 880px) {
+  .win { grid-template-columns: 72px 1fr }
+  .side { padding: 14px 10px; align-items: stretch }
+  .side .search, .side .foot div, .nav .lbl, .nav .meta, .navpill::before { display: none }
+  .sbtn { display: grid }
+  .nav { justify-content: center; padding: 0 }
+  .side .foot { justify-content: center; padding: 6px 0 }
+  .side.open { position: absolute; left: 0; top: 48px; bottom: 0; width: 280px; background: var(--pop); box-shadow: var(--shadow); border-radius: 0 0 0 var(--r-win); padding: 16px 12px }
+  .side.open .search, .side.open .foot div, .side.open .nav .lbl, .side.open .nav .meta { display: block }
+  .side.open .navpill::before { display: block }
+  .side.open .sbtn { display: none }
+  .side.open .nav { justify-content: flex-start; padding: 0 12px }
+  .side.open .foot { justify-content: flex-start; padding: 10px }
+  .content { grid-column: 2 }
+  .page { padding: 24px 22px 40px }
+  .profiles { grid-template-columns: 1fr }
+  .prof { flex-direction: row; align-items: center; flex-wrap: wrap }
+  .prof em { margin: 0 0 0 auto }
+  .tbar .crumb { display: none }
+}
+@media (max-width: 640px) {
+  .row { flex-wrap: wrap }
+  .row.wide .rc { max-width: none }
+  .battery { flex-direction: column; align-items: flex-start }
+  .stage { padding: 12px 8px 8px }
+}
+@media (max-height: 720px) { .dock { display: none } .win { height: calc(100vh - 32px) } }
+:root.solid { --win: #22101f } :root.solid[data-theme="light"] { --win: #fbf5f8 }
+@media (prefers-reduced-motion: reduce) { :root { --dur: 0 } .spin { animation: none } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-brush" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3Z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7" r="1.2"/><circle cx="15.5" cy="7.5" r="1.2"/></symbol>
+  <symbol id="i-display" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2.5"/><path d="M8.5 20h7M12 16v4"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5Z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5Z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2.5 9a14 14 0 0 1 19 0"/><path d="M5.5 12.3a9.5 9.5 0 0 1 13 0"/><path d="M8.7 15.5a5 5 0 0 1 6.6 0"/><circle cx="12" cy="19" r="1"/></symbol>
+  <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M8.7 15.5a5 5 0 0 1 6.6 0M5.5 12.3a9.5 9.5 0 0 1 4-2.2M2.5 9a14 14 0 0 1 5-3M14.5 6.2A14 14 0 0 1 21.5 9"/><circle cx="12" cy="19" r="1"/><path d="M3 3l18 18"/></symbol>
+  <symbol id="i-bt" viewBox="0 0 24 24"><path d="M7 7.5l10 9-5 4.5v-18l5 4.5-10 9"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><rect x="3" y="7" width="16" height="10" rx="2.5"/><path d="M21 10.5v3"/><path d="M11.5 8.5l-2 3.5h3l-2 3.5"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-min" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+  <symbol id="i-max" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></symbol>
+  <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></symbol>
+  <symbol id="i-palette" viewBox="0 0 24 24"><circle cx="8" cy="9" r="2.5"/><circle cx="16" cy="9" r="2.5"/><circle cx="12" cy="16" r="2.5"/></symbol>
+  <symbol id="i-icons" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><circle cx="16.5" cy="7.5" r="3.5"/><path d="M7.5 13.5l4 6.5h-8Z"/><rect x="13" y="13" width="7" height="7" rx="3.5"/></symbol>
+  <symbol id="i-font" viewBox="0 0 24 24"><path d="M4 19L9.5 5h1L16 19M6.3 14h7.4"/><path d="M17 11.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Zm2.5 0V19"/></symbol>
+  <symbol id="i-cursor" viewBox="0 0 24 24"><path d="M5 3.5l13 7.5-5.5 1.5 3.5 6-2.5 1.5-3.5-6L6 18Z"/></symbol>
+  <symbol id="i-window" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9h18M16 6.8h2"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
+  <symbol id="i-mic-off" viewBox="0 0 24 24"><path d="M15 9.5V6a3 3 0 0 0-5.8-1M9 9v2a3 3 0 0 0 4.9 2.3M5.5 11a6.5 6.5 0 0 0 10.9 4.8M18.5 11a6.5 6.5 0 0 1-.4 2.2M12 17.5V21M3 3l18 18"/></symbol>
+  <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3.5" y="14" width="4.5" height="6.5" rx="2"/><rect x="16" y="14" width="4.5" height="6.5" rx="2"/></symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M9.3 10h.01M12.6 10h.01M16 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6"/></symbol>
+  <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 7v3"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="3"/><circle cx="12" cy="14.5" r="3.2"/><path d="M12 6.5h.01"/></symbol>
+  <symbol id="i-cmd" viewBox="0 0 24 24"><path d="M9 6.5A2.5 2.5 0 1 0 6.5 9H9V6.5Zm0 0v11m0-11h6m-6 11A2.5 2.5 0 1 1 6.5 15H9Zm0 0h6m0-11A2.5 2.5 0 1 1 17.5 9H15V6.5Zm0 0v11m0 0a2.5 2.5 0 1 0 2.5-2.5H15M9 9h6M9 15h6"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15Z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-rules" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M7 10h4M7 14h7M15 10h2"/></symbol>
+  <symbol id="i-desktops" viewBox="0 0 24 24"><rect x="3" y="5" width="8" height="6" rx="1.5"/><rect x="13" y="5" width="8" height="6" rx="1.5"/><rect x="3" y="13" width="8" height="6" rx="1.5"/><rect x="13" y="13" width="8" height="6" rx="1.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M10.5 9v6l4.5-3Z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6M18.5 19a5.5 5.5 0 0 0-3-4.9"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12h8M12 8v8"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7.5 3v5.5c0 4.6-3.2 8.2-7.5 9.5-4.3-1.3-7.5-4.9-7.5-9.5V6Z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.5h.01"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c0-9 5-14 15-14 0 10-5 15-14 15"/><path d="M5 19l7-7"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l3.5-5"/><circle cx="12" cy="17" r="1"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2.5L5 13.5h6l-1 8 8-11h-6Z"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v5h-5"/></symbol>
+  <symbol id="i-plane" viewBox="0 0 24 24"><path d="M10.5 3.5c0-.8.7-1.5 1.5-1.5s1.5.7 1.5 1.5V9l7 4.5V16l-7-2.3V18l2 1.5V21L12 20l-3.5 1v-1.5l2-1.5v-4.3L3.5 16v-2.5l7-4.5Z"/></symbol>
+  <symbol id="i-ethernet" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="12" rx="2"/><path d="M8 17v3h8v-3M8 9v3M11 9v3M14 9v3M17 9v3" transform="translate(-.5 0)"/></symbol>
+  <symbol id="i-rot0" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M12 9.5v5"/></symbol>
+  <symbol id="i-rot90" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2.5"/><path d="M9.5 12h5"/></symbol>
+  <symbol id="i-rot180" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M12 9.5v5M9.5 12l2.5 2.5 2.5-2.5"/></symbol>
+  <symbol id="i-rot270" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2.5"/><path d="M9.5 12h5M12 9.5L9.5 12l2.5 2.5"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.5 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.5-3.5-8.5s1-6 3.5-8.5Z"/></symbol>
+  <symbol id="i-term" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M7 10l3 2.5L7 15M12.5 15h4"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></symbol>
+</svg>
+
+<div class="wall night" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+<div class="wall day" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+<div class="stage">
+  <div class="win" role="application" aria-label="Dockyard Settings">
+    <header class="tbar">
+      <div class="app"><span class="mark"><svg class="i"><use href="#i-gear"/></svg></span>Settings</div>
+      <div class="crumb"><svg class="i" style="width:14px;height:14px"><use href="#i-chev"/></svg><span id="crumb">Appearance</span></div>
+      <div class="sp"></div>
+      <button class="wbtn" data-toast="Would minimize the window" aria-label="Minimize"><svg class="i"><use href="#i-min"/></svg></button>
+      <button class="wbtn" data-toast="Would maximize the window" aria-label="Maximize"><svg class="i"><use href="#i-max"/></svg></button>
+      <button class="wbtn close" data-toast="Would close Settings" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button>
+    </header>
+
+    <aside class="side" id="side">
+      <button class="sbtn" id="sbtn" aria-label="Search settings" aria-expanded="false" aria-controls="side"><svg class="i"><use href="#i-search"/></svg></button>
+      <div class="search" id="searchBox" role="search">
+        <svg class="i"><use href="#i-search"/></svg>
+        <label class="vh" for="q">Search settings</label>
+        <input id="q" type="search" placeholder="Find a setting" autocomplete="off" aria-controls="results">
+        <button class="clr" id="qclr" aria-label="Clear search"><svg class="i"><use href="#i-x"/></svg></button>
+      </div>
+      <nav class="sections" id="nav" aria-label="Sections">
+        <i class="navpill" id="navpill" aria-hidden="true"></i>
+      </nav>
+      <div class="results" id="results" aria-live="polite"></div>
+      <div class="foot"><span class="av">A</span><div><b>Aryan</b><span>dockyard · Plasma 6.5</span></div></div>
+    </aside>
+
+    <main class="content" id="content">
+
+      <!-- ================= APPEARANCE ================= -->
+      <section class="page" data-page="appearance" data-title="Appearance" data-icon="brush" aria-labelledby="h-appearance">
+        <div class="ph"><div><h1 id="h-appearance">Appearance</h1><p>Global theme, mode, accent color and the finer style pieces.</p></div></div>
+
+        <div class="card">
+          <div class="card-h"><div><h2>Global theme</h2><p>Applies colors, Plasma style, window decoration and the dock look in one step.</p></div></div>
+          <div class="themes" role="radiogroup" aria-label="Global theme" id="s-theme" data-s="Global theme" data-k="look and feel dockyard breeze">
+            <button class="theme" role="radio" data-theme-id="dockyard-night" data-mode="night"><span class="thumb th-dn"><span class="tw"><i></i><i></i><i></i><i></i></span><span class="td"><i></i><i></i><i class="a"></i><i></i><i></i></span></span>Dockyard Night<span class="ind"></span></button>
+            <button class="theme" role="radio" data-theme-id="dockyard-day" data-mode="day"><span class="thumb th-dd"><span class="tw"><i></i><i></i><i></i><i></i></span><span class="td"><i></i><i></i><i class="a"></i><i></i><i></i></span></span>Dockyard Day<span class="ind"></span></button>
+            <button class="theme" role="radio" data-theme-id="breeze-dark" data-mode="night"><span class="thumb th-bd panel"><span class="tw"><i></i><i></i><i></i><i></i></span><span class="td"><i></i><i></i><i></i></span></span>Breeze Dark<span class="ind"></span></button>
+            <button class="theme" role="radio" data-theme-id="breeze" data-mode="day"><span class="thumb th-bl panel"><span class="tw"><i></i><i></i><i></i><i></i></span><span class="td"><i></i><i></i><i></i></span></span>Breeze<span class="ind"></span></button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row" id="s-mode" data-s="Day and night mode" data-k="dark light auto schedule color scheme">
+            <div class="rl"><b>Mode</b><span id="modeCap">Night all day</span></div>
+            <div class="rc"><div class="seg" role="radiogroup" aria-label="Mode" id="mode">
+              <button role="radio" data-v="night"><svg class="i"><use href="#i-moon"/></svg>Night</button>
+              <button role="radio" data-v="day"><svg class="i"><use href="#i-sun"/></svg>Day</button>
+              <button role="radio" data-v="auto"><svg class="i"><use href="#i-auto"/></svg>Auto</button>
+            </div></div>
+          </div>
+          <div class="sched" id="sched">
+            <label>Day theme <span class="sel"><select id="dayTheme" aria-label="Day theme"><option>Dockyard Day</option><option>Breeze</option></select><svg class="i"><use href="#i-down"/></svg></span></label>
+            <label>Night theme <span class="sel"><select id="nightTheme" aria-label="Night theme"><option>Dockyard Night</option><option>Breeze Dark</option></select><svg class="i"><use href="#i-down"/></svg></span></label>
+          </div>
+          <div class="row" id="s-accent" data-s="Accent color" data-k="highlight colour">
+            <div class="rl"><b>Accent color</b><span id="accentCap">Rose</span></div>
+            <div class="rc"><div class="swatches" role="radiogroup" aria-label="Accent color" id="swatches"></div></div>
+          </div>
+          <div class="row" id="s-transparency" data-s="Transparency" data-k="blur glass">
+            <div class="rl"><b>Glass transparency</b><span>Blur and tint behind panels, dock and popups</span></div>
+            <div class="rc"><button class="sw" role="switch" aria-checked="true" aria-label="Glass transparency" id="glass"></button></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h"><div><h2>Fine-tune</h2><p>Each one opens the full KDE module.</p></div></div>
+          <div class="row link" tabindex="0" role="button" id="s-colors" data-s="Colors" data-k="color scheme" data-run="kcmshell6 kcm_colors"><span class="ricon"><svg class="i"><use href="#i-palette"/></svg></span><div class="rl"><b>Colors</b><span>Dockyard Night</span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          <div class="row link" tabindex="0" role="button" id="s-icons" data-s="Icons" data-k="icon theme" data-run="kcmshell6 kcm_icons"><span class="ricon"><svg class="i"><use href="#i-icons"/></svg></span><div class="rl"><b>Icons</b><span>Papirus Dark</span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          <div class="row link" tabindex="0" role="button" id="s-fonts" data-s="Fonts" data-k="text size typeface" data-run="kcmshell6 kcm_fonts"><span class="ricon"><svg class="i"><use href="#i-font"/></svg></span><div class="rl"><b>Fonts</b><span>Inter 10 pt</span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          <div class="row link" tabindex="0" role="button" id="s-cursors" data-s="Cursors" data-k="pointer mouse" data-run="kcmshell6 kcm_cursortheme"><span class="ricon"><svg class="i"><use href="#i-cursor"/></svg></span><div class="rl"><b>Cursors</b><span>Breeze, 24 px</span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+          <div class="row link" tabindex="0" role="button" id="s-deco" data-s="Window decorations" data-k="titlebar buttons aurorae" data-run="kcmshell6 kcm_kwindecoration"><span class="ricon"><svg class="i"><use href="#i-window"/></svg></span><div class="rl"><b>Window decorations</b><span>Dockyard, flush close button</span></div><svg class="i chev"><use href="#i-chev"/></svg></div>
+        </div>
+      </section>
+
+      <!-- ================= DISPLAY ================= -->
+      <section class="page" data-page="display" data-title="Display" data-icon="display" aria-labelledby="h-display" hidden>
+        <div class="ph"><div><h1 id="h-display">Display</h1><p>Arrange screens, then tune the selected one.</p></div></div>
+        <div class="card pad">
+          <h2>Arrangement</h2>
+          <div class="arrange" id="arrange" data-s="Arrange displays" data-k="monitor layout position multiple screens"><span class="hint">Drag a screen to move it. Arrow keys work too.</span></div>
+          <div class="row" id="s-res" data-s="Resolution" data-k="mode pixels">
+            <div class="rl"><b>Resolution</b><span id="resCap">Native</span></div>
+            <div class="rc"><span class="sel"><select id="res" aria-label="Resolution"></select><svg class="i"><use href="#i-down"/></svg></span></div>
+          </div>
+          <div class="row" id="s-rate" data-s="Refresh rate" data-k="hz frequency">
+            <div class="rl"><b>Refresh rate</b><span>Higher is smoother, uses more power</span></div>
+            <div class="rc"><span class="sel"><select id="rate" aria-label="Refresh rate"></select><svg class="i"><use href="#i-down"/></svg></span></div>
+          </div>
+          <div class="row" id="s-scale" data-s="Scale" data-k="zoom size hidpi">
+            <div class="rl"><b>Scale</b><span id="scaleCap">Looks like 1707 × 1067</span></div>
+            <div class="rc"><div class="seg" role="radiogroup" aria-label="Scale" id="scale">
+              <button role="radio" data-v="100">100%</button><button role="radio" data-v="125">125%</button><button role="radio" data-v="150">150%</button><button role="radio" data-v="175">175%</button><button role="radio" data-v="200">200%</button>
+            </div></div>
+          </div>
+          <div class="row" id="s-rot" data-s="Rotation" data-k="orientation portrait landscape">
+            <div class="rl"><b>Orientation</b><span id="rotCap">Landscape</span></div>
+            <div class="rc"><div class="seg icons" role="radiogroup" aria-label="Orientation" id="rot">
+              <button role="radio" data-v="0" aria-label="Landscape"><svg class="i"><use href="#i-rot0"/></svg></button>
+              <button role="radio" data-v="90" aria-label="Portrait, rotated right"><svg class="i"><use href="#i-rot90"/></svg></button>
+              <button role="radio" data-v="180" aria-label="Landscape, flipped"><svg class="i"><use href="#i-rot180"/></svg></button>
+              <button role="radio" data-v="270" aria-label="Portrait, rotated left"><svg class="i"><use href="#i-rot270"/></svg></button>
+            </div></div>
+          </div>
+          <div class="row wide" id="s-bright" data-s="Brightness" data-k="backlight dim">
+            <div class="rl"><b>Brightness</b></div>
+            <div class="rc rng-wrap"><svg class="i"><use href="#i-sun"/></svg><input class="rng" type="range" min="5" max="100" id="bright" aria-label="Brightness"><output class="val" for="bright" id="brightV"></output></div>
+          </div>
+          <div class="row" id="s-primary" data-s="Primary display" data-k="main screen">
+            <div class="rl"><b>Primary display</b><span>The dock and new windows open here</span></div>
+            <div class="rc"><button class="sw" role="switch" aria-checked="true" aria-label="Primary display" id="primary"></button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row" id="s-night" data-s="Night light" data-k="blue light warm color temperature">
+            <div class="rl"><b>Night light</b><span id="nlCap">Off</span></div>
+            <div class="rc"><button class="sw" role="switch" aria-checked="false" aria-label="Night light" id="nl"></button></div>
+          </div>
+          <div class="row wide ctemp" id="nlTemp">
+            <div class="rl"><b>Warmth</b><span>Color temperature at night</span></div>
+            <div class="rc rng-wrap"><input class="rng" type="range" min="2500" max="6000" step="100" value="4200" id="temp" aria-label="Night light warmth"><output class="val" for="temp" id="tempV"></output></div>
+          </div>
+          <div class="row ctemp" id="nlSched">
+            <div class="rl"><b>Schedule</b></div>
+            <div class="rc"><span class="sel"><select id="nlWhen" aria-label="Night light schedule"><option>Sunset to sunrise</option><option>Custom times</option><option>Always on</option></select><svg class="i"><use href="#i-down"/></svg></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SOUND ================= -->
+      <section class="page" data-page="sound" data-title="Sound" data-icon="sound" aria-labelledby="h-sound" hidden>
+        <div class="ph"><div><h1 id="h-sound">Sound</h1><p>Where sound plays, and what the microphone hears.</p></div></div>
+        <div class="card">
+          <div class="card-h"><div><h2>Output</h2></div><button class="btn" data-toast="Would play a left, then right test tone"><svg class="i"><use href="#i-play"/></svg>Test</button></div>
+          <div class="row" id="s-out" data-s="Output device" data-k="speakers headphones hdmi">
+            <div class="rl"><b>Output device</b><span id="outCap">Built-in audio · Analog stereo</span></div>
+            <div class="rc"><span class="sel"><select id="out" aria-label="Output device"><option value="Built-in audio · Analog stereo">Speakers</option><option value="Bluetooth · A2DP high quality">Studio Buds</option><option value="Studio 27 · HDMI 1">Studio 27 (HDMI)</option></select><svg class="i"><use href="#i-down"/></svg></span></div>
+          </div>
+          <div class="row wide" id="s-vol" data-s="Volume" data-k="loudness output level">
+            <div class="rl"><b>Volume</b></div>
+            <div class="rc rng-wrap"><button class="ibtn" id="muteOut" aria-pressed="false" aria-label="Mute output"><svg class="i"><use href="#i-sound"/></svg></button><input class="rng" type="range" min="0" max="100" value="64" id="vol" aria-label="Volume"><output class="val" for="vol" id="volV"></output></div>
+          </div>
+          <div class="row" id="s-over" data-s="Allow above 100%" data-k="volume boost amplify">
+            <div class="rl"><b>Allow above 100%</b><span>Can distort on small speakers</span></div>
+            <div class="rc"><button class="sw" role="switch" aria-checked="false" aria-label="Allow volume above 100%" id="over"></button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><h2>Input</h2></div></div>
+          <div class="row" id="s-in" data-s="Input device" data-k="microphone mic">
+            <div class="rl"><b>Input device</b></div>
+            <div class="rc"><span class="sel"><select id="in" aria-label="Input device"><option>Built-in microphone</option><option>Studio Buds microphone</option></select><svg class="i"><use href="#i-down"/></svg></span></div>
+          </div>
+          <div class="row wide" id="s-mic" data-s="Microphone volume" data-k="input gain mic level">
+            <div class="rl"><b>Microphone</b></div>
+            <div class="rc rng-wrap"><button class="ibtn" id="muteMic" aria-pressed="false" aria-label="Mute microphone"><svg class="i"><use href="#i-mic"/></svg></button><input class="rng" type="range" min="0" max="100" value="72" id="mic" aria-label="Microphone volume"><output class="val" for="mic" id="micV"></output></div>
+          </div>
+          <div class="row wide" id="s-level" data-s="Input level" data-k="meter test microphone">
+            <div class="rl"><b>Input level</b><span id="levelCap">Speak to test</span></div>
+            <div class="rc"><div class="meter" id="meter" role="meter" aria-label="Input level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div>
+          </div>
+          <div class="row" id="s-noise" data-s="Noise suppression" data-k="background noise filter">
+            <div class="rl"><b>Noise suppression</b><span>Filters fans and keyboard clatter</span></div>
+            <div class="rc"><button class="sw" role="switch" aria-checked="true" aria-label="Noise suppression"></button></div>
+          </div>
+        </div>
+        <div class="card"><div class="row link" tabindex="0" role="button" data-run="kcmshell6 kcm_pulseaudio" id="s-adv-audio" data-s="Advanced audio" data-k="pulseaudio pipewire profiles"><span class="ricon"><svg class="i"><use href="#i-gear"/></svg></span><div class="rl"><b>Advanced audio</b><span>Profiles, per-app volume, devices</span></div><svg class="i chev"><use href="#i-ext"/></svg></div></div>
+      </section>
+
+      <!-- ================= NETWORK ================= -->
+      <section class="page" data-page="network" data-title="Network" data-icon="wifi" aria-labelledby="h-network" hidden>
+        <div class="ph"><div><h1 id="h-network">Network</h1><p>Wi-Fi, wired and airplane mode.</p></div></div>
+        <div class="card">
+          <div class="row" id="s-wifi" data-s="Wi-Fi" data-k="wireless wlan internet">
+            <span class="ricon"><svg class="i"><use href="#i-wifi"/></svg></span>
+            <div class="rl"><b>Wi-Fi</b><span id="wifiCap">Connected to Harbor 5G</span></div>
+            <div class="rc"><button class="sw" role="switch" aria-checked="true" aria-label="Wi-Fi" id="wifi"></button></div>
+          </div>
+          <div class="row" id="s-air" data-s="Airplane mode" data-k="flight offline radios">
+            <span class="ricon"><svg class="i"><use href="#i-plane"/></svg></span>
+            <div class="rl"><b>Airplane mode</b><span>Turns off Wi-Fi and Bluetooth</span></div>
+            <div class="rc"><button class="sw" role="switch" aria-checked="false" aria-label="Airplane mode" id="air"></button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><h2>Networks</h2></div><span class="scan" id="scanLbl"></span><button class="ibtn" id="rescan" aria-label="Scan for networks"><svg class="i"><use href="#i-refresh"/></svg></button></div>
+          <div id="netlist" data-s="Available networks" data-k="ssid join connect"></div>
+        </div>
+        <div class="card">
+          <div class="row" id="s-eth" data-s="Wired connection" data-k="ethernet lan cable">
+            <span class="ricon"><svg class="i"><use href="#i-ethernet"/></svg></span>
+            <div class="rl"><b>Wired</b><span>Cable unplugged</span></div>
+          </div>
+          <div class="row link" tabindex="0" role="button" data-run="kcmshell6 kcm_networkmanagement" id="s-vpn" data-s="VPN and advanced" data-k="proxy dns ip vpn"><span class="ricon"><svg class="i"><use href="#i-shield"/></svg></span><div class="rl"><b>VPN, proxy and advanced</b><span>NetworkManager connections</span></div><svg class="i chev"><use href="#i-ext"/></svg></div>
+        </div>
+      </section>
+
+      <!-- ================= BLUETOOTH ================= -->
+      <section class="page" data-page="bluetooth" data-title="Bluetooth" data-icon="bt" aria-labelledby="h-bluetooth" hidden>
+        <div class="ph"><div><h1 id="h-bluetooth">Bluetooth</h1><p>Paired devices and new ones nearby.</p></div></div>
+        <div class="card">
+          <div class="row" id="s-bt" data-s="Bluetooth" data-k="wireless pair devices">
+            <span class="ricon"><svg class="i"><use href="#i-bt"/></svg></span>
+            <div class="rl"><b>Bluetooth</b><span id="btCap">Visible as “aryan-laptop”</span></div>
+            <div class="rc"><button class="sw" role="switch" aria-checked="true" aria-label="Bluetooth" id="bt"></button></div>
+          </div>
+        </div>
+        <div class="card" id="btPaired">
+          <div class="card-h"><div><h2>My devices</h2></div></div>
+          <div id="paired" data-s="Paired devices" data-k="headphones keyboard mouse connect"></div>
+        </div>
+        <div class="card" id="btNear">
+          <div class="card-h"><div><h2>Nearby</h2></div><span class="scan"><svg class="i spin"><use href="#i-refresh"/></svg>Searching</span></div>
+          <div id="nearby" data-s="Pair a new device" data-k="add discover nearby"></div>
+        </div>
+      </section>
+
+      <!-- ================= POWER ================= -->
+      <section class="page" data-page="power" data-title="Power" data-icon="power" aria-labelledby="h-power" hidden>
+        <div class="ph"><div><h1 id="h-power">Power</h1><p>Battery, performance and when the screen sleeps.</p></div></div>
+        <div class="card battery" id="s-battery" data-s="Battery" data-k="charge health percentage">
+          <div class="bnum num" id="bpct">76<small>%</small></div>
+          <div class="bmeta">
+            <div class="bbar" id="bbar" style="--b:76%"><b></b><u></u></div>
+            <div class="bstats"><span><b id="bleft">3 h 12 min</b> left</span><span>Health <b>91%</b></span><span>On battery</span></div>
+          </div>
+        </div>
+        <div class="profiles" role="radiogroup" aria-label="Power profile" id="s-profile" data-s="Power profile" data-k="performance balanced power saver battery">
+          <button class="prof" role="radio" data-v="saver" data-left="4 h 05 min"><span class="pi"><svg class="i"><use href="#i-leaf"/></svg></span><b>Power Saver</b><span>Dims the screen sooner and caps the CPU.</span><em>About 4 h 05 min</em></button>
+          <button class="prof" role="radio" data-v="balanced" data-left="3 h 12 min"><span class="pi"><svg class="i"><use href="#i-gauge"/></svg></span><b>Balanced</b><span>Speed when you need it, quiet when you don't.</span><em>About 3 h 12 min</em></button>
+          <button class="prof" role="radio" data-v="performance" data-left="2 h 20 min"><span class="pi"><svg class="i"><use href="#i-bolt"/></svg></span><b>Performance</b><span>Full clocks. Fans may spin up.</span><em>About 2 h 20 min</em></button>
+        </div>
+        <div class="card">
+          <div class="row" id="s-limit" data-s="Limit charge to 80%" data-k="battery health conservation">
+            <div class="rl"><b>Limit charge to 80%</b><span>Keeps the battery healthy when mostly plugged in</span></div>
+            <div class="rc"><button class="sw" role="switch" aria-checked="false" aria-label="Limit charge to 80%" id="limit"></button></div>
+          </div>
+          <div class="row" id="s-dim" data-s="Turn off screen" data-k="sleep display idle timeout">
+            <div class="rl"><b>Turn off screen after</b></div>
+            <div class="rc"><span class="sel"><select aria-label="Turn off screen after"><option>2 minutes</option><option selected>5 minutes</option><option>10 minutes</option><option>Never</option></select><svg class="i"><use href="#i-down"/></svg></span></div>
+          </div>
+          <div class="row" id="s-suspend" data-s="Sleep when idle" data-k="suspend idle timeout">
+            <div class="rl"><b>Sleep after</b></div>
+            <div class="rc"><span class="sel"><select aria-label="Sleep after"><option>10 minutes</option><option selected>15 minutes</option><option>30 minutes</option><option>Never</option></select><svg class="i"><use href="#i-down"/></svg></span></div>
+          </div>
+          <div class="row" id="s-lid" data-s="When lid closes" data-k="laptop lid suspend">
+            <div class="rl"><b>When the lid closes</b></div>
+            <div class="rc"><span class="sel"><select aria-label="When the lid closes"><option selected>Sleep</option><option>Hibernate</option><option>Lock screen</option><option>Do nothing</option></select><svg class="i"><use href="#i-down"/></svg></span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="row link" tabindex="0" role="button" data-run="kcmshell6 kcm_powerdevilprofilesconfig" id="s-energy" data-s="Energy saving" data-k="powerdevil advanced"><span class="ricon"><svg class="i"><use href="#i-leaf"/></svg></span><div class="rl"><b>Energy saving</b><span>Per-profile timeouts and actions</span></div><svg class="i chev"><use href="#i-ext"/></svg></div>
+          <div class="row link" tabindex="0" role="button" data-run="kcmshell6 kcm_screenlocker" id="s-lock" data-s="Lock screen" data-k="screen locker password"><span class="ricon"><svg class="i"><use href="#i-lock"/></svg></span><div class="rl"><b>Lock screen</b><span>Lock after 5 minutes, on wake</span></div><svg class="i chev"><use href="#i-ext"/></svg></div>
+        </div>
+      </section>
+
+      <!-- ================= MORE ================= -->
+      <section class="page" data-page="more" data-title="More settings" data-icon="grid" aria-labelledby="h-more" hidden>
+        <div class="ph"><div><h1 id="h-more">More settings</h1><p>Everything else lives in KDE's own modules.</p></div>
+          <button class="btn" data-run="systemsettings"><svg class="i"><use href="#i-ext"/></svg>All KDE settings</button></div>
+        <div class="mods" id="mods"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="dock" aria-hidden="true">
+    <span><svg class="i"><use href="#i-folder"/></svg></span>
+    <span><svg class="i"><use href="#i-globe"/></svg></span>
+    <span><svg class="i"><use href="#i-term"/></svg></span>
+    <span><svg class="i"><use href="#i-note"/></svg></span>
+    <span class="run"><svg class="i"><use href="#i-gear"/></svg></span>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const root = document.documentElement;
+const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("dys." + k); return v === null ? d : JSON.parse(v) } catch { return d } },
+  set(k, v) { try { localStorage.setItem("dys." + k, JSON.stringify(v)) } catch {} }
+};
+const svg = (id, cls = "i") => `<svg class="${cls}"><use href="#i-${id}"/></svg>`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ---------- toast ---------- */
+const toastEl = $("#toast"); let toastT = 0;
+function toast(html) { toastEl.innerHTML = html; toastEl.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove("show"), 2200) }
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-toast]"); if (t) toast(esc(t.dataset.toast));
+  const r = e.target.closest("[data-run]"); if (r) toast(`Would run <code>${esc(r.dataset.run)}</code>`);
+});
+document.addEventListener("keydown", e => {
+  const r = e.target.closest && e.target.closest(".row.link");
+  if (r && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); r.click() }
+});
+
+/* ---------- generic controls ---------- */
+function onSwitch(el, fn) { el.addEventListener("sw", () => fn(el.getAttribute("aria-checked") === "true")) }
+function setSwitch(el, v, fire = true) { el.setAttribute("aria-checked", String(!!v)); if (fire) el.dispatchEvent(new Event("sw")) }
+document.addEventListener("click", e => { const s = e.target.closest(".sw"); if (s && !s.disabled) setSwitch(s, s.getAttribute("aria-checked") !== "true") });
+
+// Radio groups: segmented controls, theme grid, swatches, power profiles. Roving tabindex + arrows.
+function radios(group, onPick) {
+  const items = () => $$('[role="radio"]', group);
+  const pick = (b, fire = true, focus = false) => {
+    items().forEach(x => { const on = x === b; x.setAttribute("aria-checked", String(on)); x.tabIndex = on ? 0 : -1 });
+    if (focus) b.focus();
+    if (fire) onPick(b.dataset.v ?? b.dataset.themeId, b);
+  };
+  group.addEventListener("click", e => { const b = e.target.closest('[role="radio"]'); if (b && group.contains(b)) pick(b) });
+  group.addEventListener("keydown", e => {
+    const list = items(), i = list.indexOf(document.activeElement); if (i < 0) return;
+    const k = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (k) { e.preventDefault(); pick(list[(i + k + list.length) % list.length], true, true) }
+    else if (e.key === "Home") { e.preventDefault(); pick(list[0], true, true) }
+    else if (e.key === "End") { e.preventDefault(); pick(list[list.length - 1], true, true) }
+  });
+  return { set(v, fire = false) { const b = items().find(x => (x.dataset.v ?? x.dataset.themeId) === String(v)); if (b) pick(b, fire) } };
+}
+
+// Range inputs: fill + value label.
+function range(input, fmt, onChange) {
+  const out = $("#" + input.id + "V");
+  const paint = () => {
+    const p = (input.value - input.min) / (input.max - input.min) * 100;
+    input.style.setProperty("--p", p + "%");
+    if (out) out.textContent = fmt(+input.value);
+    input.setAttribute("aria-valuetext", fmt(+input.value));
+  };
+  input.addEventListener("input", () => { paint(); onChange && onChange(+input.value) });
+  paint();
+  return paint;
+}
+
+/* ---------- navigation ---------- */
+const pages = $$(".page");
+const nav = $("#nav"), pill = $("#navpill"), content = $("#content");
+pages.forEach(p => {
+  const b = document.createElement("button");
+  b.className = "nav"; b.dataset.go = p.dataset.page; b.setAttribute("aria-label", p.dataset.title);
+  b.innerHTML = `<span class="ic">${svg(p.dataset.icon)}</span><span class="lbl">${p.dataset.title}</span><span class="meta" data-meta="${p.dataset.page}"></span>`;
+  nav.appendChild(b);
+});
+const navBtns = $$(".nav", nav);
+let current = null;
+function movePill() {
+  const b = navBtns.find(x => x.dataset.go === current); if (!b) return;
+  pill.style.transform = `translateY(${b.offsetTop}px)`; pill.style.height = b.offsetHeight + "px";
+}
+function show(id, target) {
+  const page = pages.find(p => p.dataset.page === id) || pages[0];
+  if (current !== page.dataset.page) {
+    pages.forEach(p => { p.hidden = p !== page; p.classList.remove("enter") });
+    void page.offsetWidth; page.classList.add("enter");
+    current = page.dataset.page;
+    navBtns.forEach(b => b.dataset.go === current ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+    $("#crumb").textContent = page.dataset.title;
+    document.title = page.dataset.title + " · Dockyard Settings";
+    content.scrollTop = 0; movePill();
+    onPage(current);
+  }
+  if (target) {
+    const el = document.getElementById(target);
+    if (el) {
+      el.scrollIntoView({ block: "center", behavior: reduced.matches ? "auto" : "smooth" });
+      el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1400);
+      const f = el.matches("button, input, select, [tabindex]") ? el : el.querySelector('button:not([tabindex="-1"]), input, select, [tabindex="0"]');
+      if (f) f.focus({ preventScroll: true });
+    }
+  }
+}
+function route(to = location.hash.slice(1)) {
+  const [p, t] = to.split("/");
+  show(p || "appearance", t);
+}
+// Update the URL when the host allows it (file:// and http do; data: previews don't), then route directly.
+function go(to) { try { history.pushState(null, "", "#" + to) } catch {} route(to) }
+nav.addEventListener("click", e => { const b = e.target.closest(".nav"); if (!b) return; go(b.dataset.go); closeSide() });
+nav.addEventListener("keydown", e => {
+  const i = navBtns.indexOf(document.activeElement); if (i < 0) return;
+  const k = { ArrowDown: 1, ArrowUp: -1 }[e.key];
+  if (k) { e.preventDefault(); navBtns[(i + k + navBtns.length) % navBtns.length].focus() }
+});
+addEventListener("hashchange", () => route());
+addEventListener("popstate", () => route());
+addEventListener("resize", movePill);
+
+/* ---------- search ---------- */
+const side = $("#side"), q = $("#q"), results = $("#results"), searchBox = $("#searchBox");
+const index = [];
+pages.forEach(p => {
+  index.push({ label: p.dataset.title, page: p.dataset.page, pageTitle: "Section", kw: "", icon: p.dataset.icon, section: true });
+  $$("[data-s]", p).forEach(el => {
+    if (!el.id) el.id = "s-" + Math.random().toString(36).slice(2, 7);
+    if (el.dataset.s === p.dataset.title) return; // the section hit already covers it
+    index.push({ label: el.dataset.s, page: p.dataset.page, pageTitle: p.dataset.title, kw: el.dataset.k || "", id: el.id, icon: p.dataset.icon });
+  });
+});
+const hl = (s, t) => { const i = s.toLowerCase().indexOf(t); return i < 0 ? esc(s) : esc(s.slice(0, i)) + "<mark>" + esc(s.slice(i, i + t.length)) + "</mark>" + esc(s.slice(i + t.length)) };
+function runSearch() {
+  const t = q.value.trim().toLowerCase();
+  searchBox.classList.toggle("has", !!q.value);
+  side.classList.toggle("q", !!t);
+  if (!t) { results.innerHTML = ""; return }
+  const words = t.split(/\s+/);
+  const scored = index.map(e => {
+    const hay = (e.label + " " + e.kw + " " + e.pageTitle).toLowerCase();
+    if (!words.every(w => hay.includes(w))) return null;
+    let s = 0; const l = e.label.toLowerCase();
+    if (l.startsWith(t)) s += 10; else if (l.includes(t)) s += 5;
+    if (e.section) s += 3;
+    return { e, s };
+  }).filter(Boolean).sort((a, b) => b.s - a.s).slice(0, 9);
+  if (!scored.length) { results.innerHTML = `<p class="noresults">No settings match “${esc(q.value.trim())}”.</p>`; return }
+  const secs = scored.filter(x => x.e.section), sets = scored.filter(x => !x.e.section);
+  const row = ({ e }) => `<button class="res" data-to="${e.page}${e.id ? "/" + e.id : ""}">${svg(e.icon)}<div><b>${hl(e.label, t)}</b><span>${esc(e.pageTitle)}</span></div></button>`;
+  results.innerHTML = (secs.length ? `<h3>Sections</h3>${secs.map(row).join("")}` : "") + (sets.length ? `<h3>Settings</h3>${sets.map(row).join("")}` : "");
+}
+function jump(to) { clearSearch(); closeSide(); go(to) }
+function clearSearch() { q.value = ""; runSearch() }
+q.addEventListener("input", runSearch);
+q.addEventListener("keydown", e => {
+  const first = $(".res", results);
+  if (e.key === "Enter" && first) { e.preventDefault(); jump(first.dataset.to) }
+  else if (e.key === "ArrowDown" && first) { e.preventDefault(); first.focus() }
+  else if (e.key === "Escape") { if (q.value) { e.preventDefault(); clearSearch() } else closeSide(true) }
+});
+results.addEventListener("click", e => { const r = e.target.closest(".res"); if (r) jump(r.dataset.to) });
+results.addEventListener("keydown", e => {
+  const list = $$(".res", results), i = list.indexOf(document.activeElement);
+  if (e.key === "ArrowDown") { e.preventDefault(); (list[i + 1] || list[i]).focus() }
+  else if (e.key === "ArrowUp") { e.preventDefault(); i <= 0 ? q.focus() : list[i - 1].focus() }
+  else if (e.key === "Escape") { e.preventDefault(); q.focus(); clearSearch() }
+});
+$("#qclr").addEventListener("click", () => { clearSearch(); q.focus() });
+document.addEventListener("keydown", e => {
+  if ((e.key === "/" || (e.key.toLowerCase() === "f" && (e.ctrlKey || e.metaKey))) && !e.target.matches("input, select, textarea")) {
+    e.preventDefault(); openSide();
+  }
+});
+// Narrow layout: the rail's search button opens the full sidebar as an overlay.
+const sbtn = $("#sbtn");
+function openSide() { side.classList.add("open"); sbtn.setAttribute("aria-expanded", "true"); requestAnimationFrame(() => { q.focus(); movePill() }) }
+function closeSide(refocus) { if (!side.classList.contains("open")) return; side.classList.remove("open"); sbtn.setAttribute("aria-expanded", "false"); movePill(); if (refocus) sbtn.focus() }
+sbtn.addEventListener("click", openSide);
+document.addEventListener("pointerdown", e => { if (side.classList.contains("open") && !side.contains(e.target)) closeSide() });
+
+/* ---------- appearance ---------- */
+const ACCENTS = [
+  { n: "Rose", c: "#ec4f86", on: "#fff" }, { n: "Violet", c: "#9a6bff", on: "#fff" },
+  { n: "Dockyard blue", c: "#0a84ff", on: "#fff" }, { n: "Teal", c: "#1fb5a8", on: "#06201d" },
+  { n: "Green", c: "#34c46a", on: "#06200f" }, { n: "Amber", c: "#f2a33a", on: "#2a1700" },
+  { n: "Coral", c: "#ff6b57", on: "#2a0a05" }, { n: "Graphite", c: "#8a8494", on: "#fff" }
+];
+const sw = $("#swatches");
+sw.innerHTML = ACCENTS.map(a => `<button class="swatch" role="radio" data-v="${a.c}" aria-label="${a.n}" style="--c:${a.c};--on:${a.on}">${svg("check")}</button>`).join("");
+const accentR = radios(sw, v => setAccent(v, true));
+function setAccent(c, save) {
+  const a = ACCENTS.find(x => x.c === c) || ACCENTS[0];
+  root.style.setProperty("--accent", a.c); root.style.setProperty("--on-accent", a.on);
+  $("#accentCap").textContent = a.n; if (save) store.set("accent", a.c);
+}
+
+const THEMES = { "dockyard-night": "Dockyard Night", "dockyard-day": "Dockyard Day", "breeze-dark": "Breeze Dark", "breeze": "Breeze" };
+const themeR = radios($("#s-theme"), (id, b) => {
+  state.theme = id; store.set("theme", id);
+  const m = b.dataset.mode;
+  if (state.mode !== "auto") { modeR.set(m); state.mode = m; store.set("mode", m) }
+  else (m === "day" ? $("#dayTheme") : $("#nightTheme")).value = THEMES[id];
+  applyMode();
+  $("#s-colors .rl span").textContent = THEMES[id];
+});
+const state = { mode: store.get("mode", "night"), theme: store.get("theme", "dockyard-night") };
+const modeR = radios($("#mode"), v => { state.mode = v; store.set("mode", v); applyMode(true) });
+function autoIsDay() { const h = new Date().getHours(); return h >= 7 && h < 19 }
+function applyMode(fromMode) {
+  const day = state.mode === "auto" ? autoIsDay() : state.mode === "day";
+  root.dataset.theme = day ? "light" : "dark";
+  $("#sched").classList.toggle("on", state.mode === "auto");
+  $("#modeCap").textContent = state.mode === "auto"
+    ? (day ? "Day now · Night from 19:00" : "Night now · Day from 07:00")
+    : day ? "Day all day" : "Night all day";
+  if (fromMode) {
+    // Keep the selected theme in step with the mode: switch to the matching pair member.
+    const pairs = { "dockyard-night": "dockyard-day", "dockyard-day": "dockyard-night", "breeze-dark": "breeze", "breeze": "breeze-dark" };
+    const isDayTheme = $(`[data-theme-id="${state.theme}"]`).dataset.mode === "day";
+    if (isDayTheme !== day) { state.theme = pairs[state.theme]; store.set("theme", state.theme); themeR.set(state.theme); $("#s-colors .rl span").textContent = THEMES[state.theme] }
+  }
+}
+onSwitch($("#glass"), v => { root.classList.toggle("solid", !v); toast(v ? "Glass on" : "Glass off: solid panels") });
+
+/* ---------- display ---------- */
+const mons = [
+  { id: "a", name: "Built-in", w: 2560, h: 1600, x: 0, y: 0, res: "2560 × 1600", rate: "120 Hz", scale: 150, rot: 0, bright: 72, resList: ["2560 × 1600", "1920 × 1200", "1680 × 1050", "1280 × 800"], rates: ["120 Hz", "60 Hz"] },
+  { id: "b", name: "Studio 27", w: 3840, h: 2160, x: 1707, y: -300, res: "3840 × 2160", rate: "60 Hz", scale: 150, rot: 0, bright: 60, resList: ["3840 × 2160", "2560 × 1440", "1920 × 1080"], rates: ["60 Hz", "50 Hz", "30 Hz"] }
+];
+let primary = "a", sel = mons[0];
+const arrange = $("#arrange");
+const dims = m => { const [rw, rh] = m.res.split(" × ").map(Number); let w = rw * 100 / m.scale, h = rh * 100 / m.scale; if (m.rot % 180) [w, h] = [h, w]; return { w: Math.round(w), h: Math.round(h) } };
+mons.forEach((m, i) => {
+  const el = document.createElement("button");
+  el.className = "mon"; el.dataset.id = m.id;
+  el.innerHTML = `<span class="no">${i + 1}</span><span class="star"></span><b>${m.name}</b><span class="mres"></span>`;
+  arrange.appendChild(el); m.el = el;
+});
+let k = .05, off = { x: 0, y: 0 }, bbox = { x: 0, y: 0 };
+function layout(fixScale = true) {
+  const r = arrange.getBoundingClientRect();
+  if (r.width < 40) return; // page hidden; onPage("display") lays out again
+  const ds = mons.map(dims);
+  const x0 = Math.min(...mons.map(m => m.x)), y0 = Math.min(...mons.map(m => m.y));
+  const x1 = Math.max(...mons.map((m, i) => m.x + ds[i].w)), y1 = Math.max(...mons.map((m, i) => m.y + ds[i].h));
+  if (fixScale) { k = Math.min((r.width - 64) / (x1 - x0), (r.height - 64) / (y1 - y0)); bbox = { x: x0, y: y0 }; off = { x: (r.width - (x1 - x0) * k) / 2, y: (r.height - (y1 - y0) * k) / 2 } }
+  mons.forEach((m, i) => {
+    const s = m.el.style; s.left = off.x + (m.x - bbox.x) * k + "px"; s.top = off.y + (m.y - bbox.y) * k + "px";
+    s.width = ds[i].w * k + "px"; s.height = ds[i].h * k + "px";
+    m.el.setAttribute("aria-pressed", String(m === sel));
+    m.el.setAttribute("aria-label", `${m.name}, ${m.res}${m.id === primary ? ", primary" : ""}. Arrow keys move it.`);
+    $(".mres", m.el).textContent = m.res.replace(" × ", "×");
+    $(".star", m.el).textContent = m.id === primary ? "Primary" : "";
+  });
+}
+// Snap the moved monitor flush against the other one, on whichever side it is closest to.
+function snap(m) {
+  const o = mons.find(x => x !== m), a = dims(m), b = dims(o);
+  const dx = (m.x + a.w / 2) - (o.x + b.w / 2), dy = (m.y + a.h / 2) - (o.y + b.h / 2);
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  if (Math.abs(dx) / (a.w + b.w) >= Math.abs(dy) / (a.h + b.h)) {
+    m.x = dx > 0 ? o.x + b.w : o.x - a.w;
+    m.y = clamp(m.y, o.y - a.h + 120, o.y + b.h - 120);
+    for (const t of [o.y, o.y + b.h - a.h, o.y + (b.h - a.h) / 2]) if (Math.abs(m.y - t) < 120) { m.y = t; break }
+  } else {
+    m.y = dy > 0 ? o.y + b.h : o.y - a.h;
+    m.x = clamp(m.x, o.x - a.w + 120, o.x + b.w - 120);
+    for (const t of [o.x, o.x + b.w - a.w, o.x + (b.w - a.w) / 2]) if (Math.abs(m.x - t) < 120) { m.x = t; break }
+  }
+  m.x = Math.round(m.x); m.y = Math.round(m.y);
+}
+arrange.addEventListener("pointerdown", e => {
+  const el = e.target.closest(".mon"); if (!el) return;
+  const m = mons.find(x => x.el === el); select(m);
+  const sx = e.clientX, sy = e.clientY, ox = m.x, oy = m.y; let moved = false;
+  el.setPointerCapture(e.pointerId);
+  const mv = ev => { const dx = ev.clientX - sx, dy = ev.clientY - sy; if (!moved && Math.hypot(dx, dy) < 3) return; moved = true; el.classList.add("drag"); m.x = ox + dx / k; m.y = oy + dy / k; layout(false) };
+  const up = () => { el.removeEventListener("pointermove", mv); el.removeEventListener("pointerup", up); el.removeEventListener("pointercancel", up); el.classList.remove("drag"); if (moved) { snap(m); layout() } };
+  el.addEventListener("pointermove", mv); el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
+});
+arrange.addEventListener("keydown", e => {
+  const el = e.target.closest(".mon"); if (!el) return;
+  const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!d) return;
+  e.preventDefault(); const m = mons.find(x => x.el === el); select(m);
+  // Slide 200 logical px along the shared edge; snap keeps it attached to the other screen.
+  m.x += d[0] * 200; m.y += d[1] * 200;
+  snap(m); layout();
+});
+arrange.addEventListener("click", e => { const el = e.target.closest(".mon"); if (el) select(mons.find(x => x.el === el)) });
+const resSel = $("#res"), rateSel = $("#rate");
+const scaleR = radios($("#scale"), v => { sel.scale = +v; resnap(); dispUpdate() });
+const rotR = radios($("#rot"), v => { sel.rot = +v; resnap(); dispUpdate() });
+const brightPaint = range($("#bright"), v => v + "%", v => sel.bright = v);
+function resnap() { const o = mons.find(x => x !== sel); snap(o); layout() }
+function select(m) {
+  sel = m;
+  resSel.innerHTML = m.resList.map(r => `<option${r === m.res ? " selected" : ""}>${r}</option>`).join("");
+  rateSel.innerHTML = m.rates.map(r => `<option${r === m.rate ? " selected" : ""}>${r}</option>`).join("");
+  scaleR.set(m.scale); rotR.set(m.rot);
+  $("#bright").value = m.bright; brightPaint();
+  setSwitch($("#primary"), m.id === primary, false);
+  $("#primary").disabled = m.id === primary;
+  dispUpdate(); layout();
+}
+function dispUpdate() {
+  const d = dims(sel), [rw] = sel.res.split(" × ").map(Number);
+  $("#resCap").textContent = (sel.res === sel.resList[0] ? "Native · " : "") + sel.name;
+  $("#scaleCap").textContent = `Looks like ${d.w} × ${d.h}`;
+  $("#rotCap").textContent = { 0: "Landscape", 90: "Portrait, rotated right", 180: "Landscape, flipped", 270: "Portrait, rotated left" }[sel.rot];
+}
+resSel.addEventListener("change", () => { sel.res = resSel.value; resnap(); dispUpdate() });
+rateSel.addEventListener("change", () => sel.rate = rateSel.value);
+onSwitch($("#primary"), v => { if (v) { primary = sel.id; $("#primary").disabled = true; layout(); toast(`${esc(sel.name)} is now the primary display`) } });
+new ResizeObserver(() => layout()).observe(arrange);
+const tempPaint = range($("#temp"), v => v + " K", v => nlCap());
+function nlCap() { const on = $("#nl").getAttribute("aria-checked") === "true"; $("#nlCap").textContent = on ? `On · ${$("#temp").value} K from sunset` : "Off"; $$(".ctemp").forEach(x => x.classList.toggle("on", on)) }
+onSwitch($("#nl"), nlCap);
+
+/* ---------- sound ---------- */
+const volPaint = range($("#vol"), v => v + "%", () => volIcon());
+const micPaint = range($("#mic"), v => v + "%");
+function volIcon() { const m = $("#muteOut").getAttribute("aria-pressed") === "true"; $("#muteOut").innerHTML = svg(m || +$("#vol").value === 0 ? "mute" : "sound"); $("#vol").classList.toggle("off", m) }
+$("#muteOut").addEventListener("click", e => { const b = e.currentTarget, m = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", m); b.setAttribute("aria-label", m ? "Unmute output" : "Mute output"); volIcon() });
+$("#muteMic").addEventListener("click", e => { const b = e.currentTarget, m = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", m); b.setAttribute("aria-label", m ? "Unmute microphone" : "Mute microphone"); b.innerHTML = svg(m ? "mic-off" : "mic"); $("#mic").classList.toggle("off", m); $("#levelCap").textContent = m ? "Microphone muted" : "Speak to test"; meterStatic() });
+$("#out").addEventListener("change", e => $("#outCap").textContent = e.target.value);
+onSwitch($("#over"), v => { $("#vol").max = v ? 150 : 100; if (!v && +$("#vol").value > 100) $("#vol").value = 100; volPaint() });
+const meter = $("#meter"), BARS = 28;
+meter.innerHTML = "<i></i>".repeat(BARS);
+const bars = $$("i", meter);
+let raf = 0, level = 0, phase = 0;
+function micGain() { return $("#muteMic").getAttribute("aria-pressed") === "true" ? 0 : +$("#mic").value / 100 }
+function drawMeter(l) {
+  const n = Math.round(l * BARS);
+  bars.forEach((b, i) => { b.style.setProperty("--l", i < n ? 1 : 0); b.classList.toggle("hot", i >= BARS * .8) });
+  meter.setAttribute("aria-valuenow", Math.round(l * 100));
+}
+function meterStatic() { if (reduced.matches || current !== "sound") drawMeter(micGain() * .45) }
+function tick(t) {
+  phase += .06;
+  // Speech-like envelope: syllable bursts with pauses, scaled by mic gain.
+  const env = Math.max(0, Math.sin(phase * 1.7) * .5 + Math.sin(phase * 4.3) * .3 + Math.random() * .25);
+  level += ((env * micGain() * .95) - level) * .35;
+  drawMeter(Math.min(1, level));
+  raf = requestAnimationFrame(tick);
+}
+$("#mic").addEventListener("input", meterStatic);
+function onPage(p) {
+  cancelAnimationFrame(raf);
+  if (p === "sound" && !reduced.matches) raf = requestAnimationFrame(tick); else meterStatic();
+  if (p === "display") requestAnimationFrame(() => layout());
+}
+
+/* ---------- network ---------- */
+const nets = [
+  { ssid: "Harbor 5G", sig: 4, sec: true, saved: true, band: "5 GHz" },
+  { ssid: "Harbor", sig: 3, sec: true, saved: true, band: "2.4 GHz" },
+  { ssid: "Pier-Guest", sig: 3, sec: false, band: "5 GHz" },
+  { ssid: "Lighthouse", sig: 2, sec: true, band: "5 GHz" },
+  { ssid: "Galley", sig: 2, sec: true, band: "2.4 GHz" },
+  { ssid: "Boathouse_2.4", sig: 1, sec: true, band: "2.4 GHz" }
+];
+let connected = "Harbor 5G", busy = null, joining = null;
+const sigBars = n => `<span class="bars" aria-hidden="true">${[1, 2, 3, 4].map(i => `<i class="${i <= n ? "f" : ""}"></i>`).join("")}</span>`;
+const sigWord = ["", "weak", "fair", "good", "excellent"];
+function renderNets() {
+  const list = $("#netlist"), on = $("#wifi").getAttribute("aria-checked") === "true";
+  $("#wifiCap").textContent = !on ? "Off" : connected ? `Connected to ${connected}` : "Not connected";
+  $('[data-meta="network"]').textContent = on && connected ? connected : on ? "" : "Off";
+  $("#rescan").disabled = !on;
+  if (!on) { list.innerHTML = `<div class="empty">${svg("wifi-off")}<b>Wi-Fi is off</b><span>Turn it on to see networks nearby.</span><button class="btn pri" id="wifiOn">Turn on Wi-Fi</button></div>`; $("#wifiOn").onclick = () => setSwitch($("#wifi"), true); return }
+  const sorted = [...nets].sort((a, b) => (b.ssid === connected) - (a.ssid === connected) || b.sig - a.sig);
+  list.innerHTML = sorted.map(n => {
+    const isOn = n.ssid === connected, isBusy = busy === n.ssid, isJoin = joining === n.ssid;
+    const cap = isOn ? `Connected · ${n.band} · 192.168.1.24` : isBusy ? "Connecting…" : `${n.saved ? "Saved" : n.sec ? "Secured" : "Open"} · ${n.band} · ${sigWord[n.sig]} signal`;
+    const btn = isOn ? `<button class="btn" data-dis="${esc(n.ssid)}">Disconnect</button>`
+      : `<button class="btn${isJoin ? "" : ""}" data-con="${esc(n.ssid)}"${isBusy ? " disabled" : ""}>${isBusy ? svg("refresh", "i spin") + "Connecting" : "Connect"}</button>`;
+    return `<div class="item${isOn ? " on" : ""}${isJoin ? " joining" : ""}">
+      <span class="ricon">${sigBars(n.sig)}</span>
+      <div class="il"><b>${esc(n.ssid)}${n.sec ? svg("lock") : ""}</b><span>${cap}</span></div>
+      ${isJoin ? "" : btn}
+      <form class="join" data-ssid="${esc(n.ssid)}"><label class="vh" for="pw-${n.sig}${n.ssid.length}">Password for ${esc(n.ssid)}</label>
+        <input type="password" id="pw-${n.sig}${n.ssid.length}" placeholder="Password" autocomplete="off">
+        <button class="btn pri" type="submit">Join</button><button class="btn" type="button" data-cancel>Cancel</button><span class="err" aria-live="polite"></span></form>
+    </div>`;
+  }).join("");
+  if (joining) { const inp = $(".joining input", list); inp && inp.focus() }
+}
+function connect(ssid) {
+  joining = null; busy = ssid; renderNets();
+  setTimeout(() => { busy = null; connected = ssid; const n = nets.find(x => x.ssid === ssid); n.saved = true; renderNets(); toast(`Connected to ${esc(ssid)}`) }, reduced.matches ? 300 : 1100);
+}
+$("#netlist").addEventListener("click", e => {
+  const c = e.target.closest("[data-con]"), d = e.target.closest("[data-dis]"), x = e.target.closest("[data-cancel]");
+  if (c) { const n = nets.find(v => v.ssid === c.dataset.con); if (n.sec && !n.saved) { joining = n.ssid; renderNets() } else connect(n.ssid) }
+  if (d) { connected = null; renderNets(); toast(`Disconnected from ${esc(d.dataset.dis)}`) }
+  if (x) { joining = null; renderNets() }
+});
+$("#netlist").addEventListener("submit", e => {
+  e.preventDefault(); const f = e.target, v = $("input", f).value;
+  if (v.length < 8) { $(".err", f).textContent = "Wi-Fi passwords are at least 8 characters."; return }
+  connect(f.dataset.ssid);
+});
+$("#netlist").addEventListener("keydown", e => { if (e.key === "Escape" && joining) { joining = null; renderNets() } });
+onSwitch($("#wifi"), v => { if (v && $("#air").getAttribute("aria-checked") === "true") setSwitch($("#air"), false, false); renderNets() });
+$("#rescan").addEventListener("click", () => {
+  const l = $("#scanLbl"); l.innerHTML = svg("refresh", "i spin") + "Scanning";
+  setTimeout(() => { l.textContent = ""; nets.forEach(n => n.sig = Math.max(1, Math.min(4, n.sig + Math.round(Math.random() * 2 - 1)))); renderNets() }, 1200);
+});
+onSwitch($("#air"), v => { if (v) { setSwitch($("#wifi"), false); setSwitch($("#bt"), false); toast("Airplane mode on") } });
+
+/* ---------- bluetooth ---------- */
+const devs = [
+  { name: "Studio Buds", icon: "headphones", on: true, bat: 82 },
+  { name: "Keys K3", icon: "keyboard", on: true, bat: 54 },
+  { name: "Trackpad", icon: "mouse", on: false },
+  { name: "Pixel phone", icon: "phone", on: false }
+];
+const near = [{ name: "Living Room Speaker", icon: "speaker" }, { name: "Unnamed keyboard", icon: "keyboard" }];
+let btBusy = null;
+function renderBt() {
+  const on = $("#bt").getAttribute("aria-checked") === "true";
+  $("#btCap").textContent = on ? "Visible as “aryan-laptop”" : "Off";
+  $("#btNear").hidden = !on;
+  const c = devs.filter(d => d.on).length;
+  $('[data-meta="bluetooth"]').textContent = on ? (c ? c + " on" : "") : "Off";
+  if (!on) { $("#paired").innerHTML = `<div class="empty">${svg("bt")}<b>Bluetooth is off</b><span>Paired devices reconnect when you turn it back on.</span></div>`; return }
+  $("#paired").innerHTML = devs.map((d, i) => {
+    const b = btBusy === d.name;
+    return `<div class="item${d.on ? " on" : ""}"><span class="ricon">${svg(d.icon)}</span>
+      <div class="il"><b>${esc(d.name)}</b><span>${b ? (d.on ? "Disconnecting…" : "Connecting…") : d.on ? "Connected" + (d.bat ? ` · battery ${d.bat}%` : "") : "Not connected"}</span></div>
+      <button class="btn${d.on ? "" : ""}" data-bt="${i}"${b ? " disabled" : ""}>${b ? svg("refresh", "i spin") : ""}${d.on ? "Disconnect" : "Connect"}</button></div>`;
+  }).join("");
+  $("#nearby").innerHTML = near.length ? near.map((d, i) => `<div class="item"><span class="ricon">${svg(d.icon)}</span><div class="il"><b>${esc(d.name)}</b><span>${btBusy === d.name ? "Pairing…" : "Ready to pair"}</span></div><button class="btn" data-pair="${i}"${btBusy === d.name ? " disabled" : ""}>${btBusy === d.name ? svg("refresh", "i spin") : ""}Pair</button></div>`).join("")
+    : `<div class="empty"><span>No other devices found yet.</span></div>`;
+}
+const later = (fn) => setTimeout(fn, reduced.matches ? 300 : 1000);
+$("#paired").addEventListener("click", e => {
+  const b = e.target.closest("[data-bt]"); if (!b) return; const d = devs[+b.dataset.bt];
+  btBusy = d.name; renderBt(); later(() => { d.on = !d.on; btBusy = null; renderBt() });
+});
+$("#nearby").addEventListener("click", e => {
+  const b = e.target.closest("[data-pair]"); if (!b) return; const d = near[+b.dataset.pair];
+  btBusy = d.name; renderBt(); later(() => { near.splice(near.indexOf(d), 1); devs.push({ ...d, on: true }); btBusy = null; renderBt(); toast(`Paired with ${esc(d.name)}`) });
+});
+onSwitch($("#bt"), v => { if (v && $("#air").getAttribute("aria-checked") === "true") setSwitch($("#air"), false, false); renderBt() });
+
+/* ---------- power ---------- */
+radios($("#s-profile"), (v, b) => { $("#bleft").textContent = b.dataset.left; $('[data-meta="power"]').textContent = "76%"; store.set("profile", v) }).set(store.get("profile", "balanced"), true);
+onSwitch($("#limit"), v => $("#bbar").classList.toggle("lim", v));
+
+/* ---------- more ---------- */
+const MODS = [
+  ["Keyboard", "keyboard", "kcm_keyboard", "Layouts, repeat"], ["Mouse & touchpad", "mouse", "kcm_touchpad", "Speed, gestures"],
+  ["Shortcuts", "cmd", "kcm_keys", "Global keys"], ["Notifications", "bell", "kcm_notifications", "Do not disturb"],
+  ["Window rules", "rules", "kcm_kwinrules", "Per-app behavior"], ["Virtual desktops", "desktops", "kcm_kwin_virtualdesktops", "4 desktops"],
+  ["Autostart", "play", "kcm_autostart", "Login items"], ["Date & time", "clock", "kcm_clock", "Automatic"],
+  ["Users", "users", "kcm_users", "Accounts, avatar"], ["Default apps", "apps", "kcm_componentchooser", "Browser, mail"],
+  ["Search", "search", "kcm_plasmasearch", "KRunner, files"], ["Firewall", "shield", "kcm_firewall", "Active"],
+  ["About this system", "info", "kcm_about-distro", "Plasma 6.5"]
+];
+$("#mods").innerHTML = MODS.map(([n, ic, kcm, cap]) => `<button class="mod" data-run="kcmshell6 ${kcm}" id="s-mod-${kcm}" data-s="${n}" data-k="${kcm.replace("kcm_", "")} ${cap}"><span class="mi">${svg(ic)}</span><b>${n}</b><span>${cap}</span></button>`).join("");
+// Modules were added after the index was built: register them now.
+$$("#mods .mod").forEach(el => index.push({ label: el.dataset.s, page: "more", pageTitle: "More settings", kw: el.dataset.k, id: el.id, icon: "grid" }));
+
+/* ---------- boot ---------- */
+setAccent(store.get("accent", ACCENTS[0].c)); accentR.set(store.get("accent", ACCENTS[0].c));
+themeR.set(state.theme); modeR.set(state.mode); applyMode();
+$("#s-colors .rl span").textContent = THEMES[state.theme];
+select(mons[0]); nlCap(); volIcon(); renderNets(); renderBt();
+$("#dayTheme").addEventListener("change", e => toast(`Day theme: ${esc(e.target.value)}`));
+$("#nightTheme").addEventListener("change", e => toast(`Night theme: ${esc(e.target.value)}`));
+reduced.addEventListener && reduced.addEventListener("change", () => onPage(current));
+route();
+requestAnimationFrame(movePill);
+})();
+</script>
+</body>
+</html>

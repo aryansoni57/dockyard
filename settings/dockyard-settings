@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# --apptype widget: some System Settings modules are QWidget based and need QApplication.
+d="$(dirname "$(readlink -f "$0")")"
+# Single instance: the first run holds a lock for as long as it lives. A later run writes its
+# arguments to a command file the open window polls, then exits, so the window jumps to the page.
+rt="${XDG_RUNTIME_DIR:-/tmp}"
+cmd="$rt/dockyard-settings.cmd"
+exec 9>"$rt/dockyard-settings.lock"
+if ! flock -n 9; then
+    printf '%s %s\n' "$(date +%s%N)" "$*" > "$cmd"
+    # Raise the open window: KWin ignores focus requests from a background window, so a KWin script does it.
+    qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript dockyardsettingsraise >/dev/null 2>&1
+    id=$(qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.loadScript "$d/activate.js" dockyardsettingsraise 2>/dev/null)
+    if [ -n "$id" ] && [ "$id" -ge 0 ] 2>/dev/null; then
+        qdbus6 org.kde.KWin "/Scripting/Script$id" org.kde.kwin.Script.run >/dev/null 2>&1
+        ( sleep 2; qdbus6 org.kde.KWin /Scripting org.kde.kwin.Scripting.unloadScript dockyardsettingsraise >/dev/null 2>&1 ) &
+    fi
+    exit 0
+fi
+: > "$cmd"
+# Arguments after -- reach the app (deep links: kcm_<id>, a quick page name, group:<id>, search:<text>).
+# Breeze style: it draws controls from the app palette (applyScheme). The system Kvantum style
+# ignores it and keeps the Dockyard night colours, which broke Day mode inside modules.
+export QT_STYLE_OVERRIDE=breeze
+export QML_XHR_ALLOW_FILE_READ=1
+exec qml6 --apptype widget -I "$d/build/qml" "$d/main.qml" -- "cmd:$cmd" "$@"

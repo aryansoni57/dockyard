@@ -62,7 +62,7 @@ new IntersectionObserver(es => { seen = es[0].isIntersecting; if (seen) started 
 
 // Launcher. The character check runs first, so only arithmetic reaches Function.
 const APPS = [['Firefox', 'Web browser', 'firefox.svg'], ['Dolphin', 'File manager', 'org.kde.dolphin.svg'], ['Kate', 'Text editor', 'kate.svg'], ['Discord', 'Chat', 'discord.png'], ['VS Code', 'Code editor', 'vscode.png'], ['Spotify', 'Music', 'spotify-launcher.png']];
-const SITE = [['Features', 'Five things you\'ll use all day', 'org.kde.dolphin.svg', '#features'], ['Glass theme', 'The whole desktop matches', 'systemsettings.svg', '#theme'], ['Install', 'Three commands', 'kate.svg', '#install'], ['GitHub', 'Source and changelog', 'firefox.svg', 'https://github.com/aryansoni57/dockyard']];
+const SITE = [['Features', 'Five things you\'ll use all day', 'org.kde.dolphin.svg', '#features'], ['Settings app', 'One window for every setting', 'systemsettings.svg', '#settings'], ['Dashboard', 'A dashboard behind Start', 'discord.png', '#dashboard'], ['Glass theme', 'The whole desktop matches', 'systemsettings.svg', '#theme'], ['Install', 'Three commands', 'kate.svg', '#install'], ['GitHub', 'Source and changelog', 'firefox.svg', 'https://github.com/aryansoni57/dockyard']];
 function calc(q) {
     const s = q.replace(/\s/g, '');
     if (!/^[\d.+\-*/()%]+$/.test(s) || !/[+\-*/%]/.test(s)) return null;
@@ -86,7 +86,7 @@ featureSearch();
 
 // Start menu, opened over the Start tile like the real launcher.
 const menu = $('#menu'), start = $('#start'), mq = $('#mq');
-const menuSearch = () => search(mq, $('#mres'), SITE, 4);
+const menuSearch = () => search(mq, $('#mres'), SITE, 6);
 function placeMenu() {
     const t = start.getBoundingClientRect(), h = $('.hero').getBoundingClientRect();
     menu.style.left = Math.max(8, Math.min(t.left - h.left, h.width - menu.offsetWidth - 8)) + 'px';
@@ -132,11 +132,58 @@ if (!calm) setInterval(() => { if (seen && !panes[2].hidden) key(); }, 1100);
 $$('.tg').forEach(b => b.addEventListener('click', () => b.setAttribute('aria-pressed', b.classList.toggle('on'))));
 
 // Plasma style variant: the same alphas as theme/gen.py writes for each folder.
-$$('.pick button').forEach(b => b.addEventListener('click', () => {
-    $$('.pick button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
+// Each segmented switch marks its own buttons, then runs its action.
+function pick(sel, fn) {
+    const bs = $$(sel + ' button');
+    bs.forEach(b => b.addEventListener('click', () => {
+        bs.forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
+        fn(b);
+    }));
+}
+pick('.theme .pick', b => {
     const scene = $('#scene');
     scene.style.setProperty('--glass-a', b.dataset.a);
     scene.style.setProperty('--bar-a', b.dataset.b);
+});
+// Settings app screenshots: one shows at a time.
+pick('.sapp .pick', b => { $$('#shots img').forEach((im, i) => im.classList.toggle('on', i === +b.dataset.shot)); });
+// Glass decoration: the window follows the chosen color scheme.
+pick('.deco .pick', b => { $('#gwin').classList.toggle('day', b.dataset.deco === 'day'); });
+
+// Power pill, after launcher/PowerPill.qml: hover opens Lock, Sleep and Restart. Shut down and
+// Restart ask for a second click within four seconds. The demo only reports what would happen.
+const pwr = $('#pwr'), note = $('#pnote');
+let pOpen = false, armed = null, armT = 0, openT = 0, closeT = 0, noteT = 0;
+const say = t => { note.textContent = t; clearTimeout(noteT); noteT = setTimeout(() => { note.textContent = ''; }, 3200); };
+function disarm() {
+    clearTimeout(armT);
+    if (armed) { armed.classList.remove('armed'); armed.querySelector('.ask').textContent = ''; }
+    armed = null;
+}
+function setOpen(o) {
+    pOpen = o;
+    pwr.classList.toggle('open', o);
+    $$('.opt', pwr).forEach(b => { b.tabIndex = o ? 0 : -1; });
+    if (!o) disarm();
+}
+pwr.addEventListener('pointerenter', () => { clearTimeout(closeT); openT = setTimeout(() => setOpen(true), 120); });
+pwr.addEventListener('pointerleave', () => { clearTimeout(openT); closeT = setTimeout(() => { if (!pwr.contains(document.activeElement)) setOpen(false); }, 280); });
+pwr.addEventListener('focusin', () => setOpen(true));
+pwr.addEventListener('focusout', e => { if (!pwr.contains(e.relatedTarget)) setOpen(false); });
+$$('.pb', pwr).forEach(b => b.addEventListener('click', () => {
+    const name = b.getAttribute('aria-label');
+    if (!pOpen) { setOpen(true); return; }
+    if (b.dataset.ask && armed !== b) {
+        disarm();
+        armed = b;
+        b.querySelector('.ask').textContent = b.dataset.ask;
+        b.classList.add('armed');
+        armT = setTimeout(disarm, 4000);
+        say('Click again within four seconds to ' + name.toLowerCase() + '.');
+        return;
+    }
+    disarm();
+    say(name + ' would run now. This page does nothing.');
 }));
 
 // The desktop scene is drawn at 1280 wide and scaled to fit; phones keep it legible and crop.

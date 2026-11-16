@@ -23,6 +23,7 @@
   <a class="brand" href="#top" aria-label="Dockyard home"><img src="assets/icons/favicon.svg" alt="" width="20" height="20">Dockyard</a>
   <nav aria-label="Main">
     <a href="#features">Features</a>
+    <a href="#settings">Settings</a>
     <a href="#theme">Theme</a>
     <a href="#install">Install</a>
     <a class="gh" href="https://github.com/aryansoni57/dockyard">GitHub</a>
@@ -78,7 +79,7 @@
   <div class="see-copy">
     <h2 class="rise">One bar for everything.</h2>
     <ul>
-      <li class="rise">29 tiles, each one optional.</li>
+      <li class="rise">32 tiles, each one optional.</li>
       <li class="rise">No extra process. It lives in plasmashell.</li>
       <li class="rise">Free and open source.</li>
     </ul>
@@ -164,6 +165,134 @@
   </div>
 </section>
 
+<section class="sapp" id="settings">
+  <div class="theme-head">
+    <div class="rise">
+      <h2>Dockyard Settings.</h2>
+      <p>One window for every KDE System Settings module, the newer QML ones and the older widget ones. Six quick pages sit on top: Appearance, Display, Sound, Network, Bluetooth and Power.</p>
+    </div>
+    <div class="seg pick rise" role="group" aria-label="Screenshot">
+      <button class="on" data-shot="0" aria-pressed="true">Overview</button>
+      <button data-shot="1" aria-pressed="false">Day</button>
+      <button data-shot="2" aria-pressed="false">Module</button>
+    </div>
+  </div>
+  <div class="shot rise" id="shots">
+    <img class="on" src="assets/settings-overview-night.webp" width="1260" height="860" loading="lazy" decoding="async" alt="Dockyard Settings at night, on the Overview page: quick tiles for Wi-Fi, Bluetooth, Night mode and power profile, volume and brightness, this computer and recently opened pages">
+    <img src="assets/settings-appearance-day.webp" width="1260" height="860" loading="lazy" decoding="async" alt="The Appearance page in Day mode, with Night, Day and Auto, eight accent colors and the global themes">
+    <img src="assets/settings-fonts-night.webp" width="1260" height="860" loading="lazy" decoding="async" alt="The Fonts module from System Settings, open inside Dockyard Settings, with Defaults, Reset and Apply below it">
+  </div>
+  <ul class="facts">
+    <li class="rise"><b>Search everything</b>Ctrl+K finds any page or module. Up, Down and Enter do the rest.</li>
+    <li class="rise"><b>Night, Day or Auto</b>Auto switches at 07:00 and 19:00. The sidebar and title bar are blurred glass.</li>
+    <li class="rise"><b>One accent</b>Pick one of eight colors. It changes the accent across the desktop, not only in this window.</li>
+    <li class="rise"><b>Modules that match</b>Embedded modules take the window's colors, so they sit on the same surface as the rest.</li>
+    <li class="rise"><b>Apply when ready</b>Defaults, Reset and Apply sit under each module. Leaving with unsaved changes asks first.</li>
+    <li class="rise"><b>Deep links</b><code>dockyard-settings kcm_fonts</code> opens a module, and <code>dockyard-settings sound</code> a quick page.</li>
+  </ul>
+</section>
+
+<section class="dash" id="dashboard">
+  <div class="split">
+    <div class="dash-copy">
+      <h2 class="rise">A dashboard behind Start.</h2>
+      <p class="rise">Set the Start style to Dashboard, and the Start tile and Meta open this instead of the launcher.</p>
+      <ul>
+        <li class="rise">Weather with the next hours, and today's agenda. The + opens Google Calendar with a new event filled in.</li>
+        <li class="rise">Batteries of your mouse, headset or paired phone.</li>
+        <li class="rise">Continue: the track you paused and the files you opened last.</li>
+        <li class="rise">Right-click a card for its menu.</li>
+        <li class="rise">Hover the power button for Lock, Sleep and Restart. Shut down and Restart ask for a second click within four seconds.</li>
+      </ul>
+    </div>
+
+    <div class="stage" data-ui>
+      <img class="bg" src="assets/wallpaper-1280.webp" width="1280" height="720" alt="" loading="lazy">
+      <div class="glass dboard">
+        <div class="dcards">
+          <div class="dcard">
+            <h4>Weather</h4>
+            <div class="wxnow"><span class="sun"></span><span class="stack"><b class="n">24°</b><small>H 29° · L 23°</small></span></div>
+            <div class="hours"><span><small>Now</small><b>24°</b></span><span><small>15</small><b>26°</b></span><span><small>16</small><b>27°</b></span><span><small>17</small><b>26°</b></span><span><small>18</small><b>25°</b></span></div>
+          </div>
+          <div class="dcard">
+            <h4>Today <span class="plus" aria-hidden="true">+</span></h4>
+            <div class="ev"><i></i><span><b>Stand-up</b><small>10:00 to 10:15</small></span></div>
+            <div class="ev"><i style="--c:var(--green)"></i><span><b>Gym</b><small>18:30 to 19:30</small></span></div>
+          </div>
+          <div class="dcard">
+            <h4>Devices</h4>
+            <div class="bat"><span>Mouse</span><i class="track"><i style="width:72%"></i></i><small>72%</small></div>
+            <div class="bat"><span>Headset</span><i class="track"><i style="width:40%"></i></i><small>40%</small></div>
+            <div class="bat"><span>Phone</span><i class="track"><i style="width:88%"></i></i><small>88%</small></div>
+          </div>
+          <div class="dcard">
+            <h4>Continue</h4>
+            <div class="ev"><span class="art sm"></span><span><b>Midnight Drive</b><small>Paused</small></span></div>
+            <div class="ev"><img src="assets/icons/kate.svg" alt="" width="32" height="32"><span><b>notes.md</b><small>5 min ago</small></span></div>
+          </div>
+        </div>
+        <div class="dfoot">
+          <span class="fb">Settings</span>
+          <span class="fb">All apps</span>
+          <div class="pslot">
+            <div class="pwr" id="pwr" role="group" aria-label="Power">
+              <button class="pb base" data-ask="Shut down?" aria-label="Shut down"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0"/></svg><span class="ask"></span><i class="cd"></i></button>
+              <i class="div"></i>
+              <button class="pb opt" aria-label="Lock" tabindex="-1"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+              <button class="pb opt" aria-label="Sleep" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
+              <button class="pb opt" data-ask="Restart?" aria-label="Restart" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5"/></svg><span class="ask"></span><i class="cd"></i></button>
+            </div>
+          </div>
+          <span class="disk"><small>Storage</small><i class="track"><i style="width:54%"></i></i></span>
+        </div>
+        <p class="pnote" id="pnote" aria-live="polite"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="more" id="more">
+  <h2 class="rise">And the rest of the dock.</h2>
+  <div class="more-grid">
+    <article class="kit-card rise">
+      <h3>Notifications</h3>
+      <ul>
+        <li>The dock runs Plasma's notification server, so you no longer need the stock Notifications widget.</li>
+        <li>New ones pop up by the dock with their buttons. Hover to keep one on screen.</li>
+        <li>A bell tile keeps the history, with Do Not Disturb and Clear all.</li>
+        <li>A job pill shows only while a file copy runs, with pause and stop.</li>
+      </ul>
+    </article>
+    <article class="kit-card rise">
+      <h3>Apps</h3>
+      <ul>
+        <li>App Setups open a set of apps together and tile them, or put each window back where you saved it.</li>
+        <li>Right-click an app for New Window, its own actions, Pin, Keep Above and Close.</li>
+        <li>Drop a .desktop file on the dock to pin it. Icons can grow under the pointer.</li>
+        <li>On a dock wider than the screen, swipe sideways on a trackpad to scroll it.</li>
+      </ul>
+    </article>
+    <article class="kit-card rise">
+      <h3>Tiles</h3>
+      <ul>
+        <li>Right-click the dock and choose Widgets… for a searchable gallery of all 32 tiles.</li>
+        <li>Stats draws CPU, RAM and disk as rings. Tap it for two-minute graphs.</li>
+        <li>Weather opens 12 hours, five days, sunrise, sunset and UV.</li>
+        <li>Clipboard history, several notes, the output of your own script, and Quick Share when rquickshare is installed.</li>
+      </ul>
+    </article>
+    <article class="kit-card rise">
+      <h3>Layout and look</h3>
+      <ul>
+        <li>Islands split the bar into three floating glass pills.</li>
+        <li>The day and night look switches the color scheme at sunrise and sunset for your weather location.</li>
+        <li>Two monitors can each have a dock. Toasts show on one, and Meta+1 to Meta+9 follow the focused screen.</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
 <section class="theme" id="theme">
   <div class="theme-head">
     <div class="rise">
@@ -196,10 +325,36 @@
   </div>
 </section>
 
+<section class="deco" id="glass">
+  <div class="theme-head">
+    <div class="rise">
+      <h2>Title bars you can see through.</h2>
+      <p>Dockyard Glass is a window decoration with a translucent title bar on every window, and KWin blurs what is behind it. An Aurorae theme cannot ask for blur, so this is a native plugin. It is optional: <code>./setup.sh --decoration</code>, then log out and back in.</p>
+    </div>
+    <div class="seg pick rise" role="group" aria-label="Color scheme">
+      <button class="on" data-deco="night" aria-pressed="true">Night</button>
+      <button data-deco="day" aria-pressed="false">Day</button>
+    </div>
+  </div>
+  <div class="deco-split">
+    <div class="deco-bg rise" data-ui role="img" aria-label="A window with the Dockyard Glass decoration over the wallpaper">
+      <div class="gwin" id="gwin">
+        <div class="gbar"><span>Dolphin</span><span class="gbtns"><i class="gb min"></i><i class="gb max"></i><i class="gb x"></i></span></div>
+        <div class="gbody"><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+    <ul class="deco-list">
+      <li class="rise">Rounded top corners. They go square when the window is maximized or tiled to an edge.</li>
+      <li class="rise">Colors come from the window's color scheme, so Dockyard and Dockyard Day switch with it.</li>
+      <li class="rise">Close sits flush in the corner, fills the title bar's height and turns red on hover.</li>
+    </ul>
+  </div>
+</section>
+
 <section class="kit" id="kit">
   <div class="kit-head">
     <h2 class="rise">The full set.</h2>
-    <p class="rise">A color scheme, a Kvantum widget style, an Aurorae titlebar and a look-and-feel package that ties them to the Glass Plasma style. One flag installs them, and one script puts your old choices back.</p>
+    <p class="rise">A color scheme, a Kvantum app style, an Aurorae titlebar and a look-and-feel package that ties them to the Glass Plasma style, in a night set and a Day set. The look-and-feel package also brings a lock screen and splash screen, and <code>--login</code> adds a login wallpaper and boot splash. One script installs them, and one puts your old choices back.</p>
   </div>
   <div class="swatches rise" role="list" aria-label="Dockyard color scheme">
     <figure role="listitem"><i style="background:#1e1e23"></i><figcaption>Titlebar<small>#1E1E23</small></figcaption></figure>
@@ -222,20 +377,21 @@
     </article>
     <article class="kit-card rise">
       <div class="kit-bg">
-        <div class="win solid"><div class="tbar"><span>Kate</span></div><div class="wbody"><span class="wbtn pri">Save</span></div></div>
-        <div class="win frost"><div class="tbar"><span>Glass</span></div><div class="wbody"><span class="wbtn">Menu</span></div></div>
+        <div class="win frost"><div class="tbar"><span>Kate</span></div><div class="wbody"><span class="wbtn pri">Save</span></div></div>
+        <div class="win solid"><div class="tbar"><span>Solid</span></div><div class="wbody"><span class="wbtn">Menu</span></div></div>
       </div>
-      <h3>Kvantum widget style</h3>
-      <p>Solid windows with glass menus and tooltips. The script applies Dockyard. For translucent windows, pick DockyardGlass in Kvantum Manager.</p>
+      <h3>Kvantum app style</h3>
+      <p>Frosted glass windows by default: DockyardGlass at night, DockyardDayGlass by day. Dockyard and DockyardDay are the solid versions, with glass menus and tooltips.</p>
     </article>
     <article class="kit-card rise">
       <div class="term kit-term">
-        <pre><code>./install-all.sh --apply-global
+        <pre><code>./setup.sh          # night
+./setup.sh --day    # Day
 # to undo later:
 theme/restore-global.sh</code></pre>
       </div>
       <h3>Look-and-feel package</h3>
-      <p>The script applies the package and picks the Kvantum theme, which a look-and-feel package cannot set. Your current choices are saved first, so the restore script can put them back.</p>
+      <p>The script applies the package and picks the Kvantum theme, which a look-and-feel package cannot set. Both looks use Tela icons. Your current choices are saved first, so the restore script can put them back.</p>
     </article>
   </div>
 </section>
@@ -245,11 +401,20 @@ theme/restore-global.sh</code></pre>
   <div class="term rise">
     <pre><code>git clone https://github.com/aryansoni57/dockyard
 cd dockyard
-./install-all.sh --apply-theme</code></pre>
+./setup.sh</code></pre>
     <button class="copy" id="copy">Copy</button>
   </div>
-  <p class="rise">Then add Dockyard to a panel from Add Widgets.</p>
-  <p class="fine rise">Needs KDE Plasma 6. Dockyard uses some private Plasma APIs, so a Plasma update can break it.</p>
+  <p class="rise">It checks what is missing, then installs the dock, the glass themes, the night look and the Settings app. Then add Dockyard to a panel from Add Widgets.</p>
+  <dl class="flags rise">
+    <div><dt><code>--day</code></dt><dd>The Day look instead of night.</dd></div>
+    <div><dt><code>--tela</code></dt><dd>Install the Tela icons the looks use.</dd></div>
+    <div><dt><code>--decoration</code></dt><dd>Glass title bars. Log out and in after.</dd></div>
+    <div><dt><code>--login</code></dt><dd>Login wallpaper and boot splash. Needs sudo.</dd></div>
+    <div><dt><code>--no-apply</code></dt><dd>Copy the files, keep your current theme.</dd></div>
+    <div><dt><code>--check</code></dt><dd>Only check dependencies.</dd></div>
+  </dl>
+  <p class="fine rise">Only want the dock? Run <code>./install-all.sh</code> instead.</p>
+  <p class="fine rise">Needs KDE Plasma 6 and Kvantum. The Settings app also needs cmake, ninja, a C++ compiler and the KDE development packages, or skip it with <code>--no-settings</code>. Dockyard uses some private Plasma APIs, so a Plasma update can break it.</p>
 </section>
 </main>
 

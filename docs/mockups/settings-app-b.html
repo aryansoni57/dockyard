@@ -1,0 +1,1275 @@
+<!doctype html>
+<!--
+DESIGN PLAN: Dockyard Settings, version B ("Ledger")
+
+Concept
+  A calm, opaque, content-first settings app that shows its work. Changes apply as soon as you make them.
+  Each change goes into a session ledger with the exact command the real QML app would run
+  (kscreen-doctor, wpctl, nmcli, bluetoothctl, powerprofilesctl, lookandfeeltool), and you can
+  reverse it from the toast, with Ctrl+Z, or per entry in the History panel. The sidebar works
+  as a status board: every section shows a live one-line readout (for example "Harbor-5G",
+  "Balanced · 62%"), so you can read the machine without opening pages.
+
+Information architecture
+  Header: product mark | persistent search (Ctrl+K or /) with jump-to-setting | History (count).
+  Sidebar groups: Personal (Appearance) · Hardware (Display, Sound, Power) ·
+                  Connections (Network, Bluetooth) · System (More settings).
+  Page = H1 + one-line summary, then titled groups. Each group is one card of rows:
+  label + short helper on the left, inline control on the right, hairline dividers.
+  Links out to KDE modules are full-width rows with the kcm id in mono.
+  Hash routes: #appearance #display #sound #network #bluetooth #power #more, plus deep links
+  #page/setting-key that scroll to the row and highlight it.
+
+Tokens
+  Families x modes: dockyard/night, dockyard/day, breeze/night (Breeze Dark), breeze/day (Breeze).
+  Roles: --bg (content), --side (chrome), --surface (cards), --s2 (inputs), --raise (selected segment),
+         --ink / --ink-2 / --ink-3 (text), --line (hairline), --ctl (control track/border, 3:1 or more),
+         --acc / --on-acc (accent, per mode, user-selectable), --pos / --warn / --neg.
+  Accents: blue, teal, violet, amber, rose (+ Breeze blue as the Breeze default). Night uses light tints with
+         dark text on fills; day uses deep tones with white text. Each pair was checked for 4.5:1.
+  Radius: 6 controls, 10 cards, 14 dialogs. Spacing: 4-pt grid (4 8 12 16 24 32).
+  Type: system UI stack. 12 caption / 12.5 helper / 14 body / 13 group title / 22 page title.
+  Weights 400/500/600. Tabular figures for values.
+
+Interaction model
+  Instant apply. Switches, radios and selects commit right away. Sliders preview live and commit
+  once you stop for 700 ms. Each commit shows a toast with an Undo button and the command.
+  Ctrl+Z undoes the last change. History lists the session and can revert any entry.
+  Search runs over every row (labels + keywords + page + group), arrow keys and Enter jump to it.
+  Native radios give arrow-key groups. Switches are role=switch buttons. Dialogs use <dialog>.
+  Focus rings are 2 px in the accent color. prefers-reduced-motion turns off slides, spins and
+  the pulse highlight, and slows the meter.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dockyard Settings</title>
+<style>
+:root{
+  --sans: system-ui, -apple-system, "Segoe UI", "Noto Sans", Cantarell, Ubuntu, sans-serif;
+  --mono: ui-monospace, "JetBrains Mono", "Noto Sans Mono", "DejaVu Sans Mono", monospace;
+  --r-s:6px; --r-m:10px; --r-l:14px;
+  --acc:#5aa9ff; --on-acc:#0d1016;
+  --ease: cubic-bezier(.2,.7,.2,1);
+}
+:root,[data-family=dockyard][data-mode=night]{
+  --bg:#0f1116; --side:#13151b; --surface:#181b22; --s2:#20242d; --raise:#2c313c;
+  --ink:#eceef3; --ink-2:#a3a9b6; --ink-3:#8a91a0;
+  --line:#262a33; --ctl:#6e7584; --hover:#ffffff0f;
+  --pos:#4cd38a; --warn:#f0b04a; --neg:#ff7b72;
+  --shadow:0 12px 40px #00000066, 0 2px 8px #00000040;
+}
+[data-family=dockyard][data-mode=day]{
+  --bg:#f2f3f6; --side:#e9ebf0; --surface:#ffffff; --s2:#f5f6f8; --raise:#ffffff;
+  --ink:#1a1c21; --ink-2:#4f5563; --ink-3:#5f6673;
+  --line:#dfe2e8; --ctl:#767c88; --hover:#0000000a;
+  --pos:#137a40; --warn:#8a5a00; --neg:#c0332b;
+  --shadow:0 12px 40px #1e1e3c2e, 0 2px 8px #1e1e3c14;
+}
+[data-family=breeze][data-mode=night]{
+  --bg:#1b1e20; --side:#202326; --surface:#292c30; --s2:#31363b; --raise:#3f454c;
+  --ink:#fcfcfc; --ink-2:#b4b8bd; --ink-3:#9ca1a8;
+  --line:#383c41; --ctl:#80868e; --hover:#ffffff10;
+  --pos:#5ad38f; --warn:#f6b85a; --neg:#ff9a91;
+  --shadow:0 12px 40px #00000066, 0 2px 8px #00000040;
+}
+[data-family=breeze][data-mode=day]{
+  --bg:#eff0f1; --side:#e3e5e7; --surface:#ffffff; --s2:#f7f7f8; --raise:#ffffff;
+  --ink:#232629; --ink-2:#4d5257; --ink-3:#5c6268;
+  --line:#d9dcdf; --ctl:#71777d; --hover:#0000000a;
+  --pos:#1f7a43; --warn:#8a5a00; --neg:#bf2f26;
+  --shadow:0 12px 40px #1e1e3c2e, 0 2px 8px #1e1e3c14;
+}
+:root{ --sel: color-mix(in srgb, var(--acc) 16%, var(--side)); --tint: color-mix(in srgb, var(--acc) 14%, var(--surface)); }
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+code,.mono{font-family:var(--mono);font-size:11.5px}
+.ic{width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:248px minmax(0,1fr);grid-template-rows:52px minmax(0,1fr);height:100vh}
+.bar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 12px 0 16px;background:var(--side);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;width:220px;flex-shrink:0;font-weight:600;letter-spacing:-.005em}
+.brand .ic{width:22px;height:22px;color:var(--acc)}
+.search{position:relative;flex:1;max-width:540px}
+.search .ic{position:absolute;left:10px;top:8px;color:var(--ink-2);pointer-events:none}
+.search input{width:100%;height:34px;border-radius:8px;border:1px solid var(--ctl);background:var(--s2);padding:0 64px 0 36px;outline-offset:1px}
+.search input::placeholder{color:var(--ink-3)}
+.search input::-webkit-search-cancel-button{-webkit-appearance:none}
+.kbd{position:absolute;right:8px;top:7px;font:500 11px var(--sans);color:var(--ink-2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;background:var(--surface);pointer-events:none}
+.results{position:absolute;left:0;right:0;top:40px;margin:0;padding:6px;list-style:none;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);box-shadow:var(--shadow);z-index:30;max-height:min(420px,70vh);overflow:auto}
+.results li{display:flex;flex-direction:column;gap:1px;padding:7px 10px;border-radius:var(--r-s);cursor:pointer}
+.results li[aria-selected=true]{background:var(--tint)}
+.results .r-l{font-weight:500}
+.results .r-p{font-size:12px;color:var(--ink-2)}
+.results mark{background:none;color:inherit;text-decoration:underline;text-decoration-color:var(--acc);text-decoration-thickness:2px;text-underline-offset:2px}
+.results .empty{color:var(--ink-2);cursor:default}
+.bar-r{margin-left:auto;display:flex;gap:6px}
+.badge{min-width:20px;height:18px;border-radius:9px;padding:0 6px;font:600 11px/18px var(--sans);background:var(--s2);color:var(--ink-2);text-align:center}
+.badge.on{background:var(--acc);color:var(--on-acc)}
+
+.side{background:var(--side);border-right:1px solid var(--line);overflow:auto;padding:4px 8px 16px;display:flex;flex-direction:column}
+.nav-g h2{font:600 11px/1 var(--sans);text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin:18px 10px 6px}
+.nav-g ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.nav-i{display:flex;align-items:center;gap:11px;padding:7px 10px;border-radius:8px;color:var(--ink);text-decoration:none;outline-offset:-2px}
+.nav-i:hover{background:var(--hover)}
+.nav-i[aria-current=page]{background:var(--sel)}
+.nav-i[aria-current=page] .ic{color:var(--acc)}
+.nav-i .ic{color:var(--ink-2)}
+.nav-tx{display:flex;flex-direction:column;min-width:0}
+.nav-l{font-weight:500}
+.nav-s{font-size:12px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-i[aria-current=page] .nav-s{color:var(--ink-2)}
+.side-foot{margin-top:auto;padding:16px 10px 0;font-size:12px;color:var(--ink-3)}
+.side-foot kbd{font:inherit;color:var(--ink-2)}
+
+main{overflow:auto;padding:28px 32px 120px;outline:none}
+.page{max-width:760px;margin:0 auto}
+.ph h1{font-size:22px;line-height:1.25;font-weight:600;margin:0;letter-spacing:-.01em;outline:none}
+.ph p{margin:4px 0 0;color:var(--ink-2)}
+
+/* ---------- groups and rows ---------- */
+.grp{margin-top:28px}
+.grp-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 2px 8px 4px;min-height:28px}
+.grp-h h2{font-size:13px;font-weight:600;color:var(--ink-2);margin:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);overflow:hidden}
+.row{display:flex;align-items:center;gap:16px;padding:12px 16px;min-height:54px;position:relative}
+.row+.row,.card>*+*{border-top:1px solid var(--line)}
+.row-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row-l{font-weight:500}
+.row-h{font-size:12.5px;color:var(--ink-2)}
+.row-h.warn{color:var(--warn)}
+.row-h.neg{color:var(--neg)}
+.row-c{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.row .lead{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--s2);color:var(--ink-2);flex-shrink:0}
+.row .lead .ic{width:18px;height:18px}
+.row.dim{opacity:.55}
+.row.link{width:100%;border:0;background:none;text-align:left;cursor:pointer;outline-offset:-2px;border-radius:0}
+.row.link:hover{background:var(--hover)}
+.row.link code{color:var(--ink-2)}
+.row .end{color:var(--ink-3)}
+.row.opt{cursor:pointer}
+.row.opt:hover{background:var(--hover)}
+.hit{animation:hit 1.9s var(--ease)}
+@keyframes hit{0%,45%{background:var(--tint);box-shadow:inset 0 0 0 2px var(--acc)}100%{background:transparent;box-shadow:inset 0 0 0 2px transparent}}
+.hit-static{background:var(--tint);box-shadow:inset 0 0 0 2px var(--acc)}
+.note{font-size:12.5px;color:var(--ink-2);margin:10px 4px 0}
+
+/* ---------- controls ---------- */
+.sw{width:40px;height:24px;border-radius:12px;border:0;padding:0;background:var(--ctl);position:relative;cursor:pointer;flex-shrink:0;transition:background-color .14s}
+.sw-k{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0005;transition:transform .16s var(--ease)}
+.sw[aria-checked=true]{background:var(--acc)}
+.sw[aria-checked=true] .sw-k{transform:translateX(16px);background:var(--on-acc)}
+.sw:disabled{opacity:.45;cursor:not-allowed}
+
+.btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:var(--r-s);border:1px solid var(--ctl);background:var(--s2);color:var(--ink);font-weight:500;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){background:color-mix(in srgb,var(--s2) 80%,var(--ink) 8%)}
+.btn:active:not(:disabled){transform:scale(.98)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn[aria-disabled=true]{opacity:.6;cursor:progress}
+#bt-near:empty{display:none}
+.btn.pri{background:var(--acc);border-color:transparent;color:var(--on-acc)}
+.btn.pri:hover:not(:disabled){background:color-mix(in srgb,var(--acc) 88%,var(--ink))}
+.btn.quiet{background:transparent;border-color:transparent;color:var(--ink-2)}
+.btn.quiet:hover:not(:disabled){background:var(--hover);color:var(--ink)}
+.btn.link{background:transparent;border-color:transparent;color:var(--acc);padding:0 8px}
+.btn .ic{width:16px;height:16px}
+.icon-btn{width:32px;height:32px;padding:0;justify-content:center}
+.icon-btn[aria-pressed=true]{color:var(--neg);border-color:var(--neg)}
+.spin .ic{animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.sel{position:relative;display:inline-flex}
+.sel select{appearance:none;-webkit-appearance:none;height:32px;border-radius:var(--r-s);border:1px solid var(--ctl);background:var(--s2);padding:0 32px 0 10px;min-width:180px;cursor:pointer}
+.sel select:disabled{opacity:.5;cursor:not-allowed}
+.sel-ch{position:absolute;right:9px;top:8px;width:16px;height:16px;pointer-events:none;color:var(--ink-2)}
+
+input[type=range]{-webkit-appearance:none;appearance:none;width:220px;height:24px;background:transparent;margin:0;cursor:pointer;--p:50%}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right,var(--acc) var(--p),var(--ctl) var(--p))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;margin-top:-7px;background:#fff;border:1px solid #0003;box-shadow:0 1px 3px #0005}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--ctl)}
+input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--acc)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid #0003}
+input[type=range]:disabled{opacity:.45;cursor:not-allowed}
+.val{min-width:52px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:13px}
+
+.seg{display:inline-flex;padding:2px;border-radius:8px;background:var(--s2);border:1px solid var(--ctl);gap:2px}
+.seg label{position:relative;display:flex}
+.seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.seg span{display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:6px;font-size:13px;font-weight:500;color:var(--ink-2);white-space:nowrap}
+.seg span .ic{width:15px;height:15px}
+.seg input:checked+span{background:var(--raise);color:var(--ink);box-shadow:0 0 0 1px var(--ctl)}
+.seg input:focus-visible+span{outline:2px solid var(--acc);outline-offset:1px}
+.seg input:disabled+span{opacity:.45}
+
+.rad{appearance:none;-webkit-appearance:none;width:18px;height:18px;margin:0;border:2px solid var(--ctl);border-radius:50%;display:grid;place-content:center;flex-shrink:0;cursor:pointer;background:var(--surface)}
+.rad:checked{border-color:var(--acc)}
+.rad:checked::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--acc)}
+.rad:disabled{opacity:.45}
+
+.chips{display:flex;border-radius:5px;overflow:hidden;border:1px solid var(--line);flex-shrink:0}
+.chips i{width:14px;height:28px;display:block}
+
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatch{appearance:none;-webkit-appearance:none;width:26px;height:26px;border-radius:50%;margin:0;cursor:pointer;border:0;outline-offset:3px}
+.swatch:checked{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
+
+/* ---------- display arrangement ---------- */
+.arr{position:relative;height:210px;background:
+  radial-gradient(circle at 1px 1px,var(--line) 1px,transparent 1.5px) 0 0/16px 16px, var(--s2);
+  border-bottom:1px solid var(--line)}
+.mon{position:absolute;border-radius:6px;border:1.5px solid var(--ctl);background:var(--surface);color:var(--ink);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px;overflow:hidden;text-align:center;transition:left .2s var(--ease),top .2s var(--ease),width .2s var(--ease),height .2s var(--ease)}
+.mon[aria-pressed=true]{border:2px solid var(--acc);background:var(--tint)}
+.mon.off{border-style:dashed;color:var(--ink-2)}
+.mon b{font-size:13px;font-weight:600}
+.mon small{font-size:11.5px;color:var(--ink-2)}
+.mon .num{position:absolute;left:6px;top:4px;font:600 11px var(--sans);color:var(--ink-2)}
+.mon .prim{position:absolute;right:6px;top:4px;font:600 10.5px var(--sans);color:var(--acc)}
+.nl-sw{width:14px;height:14px;border-radius:50%;border:1px solid var(--line)}
+
+/* ---------- sound meter ---------- */
+.meter{display:flex;gap:3px;align-items:center;height:16px}
+.meter i{width:6px;height:12px;border-radius:2px;background:var(--line)}
+.meter i.on{background:var(--pos)}
+.meter i.on.w{background:var(--warn)}
+.meter i.on.n{background:var(--neg)}
+
+/* ---------- network / bt ---------- */
+.sig path.off{opacity:.28}
+.sig circle{fill:currentColor;stroke:none}
+.lock{width:13px;height:13px;vertical-align:-1px;margin-left:5px;color:var(--ink-2)}
+.empty-row{padding:20px 16px;color:var(--ink-2);display:flex;gap:10px;align-items:center}
+
+/* ---------- power ---------- */
+.prof{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px}
+.prof label{position:relative;display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:8px;border:1px solid var(--ctl);cursor:pointer;background:var(--surface)}
+.prof label:hover{background:var(--hover)}
+.prof input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.prof label:has(input:checked){border:2px solid var(--acc);background:var(--tint);padding:11px}
+.prof label:has(input:focus-visible){outline:2px solid var(--acc);outline-offset:2px}
+.prof .ic{width:22px;height:22px;color:var(--ink-2)}
+.prof label:has(input:checked) .ic{color:var(--acc)}
+.prof b{font-weight:600}
+.prof small{font-size:12.5px;color:var(--ink-2)}
+.batt{display:flex;align-items:baseline;gap:10px}
+.batt strong{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.bbar{width:160px;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.bbar i{display:block;height:100%;background:var(--pos);border-radius:4px}
+
+/* ---------- more ---------- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border-radius:var(--r-m);border:1px solid var(--line);background:var(--surface);text-align:left;cursor:pointer;position:relative}
+.tile:hover{background:color-mix(in srgb,var(--surface) 92%,var(--ink) 8%)}
+.tile-ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--tint);color:var(--acc)}
+.tile-ic .ic{width:19px;height:19px}
+.tile code{color:var(--ink-3)}
+.tile.all{border-style:dashed}
+
+/* ---------- toast ---------- */
+.toast-wrap{position:fixed;left:0;right:0;bottom:20px;display:flex;justify-content:center;pointer-events:none;z-index:40;padding:0 16px}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:12px;min-width:min(420px,100%);max-width:600px;padding:10px 10px 10px 14px;border-radius:var(--r-m);
+  background:var(--raise);border:1px solid var(--ctl);box-shadow:var(--shadow);opacity:0;transform:translateY(8px);visibility:hidden;transition:opacity .16s,transform .18s var(--ease),visibility 0s .18s}
+.toast.show{opacity:1;transform:none;visibility:visible;transition:opacity .16s,transform .18s var(--ease)}
+.toast>.ic{color:var(--pos)}
+.toast.err>.ic{color:var(--neg)}
+.t-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.t-msg{font-weight:500}
+.t-cmd{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- ledger ---------- */
+.ledger{position:fixed;top:52px;right:0;bottom:0;width:min(400px,100vw);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);z-index:35;display:flex;flex-direction:column}
+.ledger.anim{animation:slide .2s var(--ease)}
+@keyframes slide{from{transform:translateX(24px);opacity:0}}
+.lg-h{display:flex;align-items:center;justify-content:space-between;padding:16px 12px 4px 20px}
+.lg-h h2{margin:0;font-size:16px;outline:none}
+.lg-p{margin:0 20px 12px;color:var(--ink-2);font-size:12.5px}
+.lg-list{list-style:none;margin:0;padding:0 12px 24px;overflow:auto;flex:1}
+.lg-list li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 8px;border-top:1px solid var(--line)}
+.lg-list time{font:11.5px var(--mono);color:var(--ink-3)}
+.lg-list code{grid-column:1;color:var(--ink-2);word-break:break-all}
+.lg-list .btn{grid-row:1/4;grid-column:2;align-self:center}
+.lg-empty{color:var(--ink-2);padding:12px 20px}
+
+/* ---------- dialog ---------- */
+dialog{border:1px solid var(--line);border-radius:var(--r-l);background:var(--surface);color:var(--ink);padding:0;width:min(400px,calc(100vw - 32px));box-shadow:var(--shadow)}
+dialog::backdrop{background:#0008}
+dialog form{padding:20px;display:flex;flex-direction:column;gap:12px}
+dialog h2{margin:0;font-size:16px}
+dialog p{margin:0;color:var(--ink-2);font-size:13px}
+.fld{display:flex;flex-direction:column;gap:6px;font-weight:500;font-size:13px}
+.fld input{height:36px;border-radius:var(--r-s);border:1px solid var(--ctl);background:var(--s2);padding:0 10px;font-weight:400}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
+.chk input{accent-color:var(--acc);width:16px;height:16px;margin:0}
+dialog .err{color:var(--neg);min-height:1em}
+.dlg-b{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+
+/* ---------- responsive ---------- */
+@media (max-width:860px){
+  .app{grid-template-columns:64px minmax(0,1fr)}
+  .brand{width:auto}
+  .brand span{display:none}
+  .nav-g h2{height:1px;margin:12px 10px;background:var(--line);font-size:0;overflow:hidden}
+  .nav-g:first-child h2{display:none}
+  .nav-tx{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .nav-i{justify-content:center;padding:10px 0}
+  .nav-i .ic{width:20px;height:20px}
+  .side{padding:8px 8px}
+  .side-foot{display:none}
+  main{padding:24px 20px 120px}
+  .bar-r .btn span:not(.badge){display:none}
+}
+@media (max-width:640px){
+  .prof{grid-template-columns:1fr}
+  .row{flex-wrap:wrap}
+  .row-c{flex-wrap:wrap}
+  input[type=range]{width:160px}
+  .kbd{display:none}
+  .search input{padding-right:10px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-brand" viewBox="0 0 24 24"><rect x="2.5" y="14" width="19" height="6.5" rx="3.25"/><rect x="5" y="4.5" width="6" height="6.5" rx="1.6"/><rect x="13" y="4.5" width="6" height="6.5" rx="1.6"/></symbol>
+  <symbol id="i-look" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-display" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M9 20h6M12 16.5V20"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.5h3l4.5-4v13L7 14.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5h3l4.5-4v13L7 14.5H4z"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.3a9.5 9.5 0 0 1 13 0M8.6 15.5a5 5 0 0 1 6.8 0"/><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-bt" viewBox="0 0 24 24"><path d="M7 7.5l10 9-5 4.5V3l5 4.5-10 9"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><rect x="2.5" y="7" width="17" height="10" rx="2.5"/><path d="M22 10.5v3"/><path d="M11.5 9l-2 3h3l-2 3"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="3.25"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3.5 4v4h4"/><path d="M12 8v4.5l3 2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+  <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4.5h5.5V10M19.5 4.5L11 13"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16.3h.01"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></symbol>
+  <symbol id="i-mic-off" viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M4 4l16 16"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4v4h-4"/></symbol>
+  <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3.5" y="14" width="4" height="6" rx="1.5"/><rect x="16.5" y="14" width="4" height="6" rx="1.5"/></symbol>
+  <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="6.5" y="3.5" width="11" height="17" rx="5.5"/><path d="M12 7v3.5"/></symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 9.5h.01M9.3 9.5h.01M12.6 9.5h.01M15.9 9.5h.01M18 9.5h.01M7 14.5h10"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="3"/><circle cx="12" cy="14.5" r="3"/><path d="M12 7.5h.01"/></symbol>
+  <symbol id="i-tv" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="12.5" rx="2"/><path d="M8 21h8"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/></symbol>
+  <symbol id="i-auto" viewBox="0 0 24 24"><path d="M3 18h18M7 18a5 5 0 0 1 10 0M12 7v3M5.6 11.2l1.8 1.3M18.4 11.2l-1.8 1.3"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c0-8 5-13.5 14.5-14 .5 9.5-5 14.5-13 14"/><path d="M5 19l7-7"/></symbol>
+  <symbol id="i-balance" viewBox="0 0 24 24"><path d="M12 4v16M8 20h8M5 7.5h14"/><path d="M5 7.5l-2.5 6a2.8 2.8 0 0 0 5 0zM19 7.5l-2.5 6a2.8 2.8 0 0 0 5 0z"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 17.5a8.5 8.5 0 1 1 16 0"/><path d="M12 15.5l4.5-5"/><circle cx="12" cy="15.8" r="1.2"/></symbol>
+  <symbol id="i-cmd" viewBox="0 0 24 24"><path d="M9 9V6.5A2.5 2.5 0 1 0 6.5 9H9zm0 0h6m-6 0v6m6-6V6.5A2.5 2.5 0 1 1 17.5 9H15zm0 0v6m0 0H9m6 0v2.5a2.5 2.5 0 1 0 2.5-2.5H15zm-6 0v2.5A2.5 2.5 0 1 1 6.5 15H9z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-window" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M3 9h18M6.5 6.8h.01M9 6.8h.01"/></symbol>
+  <symbol id="i-deco" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M3 9h18M16.3 5.9l1.6 1.6M17.9 5.9l-1.6 1.6"/></symbol>
+  <symbol id="i-desktops" viewBox="0 0 24 24"><rect x="2.5" y="5" width="8.5" height="6" rx="1.5"/><rect x="13" y="5" width="8.5" height="6" rx="1.5"/><rect x="2.5" y="13" width="8.5" height="6" rx="1.5"/><rect x="13" y="13" width="8.5" height="6" rx="1.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M10 8.5l5 3.5-5 3.5z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 19.5a6.5 6.5 0 0 1 13 0"/><path d="M15.5 5.2a3.5 3.5 0 0 1 0 6.6M18 14a6.5 6.5 0 0 1 3.5 5.5"/></symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.5l2.5 2.5L16 9.5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8h.01"/></symbol>
+  <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></symbol>
+  <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.4 0 2-1 1.6-2.2-.5-1.3.4-2.3 1.7-2.3H18a2.5 2.5 0 0 0 2.5-2.5A8.5 8.5 0 0 0 12 3.5z"/><circle cx="8" cy="11" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/></symbol>
+  <symbol id="i-icons" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><circle cx="16.5" cy="7.5" r="3.5"/><path d="M7.5 13.5l4 6.5h-8zM14 14h6v6h-6z"/></symbol>
+  <symbol id="i-font" viewBox="0 0 24 24"><path d="M3.5 19L9 5h1l5.5 14M5.7 14h7.6"/><circle cx="18" cy="16" r="2.6"/><path d="M20.6 13.2V19"/></symbol>
+  <symbol id="i-cursor" viewBox="0 0 24 24"><path d="M6 3.5L18 11l-5.5 1.5L10 18z"/></symbol>
+  <symbol id="i-rot" viewBox="0 0 24 24"><path d="M4.5 11a7.5 7.5 0 0 1 13-4.5"/><path d="M18 3v4h-4"/><rect x="8" y="11" width="9" height="9" rx="1.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5.5 13.5H12L11 21l7.5-10.5H12z"/></symbol>
+</svg>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand"><svg class="ic" aria-hidden="true"><use href="#i-brand"/></svg><span>Dockyard Settings</span></div>
+    <div class="search" role="search">
+      <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+      <label for="q" class="sr">Search settings</label>
+      <input id="q" type="search" placeholder="Search settings" autocomplete="off" spellcheck="false"
+        role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="results">
+      <span class="kbd" aria-hidden="true">Ctrl K</span>
+      <ul id="results" class="results" role="listbox" aria-label="Matching settings" hidden></ul>
+    </div>
+    <div class="bar-r">
+      <button class="btn quiet" id="hist-btn" aria-expanded="false" aria-controls="ledger">
+        <svg class="ic" aria-hidden="true"><use href="#i-history"/></svg><span>History</span><span class="badge" id="hist-n" aria-label="0 changes">0</span>
+      </button>
+    </div>
+  </header>
+
+  <nav class="side" aria-label="Settings sections" id="side"></nav>
+  <main id="main" tabindex="-1"></main>
+</div>
+
+<aside class="ledger" id="ledger" aria-labelledby="lg-t" hidden>
+  <div class="lg-h"><h2 id="lg-t" tabindex="-1">This session</h2>
+    <button class="btn quiet icon-btn" id="lg-close" aria-label="Close history"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+  <p class="lg-p">Every change applied since Settings opened, newest first. Revert puts that one setting back and is itself recorded.</p>
+  <ol class="lg-list" id="lg-list"></ol>
+</aside>
+
+<div class="toast-wrap" role="status" aria-live="polite">
+  <div class="toast" id="toast">
+    <svg class="ic" aria-hidden="true"><use id="t-ic" href="#i-check"/></svg>
+    <div class="t-body"><span class="t-msg" id="t-msg"></span><code class="t-cmd" id="t-cmd"></code></div>
+    <button class="btn link" id="t-undo"><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg>Undo</button>
+    <button class="btn quiet icon-btn" id="t-close" aria-label="Dismiss"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+  </div>
+</div>
+
+<dialog id="pw" aria-labelledby="pw-t" aria-describedby="pw-d">
+  <form id="pw-f" novalidate>
+    <h2 id="pw-t">Connect to <span id="pw-ssid"></span></h2>
+    <p id="pw-d">This network is secured with WPA2. Enter its password to join.</p>
+    <label class="fld">Password<input id="pw-in" type="password" autocomplete="off" aria-describedby="pw-err pw-hint"></label>
+    <label class="chk"><input type="checkbox" id="pw-show">Show password</label>
+    <p class="err" id="pw-err" aria-live="assertive"></p>
+    <p id="pw-hint">Mockup: any password of 8 or more characters connects.</p>
+    <div class="dlg-b"><button type="button" class="btn" id="pw-cancel">Cancel</button><button type="submit" class="btn pri">Connect</button></div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+const clone = (v) => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const ic = (n, c = "") => `<svg class="ic ${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+
+/* ================= data ================= */
+const ACC = {
+  night: { blue: "#5aa9ff", teal: "#3cc7b4", violet: "#b49cff", amber: "#f0b04a", rose: "#ff7a9a", breeze: "#3daee9" },
+  day:   { blue: "#0a63d1", teal: "#0b7a6d", violet: "#6a4bd6", amber: "#8a5a00", rose: "#c2264f", breeze: "#1f72a8" },
+};
+const ACC_NAMES = { theme: "Theme default", blue: "Blue", teal: "Teal", violet: "Violet", amber: "Amber", rose: "Rose", breeze: "Breeze blue" };
+const THEMES = [
+  { id: "dev.aryan.dockyard", family: "dockyard", mode: "night", name: "Dockyard Night", desc: "Smoky dark glass dock. The default look.", sw: ["#0f1116", "#20242d", "#5aa9ff"] },
+  { id: "dev.aryan.dockyard.day", family: "dockyard", mode: "day", name: "Dockyard Day", desc: "Frosted white dock with deep-toned accents.", sw: ["#f2f3f6", "#ffffff", "#0a63d1"] },
+  { id: "org.kde.breezedark.desktop", family: "breeze", mode: "night", name: "Breeze Dark", desc: "Plasma's stock dark theme.", sw: ["#1b1e20", "#31363b", "#3daee9"] },
+  { id: "org.kde.breeze.desktop", family: "breeze", mode: "day", name: "Breeze", desc: "Plasma's stock light theme.", sw: ["#eff0f1", "#ffffff", "#1f72a8"] },
+];
+const SUNRISE = 7 * 60, SUNSET = 18 * 60 + 30;
+
+const S = {
+  look: { family: "dockyard", pref: "night" },
+  accent: "theme",
+  disp: {
+    sel: "eDP-1", primary: "eDP-1", arrange: "right",
+    mons: {
+      "eDP-1": { name: "Built-in display", detail: '14.0" laptop panel · eDP-1', mode: "2880x1800@120", scale: 175, rot: "none", bright: 70, enabled: true,
+        modes: [["2880x1800@120", "2880 × 1800 · 120 Hz"], ["2880x1800@60", "2880 × 1800 · 60 Hz"], ["1920x1200@60", "1920 × 1200 · 60 Hz"], ["1440x900@60", "1440 × 900 · 60 Hz"]] },
+      "DP-2": { name: "Dell U2723QE", detail: '27" external · DP-2', mode: "3840x2160@60", scale: 150, rot: "none", bright: 50, enabled: true,
+        modes: [["3840x2160@60", "3840 × 2160 · 60 Hz"], ["3840x2160@30", "3840 × 2160 · 30 Hz"], ["2560x1440@60", "2560 × 1440 · 60 Hz"], ["1920x1080@60", "1920 × 1080 · 60 Hz"]] },
+    },
+  },
+  nl: { on: true, temp: 4200, sched: "auto" },
+  snd: { out: "speakers", vol: 45, mute: false, mic: "internal", micVol: 70, micMute: false },
+  net: {
+    wifi: true, active: "Harbor-5G", busy: null, scanning: false, saved: ["Harbor-5G", "Pier Guest"],
+    list: [
+      { ssid: "Harbor-5G", signal: 88, sec: true, band: "5 GHz" },
+      { ssid: "Harbor", signal: 74, sec: true, band: "2.4 GHz" },
+      { ssid: "Pier Guest", signal: 61, sec: true, band: "5 GHz" },
+      { ssid: "Lighthouse Free", signal: 47, sec: false, band: "2.4 GHz" },
+      { ssid: "Tugboat Cafe", signal: 39, sec: true, band: "2.4 GHz" },
+      { ssid: "NETGEAR-7F", signal: 18, sec: true, band: "2.4 GHz" },
+    ],
+  },
+  bt: {
+    on: true, busy: null, scanning: false, scanned: false, nearby: [],
+    devices: [
+      { id: "xm5", mac: "AC:80:0A:3E:11:42", name: "WH-1000XM5", kind: "headphones", conn: true, bat: 80 },
+      { id: "mx", mac: "D4:2F:91:07:5B:C8", name: "MX Master 3S", kind: "mouse", conn: true, bat: 55 },
+      { id: "k3", mac: "DC:2C:26:E1:90:0F", name: "Keychron K3", kind: "keyboard", conn: false, bat: null },
+    ],
+  },
+  pwr: {
+    profile: "balanced", limit: true, src: "battery", pct: 62,
+    t: { battery: { dim: 60, off: 120, sleep: 600, lock: 300 }, ac: { dim: 300, off: 600, sleep: 0, lock: 600 } },
+  },
+  moreLast: "",
+};
+const BT_POOL = [
+  { id: "px", mac: "F8:0F:F9:22:A1:6D", name: "Pixel 9", kind: "phone" },
+  { id: "jbl", mac: "B8:F6:53:4C:02:9E", name: "JBL Flip 6", kind: "speaker" },
+  { id: "tv", mac: "70:2A:D5:8E:13:F4", name: "Living room TV", kind: "tv" },
+];
+const MORE = [
+  ["Keyboard", "keyboard", "kcm_keyboard", "layout repeat typing"],
+  ["Mouse and touchpad", "mouse", "kcm_mouse", "pointer cursor speed trackpad scroll"],
+  ["Shortcuts", "cmd", "kcm_keys", "hotkeys keybindings"],
+  ["Notifications", "bell", "kcm_notifications", "do not disturb alerts popups"],
+  ["Window rules", "window", "kcm_kwinrules", "kwin window behaviour"],
+  ["Virtual desktops", "desktops", "kcm_kwin_virtualdesktops", "workspaces"],
+  ["Autostart", "play", "kcm_autostart", "startup login apps"],
+  ["Date and time", "clock", "kcm_clock", "timezone ntp clock"],
+  ["Users", "users", "kcm_users", "account password avatar"],
+  ["Default apps", "apps", "kcm_componentchooser", "browser email file manager terminal"],
+  ["Search", "search", "kcm_baloofile", "file indexing baloo krunner"],
+  ["Firewall", "shield", "kcm_firewall", "ufw ports security"],
+  ["About this system", "info", "kcm_about-distro", "version hardware kernel plasma info"],
+];
+
+/* ================= state helpers ================= */
+const get = (p) => p.split(".").reduce((o, k) => (o == null ? o : o[k]), S);
+const put = (p, v) => { const ks = p.split("."), last = ks.pop(); ks.reduce((o, k) => o[k], S)[last] = v; };
+const isDayNow = () => { const d = new Date(), m = d.getHours() * 60 + d.getMinutes(); return m >= SUNRISE && m < SUNSET; };
+const modeOf = (look) => (look.pref === "auto" ? (isDayNow() ? "day" : "night") : look.pref);
+const effMode = () => modeOf(S.look);
+const themeOf = (look) => THEMES.find((t) => t.family === look.family && t.mode === modeOf(look));
+const accKey = () => (S.accent === "theme" ? (S.look.family === "breeze" ? "breeze" : "blue") : S.accent);
+const monId = (p) => p.split(".")[2];
+const monName = (p) => S.disp.mons[monId(p)].name;
+const selMon = () => S.disp.mons[S.disp.sel];
+const enabledCount = () => Object.values(S.disp.mons).filter((m) => m.enabled).length;
+const btDev = (id) => S.bt.devices.find((d) => d.id === id);
+const hpAvailable = () => S.bt.on && !!(btDev("xm5") && btDev("xm5").conn);
+const fmtSecs = (s) => (s === 0 ? "Never" : s < 60 ? s + " seconds" : s < 3600 ? s / 60 + (s === 60 ? " minute" : " minutes") : s / 3600 + (s === 3600 ? " hour" : " hours"));
+const hhmm = (m) => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+
+function logical(m) {
+  const [w, h] = m.mode.split("@")[0].split("x").map(Number);
+  let lw = Math.round((w * 100) / m.scale), lh = Math.round((h * 100) / m.scale);
+  if (m.rot === "left" || m.rot === "right") [lw, lh] = [lh, lw];
+  return { w: lw, h: lh };
+}
+function layoutRects() {
+  const b = logical(S.disp.mons["eDP-1"]), e = logical(S.disp.mons["DP-2"]);
+  const rb = { id: "eDP-1", x: 0, y: 0, ...b };
+  let re;
+  if (S.disp.arrange === "right") re = { x: b.w, y: b.h - e.h };
+  else if (S.disp.arrange === "left") re = { x: -e.w, y: b.h - e.h };
+  else re = { x: Math.round((b.w - e.w) / 2), y: -e.h };
+  return [rb, { id: "DP-2", ...re, ...e }];
+}
+function k2rgb(k) {
+  const t = k / 100; let r, g, b;
+  if (t <= 66) { r = 255; g = 99.47 * Math.log(t) - 161.12; b = t <= 19 ? 0 : 138.52 * Math.log(t - 10) - 305.04; }
+  else { r = 329.7 * Math.pow(t - 60, -0.1332); g = 288.12 * Math.pow(t - 60, -0.0755); b = 255; }
+  const c = (v) => Math.max(0, Math.min(255, Math.round(v)));
+  return `rgb(${c(r)},${c(g)},${c(b)})`;
+}
+
+/* ================= control metadata =================
+   path: string or fn; label(v, path) and cmd(v, path) describe a value for the toast + ledger. */
+const PROFILE = { "power-saver": "Power Saver", balanced: "Balanced", performance: "Performance" };
+const ROT = { none: "No rotation", right: "Rotated 90° right", inverted: "Rotated 180°", left: "Rotated 90° left" };
+const NL_SCHED = { auto: "Sunset to sunrise", times: "Custom times (20:00 to 07:00)", always: "Always on" };
+const OUTS = {
+  speakers: { name: "Built-in speakers", sub: "Analog stereo", icon: "speaker", sink: "alsa_output.pci-0000_00_1f.3.analog-stereo" },
+  xm5: { name: "WH-1000XM5", sub: "Bluetooth headphones", icon: "headphones", sink: "bluez_output.AC_80_0A_3E_11_42.1" },
+  hdmi: { name: "Dell U2723QE", sub: "DisplayPort audio", icon: "display", sink: "alsa_output.pci-0000_00_1f.3.hdmi-stereo" },
+};
+const MICS = { internal: "Built-in microphone array", xm5: "WH-1000XM5 headset mic" };
+const TO_OPTS = {
+  dim: [30, 60, 120, 300, 600, 0], off: [60, 120, 300, 600, 900, 0], sleep: [300, 600, 900, 1800, 3600, 0], lock: [60, 300, 600, 900, 0],
+};
+const TO_NAME = { dim: "Dim screen", off: "Turn off screen", sleep: "Sleep", lock: "Lock screen" };
+const TO_KEY = { dim: "Display/DimDisplayIdleTimeoutSec", off: "Display/TurnOffDisplayIdleTimeoutSec", sleep: "SuspendAndShutdown/AutoSuspendIdleTimeoutSec", lock: "Lock/Timeout" };
+const monPath = (k) => () => `disp.mons.${S.disp.sel}.${k}`;
+const toPath = (k) => () => `pwr.t.${S.pwr.src}.${k}`;
+
+const CTRL = {
+  theme: { path: "look", val: (id) => { const t = THEMES.find((x) => x.id === id); return { family: t.family, pref: t.mode }; },
+    cur: () => themeOf(S.look).id,
+    label: (v) => (v.pref === "auto" ? `Global theme: ${v.family === "breeze" ? "Breeze" : "Dockyard"}, day and night automatic` : `Global theme: ${themeOf(v).name}`),
+    cmd: (v) => `lookandfeeltool -a ${themeOf(v).id}` },
+  mode: { path: "look.pref",
+    label: (v) => ({ night: "Night look", day: "Day look", auto: "Day and night follow the clock" }[v]),
+    cmd: (v) => (v === "auto" ? "kwriteconfig6 --file kdeglobals --group KDE --key AutomaticLookAndFeel true" : `lookandfeeltool -a ${themeOf({ family: S.look.family, pref: v }).id}`) },
+  accent: { path: "accent", label: (v) => `Accent color: ${ACC_NAMES[v]}`,
+    cmd: (v) => `plasma-apply-colorscheme --accent-color "${ACC[effMode()][v === "theme" ? (S.look.family === "breeze" ? "breeze" : "blue") : v]}"`,
+    fmt: (v) => ACC_NAMES[v] + (v === "theme" ? ` (${ACC_NAMES[accKey()]})` : "") },
+  mEnabled: { path: monPath("enabled"), label: (v, p) => `${monName(p)} ${v ? "turned on" : "turned off"}`,
+    cmd: (v, p) => `kscreen-doctor output.${monId(p)}.${v ? "enable" : "disable"}`,
+    guard: (v) => (!v && enabledCount() === 1 ? "At least one display has to stay on." : null) },
+  mMode: { path: monPath("mode"), label: (v, p) => `${monName(p)}: ${S.disp.mons[monId(p)].modes.find((m) => m[0] === v)[1]}`,
+    cmd: (v, p) => `kscreen-doctor output.${monId(p)}.mode.${v}`, dis: () => !selMon().enabled },
+  mScale: { path: monPath("scale"), num: true, label: (v, p) => `${monName(p)} scale ${v}%`,
+    cmd: (v, p) => `kscreen-doctor output.${monId(p)}.scale.${v / 100}`, fmt: (v) => v + "%", dis: () => !selMon().enabled },
+  mRot: { path: monPath("rot"), label: (v, p) => `${monName(p)}: ${ROT[v].toLowerCase()}`,
+    cmd: (v, p) => `kscreen-doctor output.${monId(p)}.rotation.${v}`, optDis: () => !selMon().enabled },
+  mBright: { path: monPath("bright"), num: true, label: (v, p) => `${monName(p)} brightness ${v}%`,
+    cmd: (v, p) => `kscreen-doctor output.${monId(p)}.brightness.${v}`, fmt: (v) => v + "%", dis: () => !selMon().enabled },
+  arrange: { path: "disp.arrange", label: (v) => `Dell U2723QE placed ${{ right: "right of", left: "left of", above: "above" }[v]} the built-in display`,
+    cmd: (v) => { const save = S.disp.arrange; S.disp.arrange = v; const [b, e] = layoutRects(); S.disp.arrange = save;
+      const mx = Math.min(b.x, e.x), my = Math.min(b.y, e.y); return `kscreen-doctor output.eDP-1.position.${b.x - mx},${b.y - my} output.DP-2.position.${e.x - mx},${e.y - my}`; } },
+  primary: { path: "disp.primary", label: (v) => `Primary display: ${S.disp.mons[v].name}`, cmd: (v) => `kscreen-doctor output.${v}.primary` },
+  nlOn: { path: "nl.on", label: (v) => `Night light ${v ? "on" : "off"}`, cmd: (v) => `kwriteconfig6 --file kwinrc --group NightColor --key Active ${v}` },
+  nlTemp: { path: "nl.temp", num: true, label: (v) => `Night light temperature ${v} K`, cmd: (v) => `kwriteconfig6 --file kwinrc --group NightColor --key NightTemperature ${v}`,
+    fmt: (v) => v + " K", dis: () => !S.nl.on },
+  nlSched: { path: "nl.sched", label: (v) => `Night light schedule: ${NL_SCHED[v]}`,
+    cmd: (v) => `kwriteconfig6 --file kwinrc --group NightColor --key Mode ${{ auto: "Automatic", times: "Times", always: "Constant" }[v]}`, dis: () => !S.nl.on },
+  sndOut: { path: "snd.out", label: (v) => `Output: ${OUTS[v].name}`, cmd: (v) => `pactl set-default-sink ${OUTS[v].sink}`,
+    optDis: (v) => (v === "xm5" ? !hpAvailable() : v === "hdmi" ? !S.disp.mons["DP-2"].enabled : false) },
+  vol: { path: "snd.vol", num: true, label: (v) => `Volume ${v}%`, cmd: (v) => `wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ ${(v / 100).toFixed(2)}`, fmt: (v) => v + "%" },
+  mute: { path: "snd.mute", label: (v) => (v ? "Output muted" : "Output unmuted"), cmd: (v) => `wpctl set-mute @DEFAULT_AUDIO_SINK@ ${v ? 1 : 0}`,
+    icon: (v) => (v ? "mute" : "sound"), aria: (v) => (v ? "Unmute output" : "Mute output") },
+  mic: { path: "snd.mic", label: (v) => `Input: ${MICS[v]}`, cmd: (v) => `pactl set-default-source ${v === "xm5" ? "bluez_input.AC_80_0A_3E_11_42.0" : "alsa_input.pci-0000_00_1f.3.analog-stereo"}` },
+  micVol: { path: "snd.micVol", num: true, label: (v) => `Microphone ${v}%`, cmd: (v) => `wpctl set-volume @DEFAULT_AUDIO_SOURCE@ ${(v / 100).toFixed(2)}`, fmt: (v) => v + "%" },
+  micMute: { path: "snd.micMute", label: (v) => (v ? "Microphone muted" : "Microphone unmuted"), cmd: (v) => `wpctl set-mute @DEFAULT_AUDIO_SOURCE@ ${v ? 1 : 0}`,
+    icon: (v) => (v ? "mic-off" : "mic"), aria: (v) => (v ? "Unmute microphone" : "Mute microphone") },
+  wifi: { path: "net.wifi", label: (v) => `Wi-Fi ${v ? "on" : "off"}`, cmd: (v) => `nmcli radio wifi ${v ? "on" : "off"}` },
+  btOn: { path: "bt.on", label: (v) => `Bluetooth ${v ? "on" : "off"}`, cmd: (v) => `bluetoothctl power ${v ? "on" : "off"}` },
+  profile: { path: "pwr.profile", label: (v) => `Power profile: ${PROFILE[v]}`, cmd: (v) => `powerprofilesctl set ${v}` },
+  limit: { path: "pwr.limit", label: (v) => (v ? "Charging stops at 80%" : "Charging to 100%"),
+    cmd: (v) => `kwriteconfig6 --file powerdevilrc --group BatteryManagement --key BatteryChargeStopThreshold ${v ? 80 : 100}` },
+};
+["dim", "off", "sleep", "lock"].forEach((k) => {
+  CTRL["to_" + k] = { path: toPath(k), num: true,
+    label: (v, p) => `${TO_NAME[k]} ${p.includes(".ac.") ? "when plugged in" : "on battery"}: ${v === 0 ? "never" : "after " + fmtSecs(v)}`,
+    cmd: (v, p) => `kwriteconfig6 --file powerdevilrc --group ${p.includes(".ac.") ? "AC" : "Battery"} --group ${TO_KEY[k].split("/")[0]} --key ${TO_KEY[k].split("/")[1]} ${v}` };
+});
+const pathOf = (m) => (typeof m.path === "function" ? m.path() : m.path);
+const fixedMeta = (next, nextLabel, prevLabel, nextCmd, prevCmd) => ({
+  label: (v) => (same(v, next) ? nextLabel : prevLabel), cmd: (v) => (same(v, next) ? nextCmd : prevCmd),
+});
+
+/* ================= history ================= */
+const hist = []; let hid = 0; const bursts = {};
+function record(path, prev, next, meta) {
+  const e = { id: ++hid, path, prev: clone(prev), next: clone(next), meta, t: new Date(),
+    label: meta.label(next, path), cmd: meta.cmd(next, path), labelPrev: meta.label(prev, path), cmdPrev: meta.cmd(prev, path) };
+  hist.push(e); renderLedger();
+  toast({ msg: e.label, cmd: e.cmd, undo: true });
+}
+function commit(path, next, meta) {
+  flushLive();
+  const prev = clone(get(path));
+  if (same(prev, next)) return;
+  const g = meta.guard && meta.guard(next);
+  if (g) { toast({ msg: g, err: true }); syncAll(); return; }
+  put(path, clone(next)); syncAll();
+  record(path, prev, next, meta);
+}
+function liveSet(path, v, meta) {
+  let b = bursts[path];
+  if (!b) b = bursts[path] = { prev: clone(get(path)), meta, t: 0 };
+  put(path, v); syncAll();
+  clearTimeout(b.t); b.t = setTimeout(() => finalize(path), 700);
+}
+function finalize(path) {
+  const b = bursts[path]; if (!b) return;
+  clearTimeout(b.t); delete bursts[path];
+  if (!same(b.prev, get(path))) record(path, b.prev, clone(get(path)), b.meta);
+}
+function flushLive() { Object.keys(bursts).forEach(finalize); }
+function undoLast() {
+  flushLive();
+  const e = hist.pop();
+  if (!e) { toast({ msg: "Nothing to undo yet" }); return; }
+  put(e.path, clone(e.prev)); syncAll(); renderLedger();
+  toast({ msg: `Undid: ${e.label}`, cmd: e.cmdPrev });
+}
+function revert(id) {
+  const e = hist.find((x) => x.id === id); if (!e) return;
+  commit(e.path, e.prev, e.meta);
+}
+
+/* ================= toast ================= */
+let toastT = 0;
+function toast({ msg, cmd = "", undo = false, err = false }) {
+  const t = $("#toast");
+  $("#t-msg").textContent = msg;
+  $("#t-cmd").textContent = cmd; $("#t-cmd").hidden = !cmd;
+  $("#t-undo").hidden = !undo;
+  $("#t-ic").setAttribute("href", err ? "#i-alert" : "#i-check");
+  t.classList.toggle("err", err);
+  t.classList.add("show");
+  clearTimeout(toastT); toastT = setTimeout(hideToast, 6500);
+}
+function hideToast() {
+  const t = $("#toast");
+  if (t.contains(document.activeElement)) { document.activeElement.blur(); $("#main").focus({ preventScroll: true }); }
+  t.classList.remove("show");
+}
+
+/* ================= markup builders ================= */
+const PAGES = {
+  appearance: { title: "Appearance", icon: "look", sub: "Global theme, day and night look, and accent color.", kw: "theme look style dark light" },
+  display: { title: "Display", icon: "display", sub: "Arrangement, resolution, scale, rotation, brightness and night light.", kw: "monitor screen" },
+  sound: { title: "Sound", icon: "sound", sub: "Where audio plays, how loud, and which microphone listens.", kw: "audio volume" },
+  power: { title: "Power", icon: "power", sub: "Power profile, battery, and what happens when the machine is idle.", kw: "battery energy" },
+  network: { title: "Network", icon: "wifi", sub: "Wi-Fi radio and nearby networks.", kw: "wifi internet wireless" },
+  bluetooth: { title: "Bluetooth", icon: "bt", sub: "Paired devices and pairing new ones.", kw: "devices wireless pair" },
+  more: { title: "More settings", icon: "more", sub: "Everything else opens the matching KDE System Settings module.", kw: "kde modules kcm system settings" },
+};
+const NAV = [["Personal", ["appearance"]], ["Hardware", ["display", "sound", "power"]], ["Connections", ["network", "bluetooth"]], ["System", ["more"]]];
+
+function row({ s, label, help = "", ctl = "", kw = "", lead = "", cls = "", helpCls = "" }) {
+  return `<div class="row ${cls}" data-s="${s}" data-kw="${esc(kw)}" id="row-${s}">${lead}
+    <div class="row-t"><span class="row-l" id="l-${s}">${label}</span>${help !== null ? `<span class="row-h ${helpCls}" id="h-${s}">${help}</span>` : ""}</div>
+    <div class="row-c">${ctl}</div></div>`;
+}
+const sw = (k, s) => `<button class="sw" role="switch" aria-checked="false" data-k="${k}" aria-labelledby="l-${s}" aria-describedby="h-${s}"><span class="sw-k"></span></button>`;
+const sel = (k, s, opts) => `<span class="sel"><select data-k="${k}" aria-labelledby="l-${s}">${opts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("")}</select>${ic("chev-d", "sel-ch")}</span>`;
+const rng = (k, s, min, max, step) => `<input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" aria-labelledby="l-${s}" aria-describedby="h-${s}"><output class="val" data-out="${k}" aria-hidden="true"></output>`;
+const seg = (k, name, opts, lbl) => `<div class="seg" role="radiogroup" aria-labelledby="${lbl}">${opts.map(([v, l, i]) => `<label><input type="radio" name="${name}" value="${v}" data-k="${k}"><span>${i ? ic(i) : ""}${l}</span></label>`).join("")}</div>`;
+const link = (kcm, label, s, icon, kw = "") => `<button class="row link" data-kcm="${kcm}" data-s="${s}" data-kw="${esc(kw)}" id="row-${s}">
+  <span class="lead">${ic(icon)}</span><span class="row-t"><span class="row-l">${label}</span><span class="row-h">Opens the KDE module <code>${kcm}</code></span></span>${ic("ext", "end")}</button>`;
+const grp = (id, title, body, action = "", raw = false) => `<section class="grp" aria-labelledby="g-${id}"><div class="grp-h"><h2 id="g-${id}">${title}</h2>${action}</div>${raw ? body : `<div class="card">${body}</div>`}</section>`;
+const page = (id, body) => `<section class="page" data-page="${id}" aria-labelledby="t-${id}" hidden><header class="ph"><h1 id="t-${id}" tabindex="-1">${PAGES[id].title}</h1><p>${PAGES[id].sub}</p></header>${body}</section>`;
+
+function buildNav() {
+  $("#side").innerHTML = NAV.map(([g, ids]) => `<div class="nav-g"><h2>${g}</h2><ul>${ids.map((id) =>
+    `<li><a class="nav-i" href="#${id}" data-page="${id}" title="${PAGES[id].title}">${ic(PAGES[id].icon)}<span class="nav-tx"><span class="nav-l">${PAGES[id].title}</span><span class="nav-s" data-status="${id}"></span></span></a></li>`).join("")}</ul></div>`).join("")
+    + `<p class="side-foot">Changes apply instantly.<br><kbd>Ctrl Z</kbd> undoes the last one.</p>`;
+}
+
+function buildPages() {
+  const themeRows = THEMES.map((t) => `<label class="row opt" data-s="theme-${t.family}-${t.mode}" data-kw="global theme look and feel ${t.mode === "night" ? "dark" : "light"}" id="row-theme-${t.family}-${t.mode}">
+      <input class="rad" type="radio" name="theme" value="${t.id}" data-k="theme" aria-describedby="d-${t.family}-${t.mode}">
+      <span class="chips" aria-hidden="true">${t.sw.map((c) => `<i style="background:${c}"></i>`).join("")}</span>
+      <span class="row-t"><span class="row-l">${t.name}</span><span class="row-h" id="d-${t.family}-${t.mode}">${t.desc} <code>${t.id}</code></span></span></label>`).join("");
+
+  const appearance = page("appearance",
+    grp("theme", "Global theme", themeRows) +
+    grp("daynight", "Day and night",
+      row({ s: "mode", label: "Look", help: "", kw: "dark mode light mode auto night day schedule sunset", ctl: seg("mode", "mode", [["night", "Night", "moon"], ["day", "Day", "sun"], ["auto", "Auto", "auto"]], "l-mode") })) +
+    grp("accent", "Accent color",
+      row({ s: "accent", label: "Accent", help: "Selection, switches, links and focus rings.", kw: "highlight color colour tint",
+        ctl: `<div class="swatches" role="radiogroup" aria-labelledby="l-accent">${Object.keys(ACC_NAMES).filter((k) => k !== "breeze").map((k) =>
+          `<input class="swatch" type="radio" name="accent" value="${k}" data-k="accent" aria-label="${ACC_NAMES[k]}" title="${ACC_NAMES[k]}">`).join("")}</div><output class="val" data-out="accent" style="min-width:150px;text-align:left"></output>` })) +
+    grp("finetune", "Fine-tune in KDE",
+      link("kcm_colors", "Colors", "kcm-colors", "palette", "color scheme") + link("kcm_icons", "Icons", "kcm-icons", "icons", "icon theme") +
+      link("kcm_fonts", "Fonts", "kcm-fonts", "font", "typeface text size") + link("kcm_cursortheme", "Cursors", "kcm-cursors", "cursor", "pointer mouse") +
+      link("kcm_kwindecoration", "Window decorations", "kcm-deco", "deco", "titlebar buttons aurorae")));
+
+  const display = page("display",
+    grp("arr", "Arrangement",
+      `<div class="arr" id="arr" role="group" aria-label="Display layout. Select a display to edit it."></div>` +
+      row({ s: "arrange", label: "Dell U2723QE position", help: "Where the external display sits relative to the built-in one.", kw: "layout arrange position left right above multi monitor",
+        ctl: sel("arrange", "arrange", [["right", "Right of built-in"], ["left", "Left of built-in"], ["above", "Above built-in"]]) }) +
+      row({ s: "primary", label: "Primary display", help: "Gets the dock and new windows.", kw: "main default monitor",
+        ctl: sel("primary", "primary", [["eDP-1", "Built-in display"], ["DP-2", "Dell U2723QE"]]) })) +
+    `<section class="grp" aria-labelledby="g-mon"><div class="grp-h"><h2 id="g-mon"></h2><span class="row-h" id="mon-d"></span></div><div class="card">` +
+      row({ s: "enabled", label: "Use this display", help: "", kw: "enable disable turn off monitor", ctl: sw("mEnabled", "enabled") }) +
+      row({ s: "resolution", label: "Resolution and refresh rate", help: "", kw: "resolution refresh rate hz mode pixels", ctl: sel("mMode", "resolution", []) }) +
+      row({ s: "scale", label: "Scale", help: "", kw: "zoom dpi hidpi size text bigger smaller", ctl: rng("mScale", "scale", 100, 200, 25) }) +
+      row({ s: "rotation", label: "Rotation", help: "", kw: "orientation portrait landscape flip turn", ctl: seg("mRot", "rot", [["none", "None"], ["right", "90° right"], ["inverted", "180°"], ["left", "90° left"]], "l-rotation") }) +
+      row({ s: "brightness", label: "Brightness", help: "Built-in panels use the backlight, external ones DDC/CI.", kw: "backlight dim bright screen", ctl: rng("mBright", "brightness", 5, 100, 5) }) +
+    `</div></section>` +
+    grp("nl", "Night light",
+      row({ s: "nightlight", label: "Night light", help: "Warms the screen in the evening to reduce blue light.", kw: "blue light warm color temperature redshift night color", ctl: sw("nlOn", "nightlight") }) +
+      row({ s: "nltemp", label: "Color temperature", help: "Lower is warmer. 6500 K is neutral.", kw: "kelvin warmth night light", ctl: `<span class="nl-sw" id="nl-sw" aria-hidden="true"></span>` + rng("nlTemp", "nltemp", 2500, 6500, 100) }) +
+      row({ s: "nlsched", label: "Schedule", help: "", kw: "sunset sunrise time night light", ctl: sel("nlSched", "nlsched", Object.entries(NL_SCHED)) }) +
+      link("kcm_nighttime", "Night light details", "kcm-night", "moon", "location custom times")));
+
+  const outRows = Object.entries(OUTS).map(([k, o]) => `<label class="row opt" data-s="out-${k}" data-kw="output device speaker headphones sink" id="row-out-${k}">
+      <input class="rad" type="radio" name="sndout" value="${k}" data-k="sndOut" aria-describedby="h-out-${k}">
+      <span class="lead">${ic(o.icon)}</span><span class="row-t"><span class="row-l">${o.name}</span><span class="row-h" id="h-out-${k}">${o.sub}</span></span></label>`).join("");
+  const sound = page("sound",
+    grp("out", "Output device", outRows) +
+    grp("vol", "Output",
+      row({ s: "volume", label: "Volume", help: "For the selected output device.", kw: "loud quiet sound level speaker",
+        ctl: `<button class="btn icon-btn" data-k="mute" aria-pressed="false" aria-label="Mute output">${ic("sound")}</button>` + rng("vol", "volume", 0, 150, 1) })) +
+    grp("in", "Input",
+      row({ s: "micdev", label: "Microphone", help: "", kw: "input device record source", ctl: sel("mic", "micdev", Object.entries(MICS)) }) +
+      row({ s: "micvol", label: "Input volume", help: "Speak to see the level move.", kw: "microphone gain sensitivity mic",
+        ctl: `<button class="btn icon-btn" data-k="micMute" aria-pressed="false" aria-label="Mute microphone">${ic("mic")}</button>` + rng("micVol", "micvol", 0, 100, 1) }) +
+      row({ s: "miclevel", label: "Input level", help: "", kw: "meter vu microphone test", ctl: `<div class="meter" id="meter" role="meter" aria-labelledby="l-miclevel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">${"<i></i>".repeat(24)}</div>` })) +
+    grp("adv", "More audio", link("kcm_pulseaudio", "Advanced audio", "kcm-audio", "sound", "profiles per app pulseaudio pipewire")));
+
+  const network = page("network",
+    grp("wifi", "Wi-Fi", row({ s: "wifi", label: "Wi-Fi", help: "", kw: "wireless radio wlan internet airplane", ctl: sw("wifi", "wifi") })) +
+    grp("nets", "Networks", `<div id="net-list"></div>`,
+      `<button class="btn quiet" id="rescan" data-act="rescan" data-s="rescan" data-kw="scan refresh networks">${ic("refresh")}<span>Rescan</span></button>`) +
+    grp("netadv", "More", link("kcm_networkmanagement", "Advanced connections", "kcm-net", "cog", "vpn ethernet proxy dns ip")));
+
+  const bluetooth = page("bluetooth",
+    grp("bt", "Bluetooth", row({ s: "bt", label: "Bluetooth", help: "", kw: "radio wireless visibility", ctl: sw("btOn", "bt") })) +
+    grp("paired", "Paired devices", `<div id="bt-list"></div>`) +
+    grp("pair", "Add a device",
+      row({ s: "pairnew", label: "Pair a new device", help: "Put the device in pairing mode, then scan.", kw: "pair connect new add headphones speaker phone",
+        ctl: `<button class="btn" data-act="btscan" id="btscan">${ic("plus")}<span>Scan</span></button>` }) +
+      `<div id="bt-near"></div>` +
+      link("kcm_bluetooth", "Bluetooth details", "kcm-bt", "bt", "adapter name")));
+
+  const power = page("power",
+    grp("prof", "Power profile", `<div class="card"><div class="prof" role="radiogroup" aria-labelledby="g-prof" data-s="profile" data-kw="power saver balanced performance mode cpu fan" id="row-profile">
+      ${[["power-saver", "leaf", "Quieter, cooler, longest battery."], ["balanced", "balance", "Good speed with sensible power use."], ["performance", "gauge", "Full speed. Fans and battery work harder."]].map(([v, i, d]) =>
+        `<label><input type="radio" name="profile" value="${v}" data-k="profile" aria-describedby="pd-${v}">${ic(i)}<b>${PROFILE[v]}</b><small id="pd-${v}">${d}</small></label>`).join("")}
+      </div></div>`, "", true) +
+    grp("batt", "Battery",
+      row({ s: "battery", label: "Charge", help: "", kw: "battery level percent remaining time", ctl: `<div class="bbar" aria-hidden="true"><i id="bbar"></i></div>` }) +
+      row({ s: "health", label: "Battery health", help: "91% of design capacity · 412 charge cycles", kw: "capacity cycles wear", ctl: "" }) +
+      row({ s: "limit", label: "Limit charge to 80%", help: "Helps the battery last when you are mostly plugged in.", kw: "charge threshold battery health conservation", ctl: sw("limit", "limit") })) +
+    grp("idle", "When idle",
+      ["dim", "off", "sleep", "lock"].map((k) => row({ s: "to-" + k, label: TO_NAME[k], help: "", kw: "timeout idle " + { dim: "dim screen", off: "screen off blank display", sleep: "suspend sleep hibernate", lock: "lock screen password" }[k],
+        ctl: sel("to_" + k, "to-" + k, TO_OPTS[k].map((s) => [String(s), s === 0 ? "Never" : "After " + fmtSecs(s)])) })).join(""),
+      seg("src", "src", [["battery", "On battery", "power"], ["ac", "Plugged in", "bolt"]], "g-idle")) +
+    grp("pwradv", "More", link("kcm_powerdevilprofilesconfig", "Energy saving", "kcm-energy", "leaf", "powerdevil suspend lid button") +
+      link("kcm_screenlocker", "Lock screen", "kcm-lock", "lock", "screen locker password wallpaper")));
+
+  const more = page("more",
+    `<div class="grp"><div class="tiles">${MORE.map(([n, i, k, kw]) =>
+      `<button class="tile" data-kcm="${k}" data-s="m-${k}" data-kw="${kw}" id="row-m-${k}"><span class="tile-ic">${ic(i)}</span><span class="row-l">${n}</span><code>${k}</code></button>`).join("")}
+      <button class="tile all" data-kcm="systemsettings" data-s="m-all" data-kw="system settings everything kde" id="row-m-all"><span class="tile-ic">${ic("cog")}</span><span class="row-l">All KDE System Settings</span><code>systemsettings</code></button>
+    </div><p class="note" id="more-last" aria-live="polite">Pick a module. The mockup shows the command instead of opening it.</p></div>`);
+
+  $("#main").innerHTML = appearance + display + sound + power + network + bluetooth + more;
+}
+
+/* ================= sync ================= */
+function applyLook() {
+  const r = document.documentElement, m = effMode();
+  r.dataset.family = S.look.family; r.dataset.mode = m;
+  r.style.setProperty("--acc", ACC[m][accKey()]);
+  r.style.setProperty("--on-acc", m === "night" ? "#0d1016" : "#ffffff");
+  r.style.colorScheme = m === "night" ? "dark" : "light";
+}
+function fillRange(el) { const p = ((el.value - el.min) / (el.max - el.min)) * 100; el.style.setProperty("--p", p + "%"); }
+function syncCtrls() {
+  $$("[data-k]").forEach((el) => {
+    const m = CTRL[el.dataset.k]; if (!m) return;
+    const v = m.cur ? m.cur() : get(pathOf(m));
+    if (el.getAttribute("role") === "switch") { el.setAttribute("aria-checked", String(!!v)); el.disabled = m.dis ? m.dis() : false; }
+    else if (el.hasAttribute("aria-pressed")) {
+      el.setAttribute("aria-pressed", String(!!v));
+      if (m.icon) $("use", el).setAttribute("href", "#i-" + m.icon(v));
+      if (m.aria) el.setAttribute("aria-label", m.aria(v));
+    } else if (el.type === "radio") { el.checked = el.value === String(v); el.disabled = m.optDis ? m.optDis(el.value) : false; }
+    else if (el.type === "range") { if (String(el.value) !== String(v)) el.value = v; fillRange(el); el.disabled = m.dis ? m.dis() : false; el.setAttribute("aria-valuetext", m.fmt ? m.fmt(v) : String(v)); }
+    else if (el.tagName === "SELECT") { if (el.value !== String(v)) el.value = String(v); el.disabled = m.dis ? m.dis() : false; }
+  });
+  $$("[data-out]").forEach((o) => { const m = CTRL[o.dataset.out]; o.textContent = m.fmt(get(pathOf(m))); });
+  $$(".swatch").forEach((s) => { s.style.background = ACC[effMode()][s.value === "theme" ? (S.look.family === "breeze" ? "breeze" : "blue") : s.value]; });
+}
+function setHelp(id, text, cls = "") { const h = $("#h-" + id); if (!h) return; h.textContent = text; h.className = "row-h " + cls; }
+
+function normalize() {
+  if (S.snd.out === "xm5" && !hpAvailable()) S.snd.out = "speakers";
+  if (S.snd.out === "hdmi" && !S.disp.mons["DP-2"].enabled) S.snd.out = "speakers";
+  if (S.snd.mic === "xm5" && !hpAvailable()) S.snd.mic = "internal";
+  if (!S.disp.mons[S.disp.primary].enabled) S.disp.primary = Object.keys(S.disp.mons).find((k) => S.disp.mons[k].enabled);
+}
+
+function syncAppearance() {
+  const t = themeOf(S.look), now = effMode();
+  const fam = S.look.family === "breeze" ? "Breeze" : "Dockyard";
+  const txt = S.look.pref === "auto"
+    ? `Uses ${fam} ${now === "day" ? "Day" : "Night"} now. Switches to ${now === "day" ? "Night at " + hhmm(SUNSET) : "Day at " + hhmm(SUNRISE)}.`
+    : `Picks the ${S.look.pref} variant of ${fam}: ${t.name}.`;
+  setHelp("mode", txt);
+}
+let lastSel = null, arrSig = "";
+function syncDisplay() {
+  const m = selMon();
+  if (lastSel !== S.disp.sel) {
+    const s = $('[data-k="mMode"]');
+    s.innerHTML = m.modes.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+    s.value = m.mode; lastSel = S.disp.sel;
+  }
+  $("#g-mon").textContent = m.name; $("#mon-d").textContent = m.detail;
+  const lg = logical(m);
+  setHelp("enabled", m.enabled ? (S.disp.primary === S.disp.sel ? "On · primary display" : "On") : "Off. Its windows moved to the other display.");
+  setHelp("resolution", m.enabled ? `Native ${m.modes[0][1].split(" · ")[0]}` : "Turn the display on to change this.");
+  setHelp("scale", `Apps size as if the screen were ${lg.w} × ${lg.h}.`);
+  setHelp("rotation", ROT[m.rot] + ".");
+  setHelp("nlsched", S.nl.sched === "auto" ? `Today: ${hhmm(SUNSET)} to ${hhmm(SUNRISE)}, from your location.` : NL_SCHED[S.nl.sched] + ".");
+  $("#nl-sw").style.background = S.nl.on ? k2rgb(S.nl.temp) : "transparent";
+  $$("#row-enabled, #row-resolution, #row-scale, #row-rotation, #row-brightness").forEach((r, i) => r.classList.toggle("dim", i > 0 && !m.enabled));
+  $("#row-nltemp").classList.toggle("dim", !S.nl.on); $("#row-nlsched").classList.toggle("dim", !S.nl.on);
+  drawArrangement();
+}
+function drawArrangement() {
+  const box = $("#arr"); if (!box || !box.clientWidth) return;
+  const rects = layoutRects();
+  const sig = JSON.stringify([rects, box.clientWidth, S.disp.sel, S.disp.primary, S.disp.mons["eDP-1"].enabled, S.disp.mons["DP-2"].enabled]);
+  if (sig === arrSig) return; arrSig = sig;
+  const minX = Math.min(...rects.map((r) => r.x)), minY = Math.min(...rects.map((r) => r.y));
+  const maxX = Math.max(...rects.map((r) => r.x + r.w)), maxY = Math.max(...rects.map((r) => r.y + r.h));
+  const W = box.clientWidth, H = box.clientHeight, pad = 28;
+  const k = Math.min((W - pad * 2) / (maxX - minX), (H - pad * 2) / (maxY - minY));
+  const ox = (W - (maxX - minX) * k) / 2, oy = (H - (maxY - minY) * k) / 2;
+  keepFocus(box, rects.map((r, i) => {
+    const mon = S.disp.mons[r.id];
+    const st = `left:${ox + (r.x - minX) * k + 2}px;top:${oy + (r.y - minY) * k + 2}px;width:${r.w * k - 4}px;height:${r.h * k - 4}px`;
+    const label = `${mon.name}, ${mon.enabled ? r.w + " by " + r.h + " logical pixels" : "off"}${S.disp.primary === r.id ? ", primary" : ""}`;
+    return `<button class="mon${mon.enabled ? "" : " off"}" style="${st}" data-act="selmon" data-mon="${r.id}" data-fk="mon-${r.id}" aria-pressed="${S.disp.sel === r.id}" aria-label="${label}">
+      <span class="num" aria-hidden="true">${i + 1}</span>${S.disp.primary === r.id ? '<span class="prim" aria-hidden="true">Primary</span>' : ""}
+      <b aria-hidden="true">${r.id === "eDP-1" ? "Built-in" : "Dell U2723QE"}</b><small aria-hidden="true">${mon.enabled ? r.w + " × " + r.h : "Off"}</small></button>`;
+  }).join(""));
+}
+function keepFocus(container, html) {
+  const a = document.activeElement;
+  const fk = a && container.contains(a) ? a.dataset.fk : null;
+  container.innerHTML = html;
+  if (fk) { const n = container.querySelector(`[data-fk="${CSS.escape(fk)}"]`); if (n && !n.disabled) n.focus(); else if (n) $("#main").focus({ preventScroll: true }); }
+}
+
+function syncSound() {
+  setHelp("volume", S.snd.mute ? `Muted. ${OUTS[S.snd.out].name} is silent.` : S.snd.vol > 100 ? "Above 100% can distort." : `Playing through ${OUTS[S.snd.out].name}.`, S.snd.vol > 100 && !S.snd.mute ? "warn" : "");
+  setHelp("out-xm5", hpAvailable() ? "Bluetooth headphones · connected" : "Bluetooth headphones · not connected");
+  setHelp("out-hdmi", S.disp.mons["DP-2"].enabled ? "DisplayPort audio" : "DisplayPort audio · display is off");
+  $$("#row-out-xm5").forEach((r) => r.classList.toggle("dim", !hpAvailable()));
+  $$("#row-out-hdmi").forEach((r) => r.classList.toggle("dim", !S.disp.mons["DP-2"].enabled));
+  const micSel = $('[data-k="mic"]'); const xmOpt = micSel.querySelector('option[value="xm5"]'); xmOpt.disabled = !hpAvailable();
+  setHelp("micdev", hpAvailable() ? "Headset mic is available while the headphones are connected." : "Connect the headphones to use their mic.");
+  setHelp("micvol", S.snd.micMute ? "Muted. Apps hear silence." : "Speak to see the level move.");
+}
+function sigIcon(sig) {
+  const n = sig > 75 ? 3 : sig > 50 ? 2 : sig > 25 ? 1 : 0;
+  return `<svg class="ic sig" viewBox="0 0 24 24" aria-hidden="true"><path class="${n >= 3 ? "" : "off"}" d="M2.5 9a14 14 0 0 1 19 0"/><path class="${n >= 2 ? "" : "off"}" d="M5.5 12.3a9.5 9.5 0 0 1 13 0"/><path class="${n >= 1 ? "" : "off"}" d="M8.6 15.5a5 5 0 0 1 6.8 0"/><circle cx="12" cy="19" r="1.3"/></svg>`;
+}
+const sigWord = (s) => (s > 75 ? "Excellent" : s > 50 ? "Good" : s > 25 ? "Fair" : "Weak");
+let netSig = "";
+const NETMETA = (prevActive) => ({ label: (v) => (v ? `Connected to ${v}` : "Disconnected from Wi-Fi"),
+  cmd: (v) => (v ? `nmcli dev wifi connect '${v}'` : `nmcli con down id '${prevActive || "Wi-Fi"}'`) });
+function renderNet() {
+  const n = S.net;
+  const sig = JSON.stringify([n.wifi, n.active, n.busy, n.list, n.saved, n.scanning]);
+  const r = $("#rescan"); r.disabled = !n.wifi || n.scanning; r.classList.toggle("spin", n.scanning && !reduce.matches);
+  r.setAttribute("aria-busy", String(n.scanning)); $("span", r).textContent = n.scanning ? "Scanning…" : "Rescan";
+  setHelp("wifi", !n.wifi ? "Off. Turn on to see networks." : n.busy ? `Connecting to ${n.busy}…` : n.active ? `Connected to ${n.active}` : "On, not connected");
+  if (sig === netSig) return; netSig = sig;
+  let html;
+  if (!n.wifi) html = `<div class="empty-row">${ic("wifi")}Wi-Fi is off.</div>`;
+  else {
+    const list = [...n.list].sort((a, b) => (b.ssid === n.active) - (a.ssid === n.active) || b.signal - a.signal);
+    html = list.map((w) => {
+      const act = w.ssid === n.active, busy = n.busy === w.ssid, saved = n.saved.includes(w.ssid);
+      const sub = busy ? "Connecting…" : [act ? "Connected" : saved ? "Saved" : null, w.sec ? "Secured" : "Open, not encrypted", w.band, sigWord(w.signal) + " signal"].filter(Boolean).join(" · ");
+      const e = esc(w.ssid);
+      return `<div class="row" data-fk-row="${e}"><span class="lead" style="${act ? "color:var(--acc)" : ""}">${sigIcon(w.signal)}</span>
+        <div class="row-t"><span class="row-l">${e}${w.sec ? `<svg class="ic lock" aria-label="Secured" role="img"><use href="#i-lock"/></svg>` : ""}</span><span class="row-h">${sub}</span></div>
+        <div class="row-c"><button class="btn${act ? "" : ""}" data-act="${act ? "netoff" : "neton"}" data-ssid="${e}" data-fk="net-${e}" ${n.busy ? 'aria-disabled="true"' : ""} aria-label="${act ? "Disconnect from" : "Connect to"} ${e}">${busy ? "Connecting…" : act ? "Disconnect" : "Connect"}</button></div></div>`;
+    }).join("");
+  }
+  keepFocus($("#net-list"), html);
+}
+let btSig = "";
+function renderBt() {
+  const b = S.bt;
+  setHelp("bt", b.on ? "On · visible to nearby devices as “dockyard-laptop”" : "Off. Paired devices stay paired.");
+  $("#btscan").disabled = !b.on || b.scanning; $("span", $("#btscan")).textContent = b.scanning ? "Scanning…" : b.scanned ? "Scan again" : "Scan";
+  $("#btscan").classList.toggle("spin", false);
+  const sig = JSON.stringify(b);
+  if (sig === btSig) return; btSig = sig;
+  const devRow = (d, paired) => {
+    const busy = b.busy === d.id;
+    const sub = !b.on ? "Bluetooth is off" : busy ? (paired ? "Working…" : "Pairing…") : paired ? (d.conn ? `Connected${d.bat != null ? " · battery " + d.bat + "%" : ""}` : "Paired · not connected") : "Ready to pair";
+    const act = paired ? (d.conn ? "Disconnect" : "Connect") : "Pair";
+    return `<div class="row${b.on ? "" : " dim"}"><span class="lead" style="${paired && d.conn && b.on ? "color:var(--acc)" : ""}">${ic(d.kind)}</span>
+      <div class="row-t"><span class="row-l">${esc(d.name)}</span><span class="row-h">${sub}</span></div>
+      <div class="row-c">${paired ? `<button class="btn quiet" data-act="btforget" data-id="${d.id}" data-fk="btf-${d.id}" ${!b.on ? "disabled" : b.busy ? 'aria-disabled="true"' : ""} aria-label="Forget ${esc(d.name)}">Forget</button>` : ""}
+      <button class="btn${paired ? "" : " pri"}" data-act="${paired ? "bttoggle" : "btpair"}" data-id="${d.id}" data-fk="bt-${d.id}" ${!b.on ? "disabled" : b.busy ? 'aria-disabled="true"' : ""} aria-label="${act} ${esc(d.name)}">${busy ? (paired ? "Working…" : "Pairing…") : act}</button></div></div>`;
+  };
+  keepFocus($("#bt-list"), b.devices.length ? b.devices.map((d) => devRow(d, true)).join("") : `<div class="empty-row">No paired devices.</div>`);
+  const near = b.scanning ? `<div class="empty-row" role="status">${ic("refresh")}Looking for devices in pairing mode…</div>`
+    : b.scanned ? (b.nearby.length ? b.nearby.map((d) => devRow(d, false)).join("") : `<div class="empty-row">No new devices found.</div>`) : "";
+  keepFocus($("#bt-near"), near);
+}
+function syncPower() {
+  const est = { "power-saver": "about 4 h 50 min", balanced: "about 3 h 40 min", performance: "about 2 h 30 min" }[S.pwr.profile];
+  $("#l-battery").innerHTML = `<span class="batt"><strong>${S.pwr.pct}%</strong><span class="row-h">Charge</span></span>`;
+  setHelp("battery", `On battery · ${est} left at ${PROFILE[S.pwr.profile]}`);
+  $("#bbar").style.width = S.pwr.pct + "%";
+  $$('input[name="src"]').forEach((i) => (i.checked = i.value === S.pwr.src));
+}
+const STATUS = {
+  appearance: () => `${themeOf(S.look).name}${S.look.pref === "auto" ? " (auto)" : ""}`,
+  display: () => { const n = enabledCount(); return `${n} display${n > 1 ? "s" : ""}${S.nl.on ? " · night light" : ""}`; },
+  sound: () => (S.snd.mute ? "Muted" : `${OUTS[S.snd.out].name} · ${S.snd.vol}%`),
+  power: () => `${PROFILE[S.pwr.profile]} · ${S.pwr.pct}%`,
+  network: () => (!S.net.wifi ? "Wi-Fi off" : S.net.busy ? "Connecting…" : S.net.active || "Not connected"),
+  bluetooth: () => { if (!S.bt.on) return "Off"; const c = S.bt.devices.filter((d) => d.conn).length; return c ? `${c} connected` : "On"; },
+  more: () => `${MORE.length} KDE modules`,
+};
+function syncNav() { $$("[data-status]").forEach((s) => (s.textContent = STATUS[s.dataset.status]())); }
+function syncAll() {
+  normalize(); applyLook(); syncCtrls(); syncAppearance(); syncDisplay(); syncSound(); renderNet(); renderBt(); syncPower(); syncNav();
+  $("#more-last").textContent = S.moreLast || "Pick a module. The mockup shows the command instead of opening it.";
+}
+
+/* ================= ledger ================= */
+function renderLedger() {
+  const n = hist.length, badge = $("#hist-n");
+  badge.textContent = n; badge.classList.toggle("on", n > 0); badge.setAttribute("aria-label", `${n} change${n === 1 ? "" : "s"}`);
+  const fmt = (d) => d.toTimeString().slice(0, 8);
+  $("#lg-list").innerHTML = n ? [...hist].reverse().map((e) => `<li><time datetime="${e.t.toISOString()}">${fmt(e.t)}</time><span>${esc(e.label)}</span><code>${esc(e.cmd)}</code>
+    <button class="btn" data-rev="${e.id}" aria-label="Revert: ${esc(e.label)}">Revert</button></li>`).join("") : `<li class="lg-empty" style="border:0">Nothing changed yet.</li>`;
+}
+let ledgerReturn = null;
+function openLedger(open) {
+  const l = $("#ledger"), b = $("#hist-btn");
+  if (open) { ledgerReturn = document.activeElement; l.hidden = false; l.classList.toggle("anim", !reduce.matches); b.setAttribute("aria-expanded", "true"); $("#lg-t").focus(); }
+  else { l.hidden = true; b.setAttribute("aria-expanded", "false"); if (ledgerReturn && document.contains(ledgerReturn)) ledgerReturn.focus(); }
+}
+
+/* ================= routing ================= */
+let navFocus = false, curPage = null;
+function route() {
+  const [p, k] = (location.hash.slice(1) || "appearance").split("/");
+  const id = PAGES[p] ? p : "appearance";
+  $$(".page").forEach((s) => (s.hidden = s.dataset.page !== id));
+  $$(".nav-i").forEach((a) => (a.dataset.page === id ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
+  document.title = `${PAGES[id].title} · Dockyard Settings`;
+  if (curPage !== id) $("#main").scrollTop = 0;
+  curPage = id;
+  if (id === "display") { arrSig = ""; drawArrangement(); }
+  meter(id === "sound");
+  if (k) highlight(k);
+  else if (navFocus) $(`#t-${id}`).focus({ preventScroll: true });
+  navFocus = false;
+}
+function go(pageId, key) {
+  const h = "#" + pageId + (key ? "/" + key : "");
+  if (location.hash === h) route(); else location.hash = h;
+}
+function highlight(key) {
+  const el = document.querySelector(`[data-s="${CSS.escape(key)}"]`); if (!el) return;
+  el.scrollIntoView({ block: "center", behavior: reduce.matches ? "auto" : "smooth" });
+  el.classList.remove("hit", "hit-static"); void el.offsetWidth;
+  el.classList.add(reduce.matches ? "hit-static" : "hit");
+  setTimeout(() => el.classList.remove("hit", "hit-static"), 2000);
+  const target = el.matches("button") ? el : el.querySelector("input:not([disabled]),select:not([disabled]),button:not([disabled]),[role=switch]");
+  if (target) target.focus({ preventScroll: true });
+}
+
+/* ================= search ================= */
+let IDX = [], hits = [], active = -1;
+function buildIndex() {
+  IDX = $$("[data-s]").map((el) => {
+    const pg = el.closest(".page").dataset.page;
+    const g = el.closest(".grp"); const gh = g && g.querySelector(".grp-h h2");
+    let label = el.dataset.sl || (el.querySelector(".row-l") || {}).textContent || el.textContent;
+    if (el.dataset.s === "profile") label = "Power profile";
+    if (el.dataset.s === "rescan") label = "Rescan Wi-Fi networks";
+    return { key: el.dataset.s, page: pg, label: label.trim(), group: gh ? gh.id === "g-mon" ? "Selected display" : gh.textContent : "", kw: el.dataset.kw || "" };
+  });
+  Object.entries(PAGES).forEach(([id, p]) => IDX.push({ key: null, page: id, label: p.title, group: "Page", kw: p.kw }));
+}
+function runSearch(q) {
+  q = q.trim().toLowerCase();
+  if (!q) return [];
+  const words = q.split(/\s+/);
+  return IDX.map((e) => {
+    const l = e.label.toLowerCase(), hay = `${l} ${e.kw} ${e.group} ${PAGES[e.page].title}`.toLowerCase();
+    if (!words.every((w) => hay.includes(w))) return null;
+    const sc = (l.startsWith(q) ? 100 : l.includes(q) ? 60 : words.some((w) => l.includes(w)) ? 40 : 20) + (e.key ? 0 : 8);
+    return { ...e, sc };
+  }).filter(Boolean).sort((a, b) => b.sc - a.sc || a.label.localeCompare(b.label)).slice(0, 8);
+}
+function mark(text, q) {
+  const i = text.toLowerCase().indexOf(q.trim().toLowerCase());
+  if (!q.trim() || i < 0) return esc(text);
+  return esc(text.slice(0, i)) + "<mark>" + esc(text.slice(i, i + q.trim().length)) + "</mark>" + esc(text.slice(i + q.trim().length));
+}
+function renderResults() {
+  const q = $("#q").value, ul = $("#results");
+  if (!q.trim()) { ul.hidden = true; $("#q").setAttribute("aria-expanded", "false"); $("#q").removeAttribute("aria-activedescendant"); return; }
+  hits = runSearch(q); if (active >= hits.length) active = hits.length - 1;
+  ul.innerHTML = hits.length ? hits.map((h, i) => `<li role="option" id="res-${i}" aria-selected="${i === active}" data-i="${i}"><span class="r-l">${mark(h.label, q)}</span><span class="r-p">${PAGES[h.page].title}${h.group && h.group !== "Page" ? " › " + esc(h.group) : h.group === "Page" ? " · page" : ""}</span></li>`).join("")
+    : `<li class="empty" role="option" aria-disabled="true" aria-selected="false">No settings match “${esc(q)}”. Try “brightness”, “wifi” or “dark”.</li>`;
+  ul.hidden = false; $("#q").setAttribute("aria-expanded", "true");
+  if (active >= 0) { $("#q").setAttribute("aria-activedescendant", "res-" + active); $("#res-" + active).scrollIntoView({ block: "nearest" }); }
+  else $("#q").removeAttribute("aria-activedescendant");
+}
+function pick(i) {
+  const h = hits[i]; if (!h) return;
+  $("#q").value = ""; active = -1; renderResults();
+  go(h.page, h.key);
+  if (!h.key) $(`#t-${h.page}`).focus({ preventScroll: true });
+}
+
+/* ================= sound meter ================= */
+let raf = 0, lastTick = 0, phase = 0;
+function meter(on) {
+  cancelAnimationFrame(raf);
+  if (!on) return;
+  const segs = $$("#meter i"); segs.forEach((s, i) => { s.classList.toggle("w", i >= 17 && i < 21); s.classList.toggle("n", i >= 21); });
+  const tick = (ts) => {
+    raf = requestAnimationFrame(tick);
+    if (ts - lastTick < (reduce.matches ? 600 : 70) || document.hidden) return;
+    lastTick = ts; phase += 0.35;
+    const speech = Math.max(0, Math.sin(phase) * 0.6 + Math.sin(phase * 2.7) * 0.3 + (Math.random() - 0.4) * 0.35);
+    const lvl = S.snd.micMute ? 0 : Math.min(1, (S.snd.micVol / 100) * (0.12 + speech));
+    const lit = Math.round(lvl * segs.length);
+    segs.forEach((s, i) => s.classList.toggle("on", i < lit));
+    $("#meter").setAttribute("aria-valuenow", String(Math.round(lvl * 100)));
+  };
+  raf = requestAnimationFrame(tick);
+}
+
+/* ================= actions ================= */
+function kcm(k) {
+  const cmd = k === "systemsettings" ? "systemsettings" : `kcmshell6 ${k}`;
+  S.moreLast = `Would run: ${cmd}`;
+  toast({ msg: "Would open a KDE module", cmd: `Would run: ${cmd}` });
+  $("#more-last").textContent = S.moreLast;
+}
+let pwSsid = null;
+function connectTo(ssid, viaPassword) {
+  const prev = S.net.active;
+  S.net.busy = ssid; syncAll();
+  setTimeout(() => {
+    S.net.busy = null;
+    if (viaPassword && !S.net.saved.includes(ssid)) S.net.saved.push(ssid);
+    commit("net.active", ssid, NETMETA(prev));
+  }, 900);
+}
+const ACTIONS = {
+  selmon: (el) => { S.disp.sel = el.dataset.mon; syncAll(); },
+  rescan: () => {
+    S.net.scanning = true; syncAll();
+    setTimeout(() => {
+      S.net.scanning = false;
+      S.net.list.forEach((w) => (w.signal = Math.max(8, Math.min(98, w.signal + Math.round((Math.random() - 0.5) * 16)))));
+      if (!S.net.list.some((w) => w.ssid === "Ferry Terminal")) S.net.list.push({ ssid: "Ferry Terminal", signal: 33, sec: false, band: "2.4 GHz" });
+      syncAll(); toast({ msg: `Found ${S.net.list.length} networks`, cmd: "nmcli dev wifi rescan" });
+    }, 1300);
+  },
+  neton: (el) => {
+    const w = S.net.list.find((x) => x.ssid === el.dataset.ssid); if (!w) return;
+    if (w.sec && !S.net.saved.includes(w.ssid)) { pwSsid = w.ssid; $("#pw-ssid").textContent = w.ssid; $("#pw-in").value = ""; $("#pw-err").textContent = ""; $("#pw-show").checked = false; $("#pw-in").type = "password"; $("#pw").showModal(); $("#pw-in").focus(); return; }
+    connectTo(w.ssid, false);
+  },
+  netoff: () => commit("net.active", null, NETMETA(S.net.active)),
+  bttoggle: (el) => {
+    const id = el.dataset.id; S.bt.busy = id; syncAll();
+    setTimeout(() => {
+      S.bt.busy = null;
+      const next = clone(S.bt.devices), d = next.find((x) => x.id === id); d.conn = !d.conn;
+      commit("bt.devices", next, fixedMeta(next, `${d.conn ? "Connected" : "Disconnected"} ${d.name}`, `${d.conn ? "Disconnected" : "Connected"} ${d.name}`,
+        `bluetoothctl ${d.conn ? "connect" : "disconnect"} ${d.mac}`, `bluetoothctl ${d.conn ? "disconnect" : "connect"} ${d.mac}`));
+    }, 800);
+  },
+  btforget: (el) => {
+    const d = btDev(el.dataset.id); const next = S.bt.devices.filter((x) => x.id !== d.id);
+    commit("bt.devices", next, fixedMeta(next, `Forgot ${d.name}`, `Paired ${d.name} again`, `bluetoothctl remove ${d.mac}`, `bluetoothctl pair ${d.mac}`));
+  },
+  btscan: () => {
+    S.bt.scanning = true; syncAll();
+    setTimeout(() => { S.bt.scanning = false; S.bt.scanned = true; S.bt.nearby = BT_POOL.filter((p) => !S.bt.devices.some((d) => d.id === p.id)).map(clone); syncAll(); }, 1500);
+  },
+  btpair: (el) => {
+    const id = el.dataset.id, d = S.bt.nearby.find((x) => x.id === id); S.bt.busy = id; syncAll();
+    setTimeout(() => {
+      S.bt.busy = null; S.bt.nearby = S.bt.nearby.filter((x) => x.id !== id);
+      const next = [...clone(S.bt.devices), { ...d, conn: true, bat: d.kind === "speaker" ? 90 : null }];
+      commit("bt.devices", next, fixedMeta(next, `Paired and connected ${d.name}`, `Removed ${d.name}`, `bluetoothctl pair ${d.mac} && bluetoothctl connect ${d.mac}`, `bluetoothctl remove ${d.mac}`));
+    }, 1200);
+  },
+};
+
+/* ================= events ================= */
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  const tog = t.closest('[data-k][role="switch"], [data-k][aria-pressed]');
+  if (tog && !tog.disabled) { const m = CTRL[tog.dataset.k]; commit(pathOf(m), !get(pathOf(m)), m); return; }
+  const k = t.closest("[data-kcm]"); if (k) { kcm(k.dataset.kcm); return; }
+  const a = t.closest("[data-act]"); if (a && !a.disabled && a.getAttribute("aria-disabled") !== "true" && ACTIONS[a.dataset.act]) { ACTIONS[a.dataset.act](a); return; }
+  const r = t.closest("[data-rev]"); if (r) { revert(+r.dataset.rev); return; }
+  const n = t.closest(".nav-i"); if (n) navFocus = true;
+  const li = t.closest("#results li[data-i]"); if (li) pick(+li.dataset.i);
+});
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (el.name === "src") { S.pwr.src = el.value; syncAll(); return; }
+  if (!el.dataset.k || el.type === "range") return;
+  const m = CTRL[el.dataset.k];
+  const raw = el.value, v = m.val ? m.val(raw) : m.num ? +raw : raw;
+  commit(pathOf(m), v, m);
+});
+document.addEventListener("input", (e) => {
+  const el = e.target;
+  if (el.type === "range" && el.dataset.k) { const m = CTRL[el.dataset.k]; liveSet(pathOf(m), +el.value, m); }
+});
+document.addEventListener("focusout", (e) => { if (e.target.type === "range") flushLive(); });
+$("#results").addEventListener("mousedown", (e) => e.preventDefault());
+
+const q = $("#q");
+q.addEventListener("input", () => { active = 0; renderResults(); });
+q.addEventListener("focus", renderResults);
+q.addEventListener("blur", () => setTimeout(() => { $("#results").hidden = true; q.setAttribute("aria-expanded", "false"); }, 120));
+q.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault(); if (!hits.length) return;
+    active = (active + (e.key === "ArrowDown" ? 1 : -1) + hits.length) % hits.length; renderResults();
+  } else if (e.key === "Enter") { e.preventDefault(); if (hits.length) pick(Math.max(0, active)); }
+  else if (e.key === "Escape") { if (q.value) { q.value = ""; renderResults(); } else q.blur(); }
+});
+document.addEventListener("keydown", (e) => {
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !["range", "radio", "checkbox"].includes(e.target.type);
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); q.focus(); q.select(); return; }
+  if (e.key === "/" && !typing && !$("#pw").open) { e.preventDefault(); q.focus(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey && !typing && !$("#pw").open) { e.preventDefault(); undoLast(); return; }
+  if (e.key === "Escape" && !$("#ledger").hidden && !$("#pw").open) { openLedger(false); }
+});
+$("#t-undo").addEventListener("click", () => { undoLast(); });
+$("#t-close").addEventListener("click", hideToast);
+$("#toast").addEventListener("mouseenter", () => clearTimeout(toastT));
+$("#toast").addEventListener("focusin", () => clearTimeout(toastT));
+$("#toast").addEventListener("mouseleave", () => { clearTimeout(toastT); toastT = setTimeout(hideToast, 3000); });
+$("#hist-btn").addEventListener("click", () => openLedger($("#ledger").hidden));
+$("#lg-close").addEventListener("click", () => openLedger(false));
+$("#pw-show").addEventListener("change", (e) => ($("#pw-in").type = e.target.checked ? "text" : "password"));
+$("#pw-cancel").addEventListener("click", () => $("#pw").close());
+$("#pw-f").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const v = $("#pw-in").value;
+  if (v.length < 8) { $("#pw-err").textContent = v ? "WPA passwords are at least 8 characters." : "Enter the network password."; $("#pw-in").setAttribute("aria-invalid", "true"); $("#pw-in").focus(); return; }
+  $("#pw-in").removeAttribute("aria-invalid"); $("#pw-in").value = "";
+  $("#pw").close(); const s = pwSsid; pwSsid = null;
+  connectTo(s, true);
+  const b = document.querySelector(`[data-fk="net-${CSS.escape(s)}"]`); if (b) b.focus();
+});
+$("#pw").addEventListener("close", () => { $("#pw-in").value = ""; });
+window.addEventListener("hashchange", route);
+new ResizeObserver(() => { arrSig = ""; drawArrangement(); }).observe($("#main"));
+setInterval(() => { if (S.look.pref === "auto") syncAll(); }, 60000);
+reduce.addEventListener("change", () => { meter(curPage === "sound"); netSig = ""; syncAll(); });
+
+/* ================= contrast self-check (dev aid, used by the test harness) =================
+   window.__contrast() reads the live tokens and returns WCAG ratios for every text/background pair in use. */
+window.__contrast = function () {
+  const cs = getComputedStyle(document.documentElement);
+  const hex = (n) => cs.getPropertyValue(n).trim();
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const lum = (c) => { const v = c.map((x) => x / 255).map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4)); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+  const mix = (a, b, t) => a.map((x, i) => Math.round(x * t + b[i] * (1 - t)));
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return +((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)).toFixed(2); };
+  const T = {}; ["--bg", "--side", "--surface", "--s2", "--raise", "--ink", "--ink-2", "--ink-3", "--acc", "--on-acc", "--ctl", "--pos", "--warn", "--neg"].forEach((n) => (T[n] = rgb(hex(n))));
+  const sel = mix(T["--acc"], T["--side"], 0.16), tint = mix(T["--acc"], T["--surface"], 0.14);
+  const text = [["ink/bg", T["--ink"], T["--bg"]], ["ink/surface", T["--ink"], T["--surface"]], ["ink/s2", T["--ink"], T["--s2"]], ["ink/raise", T["--ink"], T["--raise"]],
+    ["ink-2/bg", T["--ink-2"], T["--bg"]], ["ink-2/surface", T["--ink-2"], T["--surface"]], ["ink-2/s2", T["--ink-2"], T["--s2"]], ["ink-2/raise", T["--ink-2"], T["--raise"]],
+    ["ink-3/side", T["--ink-3"], T["--side"]], ["ink-3/surface", T["--ink-3"], T["--surface"]], ["ink-3/s2", T["--ink-3"], T["--s2"]],
+    ["ink/sel", T["--ink"], sel], ["ink-2/sel", T["--ink-2"], sel], ["ink/tint", T["--ink"], tint], ["ink-2/tint", T["--ink-2"], tint],
+    ["acc/surface", T["--acc"], T["--surface"]], ["acc/bg", T["--acc"], T["--bg"]], ["on-acc/acc", T["--on-acc"], T["--acc"]],
+    ["pos/surface", T["--pos"], T["--surface"]], ["warn/surface", T["--warn"], T["--surface"]], ["neg/surface", T["--neg"], T["--surface"]], ["neg/raise", T["--neg"], T["--raise"]], ["pos/raise", T["--pos"], T["--raise"]]];
+  const ui = [["acc/side (nav icon)", T["--acc"], T["--side"]], ["acc/sel (nav icon)", T["--acc"], sel], ["ctl/surface", T["--ctl"], T["--surface"]], ["ctl/s2", T["--ctl"], T["--s2"]], ["ctl/side", T["--ctl"], T["--side"]], ["acc/s2 (focus)", T["--acc"], T["--s2"]], ["acc/tint (sel border)", T["--acc"], tint]];
+  const out = { look: `${document.documentElement.dataset.family}/${document.documentElement.dataset.mode}`, accent: S.accent, fails: [] };
+  text.forEach(([n, a, b]) => { const r = ratio(a, b); out[n] = r; if (r < 4.5) out.fails.push(`${n} ${r} < 4.5`); });
+  ui.forEach(([n, a, b]) => { const r = ratio(a, b); out[n] = r; if (r < 3) out.fails.push(`${n} ${r} < 3`); });
+  return out;
+};
+window.__state = S;
+
+/* ================= boot ================= */
+buildNav(); buildPages(); buildIndex(); renderLedger();
+if (!location.hash) history.replaceState(null, "", "#appearance");
+syncAll(); route();
+</script>
+</body>
+</html>

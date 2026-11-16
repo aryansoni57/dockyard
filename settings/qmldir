@@ -1,0 +1,27 @@
+singleton Theme 1.0 Theme.qml
+Exec 1.0 Exec.qml
+Status 1.0 Status.qml
+Wall 1.0 Wall.qml
+Ico 1.0 Ico.qml
+Chip 1.0 Chip.qml
+Kbd 1.0 Kbd.qml
+Tip 1.0 Tip.qml
+FocusRing 1.0 FocusRing.qml
+Scroller 1.0 Scroller.qml
+Card 1.0 Card.qml
+SettingRow 1.0 SettingRow.qml
+Sheet 1.0 Sheet.qml
+Btn 1.0 Btn.qml
+IconBtn 1.0 IconBtn.qml
+Segmented 1.0 Segmented.qml
+Combo 1.0 Combo.qml
+Toggle 1.0 Toggle.qml
+Slide 1.0 Slide.qml
+Meter 1.0 Meter.qml
+EmptyState 1.0 EmptyState.qml
+Skeleton 1.0 Skeleton.qml
+Toast 1.0 Toast.qml
+SearchPalette 1.0 SearchPalette.qml
+SmoothWheel 1.0 SmoothWheel.qml
+Ask 1.0 Ask.qml
+Confirm 1.0 Confirm.qml

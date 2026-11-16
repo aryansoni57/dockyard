@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Dockyard Settings
+Comment=Display, sound, network, power and appearance
+Exec=dockyard-settings
+Icon=dev.aryan.dockyard.settings
+StartupWMClass=dev.aryan.dockyard.settings
+Categories=Settings;Qt;KDE;
