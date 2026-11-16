@@ -8,7 +8,8 @@ import glob, os, re, sys
 
 hexc = sys.argv[1].lstrip("#")
 rgb = ",".join(str(int(hexc[i:i + 2], 16)) for i in (0, 2, 4))
-root = os.path.expanduser("~/.local/share/plasma/desktoptheme")
+data = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+root = os.path.join(data, "plasma", "desktoptheme")
 keys = ("DecorationFocus", "DecorationHover", "ForegroundActive")
 for path in glob.glob(os.path.join(root, "glass*", "colors")):
     out, section = [], ""

@@ -4,7 +4,7 @@
 python3 - "$ACCENT" <<'PY'
 import json, os, sys
 accent = sys.argv[1]
-f = os.path.expanduser("~/.config/Code/User/settings.json")
+f = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "Code", "User", "settings.json")
 if not os.path.exists(f):
     sys.exit(0)
 try:

@@ -65,7 +65,8 @@ for x, y, w, hgt, op, d1, d2 in ribbons:
     layer.paste(ribbon, (int(W * x) - (ribbon.width - rw) // 2, int(H * y) - (ribbon.height - rh) // 2), ribbon)
     base = Image.alpha_composite(base, layer.filter(ImageFilter.GaussianBlur(W // 160)))
 if out is None:
-    folder = os.path.expanduser("~/.local/share/wallpapers/Dockyard-accent/contents/images")
+    data = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    folder = os.path.join(data, "wallpapers", "Dockyard-accent", "contents", "images")
     os.makedirs(folder, exist_ok=True)
     out = os.path.join(folder, f"{W}x{H}.png")
 base.convert("RGB").save(out)

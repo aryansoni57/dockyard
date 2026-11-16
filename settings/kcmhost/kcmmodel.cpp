@@ -37,18 +37,23 @@ struct Cat { QString id, parent, name, icon; int weight = 0; };
 QHash<QString, Cat> readCategories()
 {
     QHash<QString, Cat> out;
-    const QDir dir(QStringLiteral("/usr/share/systemsettings/categories"));
-    for (const QString &f : dir.entryList({QStringLiteral("*.desktop")}, QDir::Files)) {
-        KConfig c(dir.filePath(f), KConfig::SimpleConfig);
-        KConfigGroup g = c.group(QStringLiteral("Desktop Entry"));
-        Cat cat;
-        cat.id = g.readEntry("X-KDE-System-Settings-Category");
-        cat.parent = g.readEntry("X-KDE-System-Settings-Parent-Category");
-        cat.name = g.readEntry("Name");
-        cat.icon = g.readEntry("Icon");
-        cat.weight = g.readEntry("X-KDE-Weight", 0);
-        if (!cat.id.isEmpty())
-            out.insert(cat.id, cat);
+    // Every data directory that carries systemsettings/categories (user first, then the system ones),
+    // so a distribution or prefix that keeps them outside /usr/share still works. The first definition of a category wins.
+    const QStringList dirs = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QStringLiteral("systemsettings/categories"), QStandardPaths::LocateDirectory);
+    for (const QString &dirPath : dirs) {
+        const QDir dir(dirPath);
+        for (const QString &f : dir.entryList({QStringLiteral("*.desktop")}, QDir::Files)) {
+            KConfig c(dir.filePath(f), KConfig::SimpleConfig);
+            KConfigGroup g = c.group(QStringLiteral("Desktop Entry"));
+            Cat cat;
+            cat.id = g.readEntry("X-KDE-System-Settings-Category");
+            cat.parent = g.readEntry("X-KDE-System-Settings-Parent-Category");
+            cat.name = g.readEntry("Name");
+            cat.icon = g.readEntry("Icon");
+            cat.weight = g.readEntry("X-KDE-Weight", 0);
+            if (!cat.id.isEmpty() && !out.contains(cat.id))
+                out.insert(cat.id, cat);
+        }
     }
     return out;
 }

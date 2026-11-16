@@ -25,6 +25,10 @@ Item {
     // Hides the pinned apps that are not running, leaving the running ones and a chevron
     // to bring the rest back. Meta+1..9 keep counting the hidden ones.
     property bool collapsed: false
+    // Task icons arrive as cached QIcons, which do not follow an icon theme change. When the
+    // theme name changes, iconReload blanks every icon source for a tick so they resolve again.
+    property bool iconReload: false
+    property string iconTheme: ""
     // How many pinned-but-not-running icons there are; the chevron shows only if some.
     property int launcherRows: 0
     readonly property bool canCollapse: launcherRows > 0
@@ -351,7 +355,7 @@ Item {
                             anchors.centerIn: parent
                             width: Kirigami.Units.iconSizes.large
                             height: width
-                            source: card.entry ? card.entry.model.decoration : ""
+                            source: card.entry && !apps.iconReload ? card.entry.model.decoration : ""
                             visible: !pw.visible
                         }
 
@@ -450,6 +454,24 @@ Item {
             hoverClear.stop();
         else
             hoverClear.restart();
+    }
+    ShellRunner {
+        id: iconThemeRunner
+        onFinished: (cmd, out) => {
+            const t = out.trim();
+            if (apps.iconTheme !== "" && t !== apps.iconTheme) {
+                apps.iconReload = true;
+                Qt.callLater(() => { apps.iconReload = false; });
+            }
+            apps.iconTheme = t;
+        }
+    }
+    Timer {
+        interval: 2000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: iconThemeRunner.run("kreadconfig6 --file kdeglobals --group Icons --key Theme")
     }
     Timer {
         id: tipOpen
@@ -793,7 +815,7 @@ Item {
                     anchors.centerIn: parent
                     width: apps.iconSize
                     height: apps.iconSize
-                    source: app.model.decoration
+                    source: apps.iconReload ? "" : app.model.decoration
                     scale: (reorder.active ? 1.12 : tap.pressed ? 0.94 : 1) * app.zoom
                     opacity: reorder.active ? 0.8 : 1
 

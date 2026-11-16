@@ -35,7 +35,7 @@ block = ("/* dockyard-accent begin */\n"
          f"@define-color theme_selected_bg_color {bg};\n@define-color theme_selected_fg_color #ffffff;\n"
          "/* dockyard-accent end */\n")
 for v in ("gtk-3.0", "gtk-4.0"):
-    d = os.path.expanduser("~/.config/" + v)
+    d = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), v)
     if not os.path.isdir(d):
         continue
     f = os.path.join(d, "gtk.css")

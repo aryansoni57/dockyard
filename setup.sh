@@ -40,6 +40,19 @@ need() { # command, what it is for, Arch package
         echo "  missing: $1  ($2; Arch package: $3)"; missing=1
     fi
 }
+# A CMake package is installed when its Config file is in a cmake folder under any library or prefix
+# directory (Arch: /usr/lib/cmake, Debian: /usr/lib/<triplet>/cmake, Fedora: /usr/lib64/cmake, CMAKE_PREFIX_PATH).
+have_cmake_pkg() {
+    local pkg="$1" roots d f
+    local prefix="${CMAKE_PREFIX_PATH:-}"; roots="/usr /usr/local ${prefix//:/ }"
+    for d in $roots; do
+        for f in "$d"/lib/cmake/"$pkg"/"$pkg"Config.cmake "$d"/lib*/cmake/"$pkg"/"$pkg"Config.cmake \
+                 "$d"/lib/*/cmake/"$pkg"/"$pkg"Config.cmake "$d"/share/cmake/"$pkg"/"$pkg"Config.cmake; do
+            [ -f "$f" ] && return 0
+        done
+    done
+    return 1
+}
 echo "Checking dependencies"
 need kpackagetool6 "installs the dock" plasma-sdk-or-kpackage
 need plasmashell "KDE Plasma 6" plasma-desktop
@@ -54,12 +67,12 @@ if [ "$settings" = 1 ]; then
     need ninja "builds the Settings app plugin" ninja
     need c++ "builds the Settings app plugin" gcc
     need qml6 "runs the Settings app" qt6-declarative
-    ls /usr/lib/cmake/KF6KCMUtils >/dev/null 2>&1 || { echo "  missing: KF6 KCMUtils dev files (kcmutils)"; missing=1; }
-    ls /usr/lib/cmake/KF6ColorScheme >/dev/null 2>&1 || { echo "  missing: KF6 ColorScheme dev files (kcolorscheme)"; missing=1; }
-    ls /usr/lib/cmake/KF6WindowSystem >/dev/null 2>&1 || { echo "  missing: KF6 WindowSystem dev files (kwindowsystem)"; missing=1; }
+    have_cmake_pkg KF6KCMUtils || { echo "  missing: KF6 KCMUtils dev files (kcmutils)"; missing=1; }
+    have_cmake_pkg KF6ColorScheme || { echo "  missing: KF6 ColorScheme dev files (kcolorscheme)"; missing=1; }
+    have_cmake_pkg KF6WindowSystem || { echo "  missing: KF6 WindowSystem dev files (kwindowsystem)"; missing=1; }
 fi
 if [ "$deco" = 1 ]; then
-    ls /usr/lib/cmake/KDecoration3 >/dev/null 2>&1 || { echo "  missing: KDecoration3 dev files (kdecoration)"; missing=1; }
+    have_cmake_pkg KDecoration3 || { echo "  missing: KDecoration3 dev files (kdecoration)"; missing=1; }
 fi
 icons_ok=0
 for d in "$HOME/.local/share/icons" /usr/share/icons; do
