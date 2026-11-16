@@ -1,0 +1,9 @@
+[Unit]
+Description=Re-colour Dockyard when the system accent changes
+
+[Path]
+PathChanged=%h/.config/kdeglobals
+Unit=dockyard-accent.service
+
+[Install]
+WantedBy=default.target

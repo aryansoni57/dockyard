@@ -1,0 +1,13 @@
+{
+    "KPackageStructure": "Plasma/Theme",
+    "KPlugin": {
+        "Authors": [{"Name": "aryan"}],
+        "Category": "Plasma Theme",
+        "Description": "Dark frosted rounded popups (notifications, dialogs)",
+        "EnabledByDefault": true,
+        "Id": "glass-notify",
+        "Name": "Glass Notify",
+        "Version": "1.0",
+        "License": "GPL-2.0+"
+    }
+}

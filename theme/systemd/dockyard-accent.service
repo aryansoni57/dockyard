@@ -1,0 +1,7 @@
+[Unit]
+Description=Apply the system accent to the Dockyard theme set
+
+[Service]
+Type=oneshot
+# Skips by itself when the accent is the one already applied, so its own colour-scheme writes do not loop.
+ExecStart=@DIR@/apply-accent-all.sh

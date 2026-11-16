@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Dockyard
+Description=Dockyard boot splash: accent rings expanding from the logo on black.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/dockyard
+ScriptFile=/usr/share/plymouth/themes/dockyard/dockyard.script

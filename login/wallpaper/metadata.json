@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Dockyard"
+            }
+        ],
+        "Description": "Dockyard flowing liquid wallpaper",
+        "Icon": "preferences-desktop-wallpaper",
+        "Id": "online.knowmad.shaderwallpaper",
+        "License": "GPLv2+",
+        "Name": "Dockyard",
+        "Website": "",
+        "EnabledByDefault": true
+    }
+}

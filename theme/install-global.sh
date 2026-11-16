@@ -81,7 +81,7 @@ if [ "$apply" = 1 ] && [ "$day" = 1 ]; then
     # Same steps as below, with the Day set.
     plasma-apply-lookandfeel -a dev.aryan.dockyard.day
     kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle kvantum
-    kvantummanager --set DockyardDay
+    kvantummanager --set DockyardDayGlass
     plasma-apply-colorscheme DockyardDay
     kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
     qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
@@ -90,11 +90,12 @@ if [ "$apply" = 1 ] && [ "$day" = 1 ]; then
     qdbus6 org.kde.KWin /KWin reconfigure >/dev/null 2>&1 || true
     echo "Applied Dockyard Day. Restart open Qt apps to pick up the style. Undo with: $PWD/restore-global.sh"
 elif [ "$apply" = 1 ]; then
-    # Default app style: solid windows with glass menus and tooltips (Dockyard, not DockyardGlass).
+    # Default app style: the glass one (DockyardGlass), matching the frosted Plasma theme glass.
+    # Solid windows are one switch away (the dock's Frosted/Solid option, or kvantummanager --set Dockyard).
     # A look-and-feel cannot pick a Kvantum theme, so this script is the supported way to apply.
     plasma-apply-lookandfeel -a dev.aryan.dockyard
     kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle kvantum
-    kvantummanager --set Dockyard
+    kvantummanager --set DockyardGlass
     plasma-apply-colorscheme Dockyard
     # KWin keeps a loaded Aurorae theme until the decoration changes, so step through Breeze.
     kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze

@@ -21,7 +21,7 @@ the Day set (glass-day, glass-day-opaque and the Day app themes). Tokens: docs/t
 """
 import base64, json, math, os, struct, subprocess, sys, zlib
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.environ.get("DOCKYARD_OUT") or os.path.dirname(os.path.abspath(__file__))
 
 # "glass" is frosted. "glass-opaque" is the same theme with every surface solid, for
 # the Opaque dock bar switch. The default run writes both, and the rest of the set.
@@ -42,6 +42,49 @@ LINE = "#2e2e37"
 APP_INK = "#ecedf2"      # softer than white, which glows on a dark ground
 APP_INK_2 = "#a8a9b3"
 SELECT = "#0071e3"  # selection and primary buttons; white text on it passes AA
+
+# ---- Accent ----------------------------------------------------------------------------
+# DOCKYARD_ACCENT=#rrggbb regenerates the set around that accent (theme/apply-accent-all.sh).
+# Unset, the original blue values below are used. Derived values keep the contrast the
+# tokens promise: white text on the selection colour is AA, the day accent is 3:1 against
+# white (non-text), the day accent as text is AA on the light window grey.
+def _lin(c):
+    c /= 255
+    return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+def _lum(rgb):
+    return 0.2126 * _lin(rgb[0]) + 0.7152 * _lin(rgb[1]) + 0.0722 * _lin(rgb[2])
+
+def _contrast(a, b):
+    la, lb = _lum(a), _lum(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+def _hex(rgb):
+    return "#%02x%02x%02x" % tuple(max(0, min(255, round(v))) for v in rgb)
+
+def _toward(rgb, target, bg, ratio):
+    """Mix rgb toward target (black or white) in small steps until it has `ratio` contrast on bg."""
+    for i in range(41):
+        k = i / 40
+        c = tuple(rgb[j] + (target[j] - rgb[j]) * k for j in range(3))
+        if _contrast(c, bg) >= ratio:
+            return _hex(c)
+    return _hex(target)
+
+ACCENT_N, SELECT_N, ACTIVE_N = "#0A84FF", "#0071e3", "#0A84FF"
+ACCENT_D, ACTIVE_D, SELECT_D = "#0a7aff", "#0058c4", "#0064d6"
+_env_accent = os.environ.get("DOCKYARD_ACCENT", "").strip()
+if len(_env_accent) == 7 and _env_accent.startswith("#"):
+    _a = tuple(int(_env_accent[i:i + 2], 16) for i in (1, 3, 5))
+    _W, _K = (255, 255, 255), (0, 0, 0)
+    ACCENT_N = _env_accent.lower()
+    SELECT_N = _toward(_a, _K, _W, 4.5)                     # selection fill under white text
+    ACTIVE_N = _toward(_a, _W, (22, 22, 26), 4.5)           # accent as text on the dark glass
+    ACCENT_D = _toward(_a, _K, _W, 3.0)                     # focus rings, slider fill on light
+    ACTIVE_D = _toward(_a, _K, (239, 240, 244), 4.5)        # accent as text on the light window
+    SELECT_D = SELECT_N
+ACCENT_ON = bool(_env_accent) and len(_env_accent) == 7
+SELECT = SELECT_N
 RIM = 'fill="#ffffff" fill-opacity="0.14"'
 RIM_TOP = 'fill="#ffffff" fill-opacity="0.08"'
 
@@ -58,7 +101,7 @@ if DAY:
     LINE = "#d5d7df"
     APP_INK = "#1c1c1e"
     APP_INK_2 = "#5c5e66"   # secondary text, AA on every surface (theme/contrast.py)
-    SELECT = "#0064d6"      # selection and primary buttons; white text on it passes AA
+    SELECT = SELECT_D       # selection and primary buttons; white text on it passes AA
     PLASMA_INK_2 = "#4b4d55"  # secondary text on the translucent Plasma glass
     RIM = 'fill="#000000" fill-opacity="0.10"'
     RIM_TOP = 'fill="#ffffff" fill-opacity="0.70"'
@@ -173,11 +216,11 @@ FG_NIGHT = {"link": "#64d2ff", "negative": "#ff3b30", "neutral": "#ff9f0a",
             "positive": "#30d158", "visited": "#bf5af2"}
 FG_DAY = {"link": "#0058c4", "negative": "#c8102e", "neutral": "#9a4a00",
           "positive": "#157030", "visited": "#8a3fb5"}
-ACCENT_DAY = "#0a7aff"    # rings, focus, slider fill, checked controls (non-text, 3:1)
-ACTIVE_DAY = "#0058c4"    # accent as text (ForegroundActive): AA on every light surface
+ACCENT_DAY = ACCENT_D    # rings, focus, slider fill, checked controls (non-text, 3:1)
+ACTIVE_DAY = ACTIVE_D    # accent as text (ForegroundActive): AA on every light surface
 
 
-def group(name, bg, alt, accent="#0A84FF", ink="#ffffff", ink_2="#a2a2a3", fg=None, active=None):
+def group(name, bg, alt, accent=ACCENT_N, ink="#ffffff", ink_2="#a2a2a3", fg=None, active=None):
     if fg is None:
         return f"""[Colors:{name}]
 BackgroundAlternate={rgb(alt)}
@@ -217,7 +260,7 @@ def day_group(name, bg, alt, ink=APP_INK, ink_2=APP_INK_2):
 def dark_group(name, bg="#16161a", alt="#1e1e23"):
     """Complementary stays dark in a light scheme (as in Breeze Light): it is the
     contrasting set for surfaces that must stand out, such as the lock screen."""
-    return group(name, bg, alt, "#0A84FF", "#ffffff", "#a2a2a3", FG_NIGHT, "#0A84FF")
+    return group(name, bg, alt, ACCENT_N, "#ffffff", "#a2a2a3", FG_NIGHT, ACTIVE_N)
 
 
 def selection_group(sel):
@@ -261,7 +304,7 @@ IntensityEffect=0
 colors = effects + group("Button", "#3d3d40", "#4a4a4e")
 colors += group("Complementary", "#16161a", "#1e1e23")
 colors += group("Header", "#1e1e23", "#16161a")
-colors += group("Selection", "#0071e3", "#0071e3", "#ffffff").replace(
+colors += group("Selection", SELECT_N, SELECT_N, "#ffffff").replace(
     "ForegroundInactive=162,162,163", "ForegroundInactive=230,230,235").replace(
     "ForegroundLink=100,210,255", "ForegroundLink=255,255,255")
 colors += group("Tooltip", "#16161a", "#1e1e23")
@@ -340,8 +383,8 @@ PANEL = (22, 22, 26)           # GLASS as rgb
 HEADER_RGB = (33, 33, 40)      # HEADER as rgb
 HEADER_DIM = "#1b1b21"         # inactive titlebar
 RIM_SOLID = "#37373a"          # rim flattened over GLASS, for window edges
-ACC = (10, 132, 255)           # focus rings, slider fill, checked controls
-SEL = (0, 113, 227)            # SELECT: selection and primary buttons
+ACC = tuple(int(ACCENT_N[i:i + 2], 16) for i in (1, 3, 5))  # focus rings, slider fill, checked controls
+SEL = tuple(int(SELECT_N[i:i + 2], 16) for i in (1, 3, 5))  # SELECT: selection and primary buttons
 NEG = (255, 59, 48)
 STATES = ("normal", "focused", "pressed", "toggled", "disabled")
 BLACK = (0, 0, 0)
@@ -701,7 +744,7 @@ def kv_config(translucent):
         "toolbutton_style=0",
         "double_click=false",
         f"translucent_windows={'true' if translucent else 'false'}",
-        f"reduce_window_opacity={'12' if translucent else '0'}",  # higher lets other windows' text show through bars
+        f"reduce_window_opacity={'40' if translucent else '0'}",  # higher lets other windows' text show through bars
         "reduce_menu_opacity=0",
         "blurring=true",
         "popup_blurring=true",
@@ -742,7 +785,7 @@ def kv_config(translucent):
         f"light.color={BUTTON_ALT}",
         f"mid.color={LINE}",
         f"dark.color={'#a9acb8' if DAY else '#0e0e10'}",
-        f"highlight.color={SELECT if DAY else '#0071e3'}",
+        f"highlight.color={SELECT}",
         f"text.color={APP_INK}",
         f"window.text.color={APP_INK}",
         f"button.text.color={APP_INK}",
@@ -853,6 +896,9 @@ def shadow_image(box, oy, peak, sigma):
             f'xlink:href="data:image/png;base64,{data}"/>')
 
 
+TITLE_ALPHA = 0.60
+
+
 def deco_set(prefix, oy, head, rim, peak, sigma):
     """The nine pieces of one Aurorae frame, drawn at y offset `oy`."""
     L, T, R_, B = PAD_L, PAD_T, WIN_R, WIN_B
@@ -861,7 +907,8 @@ def deco_set(prefix, oy, head, rim, peak, sigma):
     NONE = 'fill="none"'
     rect = lambda x, y, w, h, f: f'<rect x="{x}" y="{y + oy}" width="{w}" height="{h}" {f}/>'
     p = lambda x, y: f"{x},{y + oy}"
-    fh = f'fill="{head}"'
+    # Translucent titlebar: KWin blurs whatever the decoration leaves see-through.
+    fh = f'fill="{head}" fill-opacity="{TITLE_ALPHA}"'
     fr = f'fill="#ffffff" fill-opacity="{rim}"'
     fl = 'fill="#ffffff" fill-opacity="0.08"'
     if DAY:
@@ -909,9 +956,13 @@ def aurorae_svg():
         body = deco_set("decoration", 0, HEADER, .14, .38, 15)
         body += deco_set("decoration-inactive", step, HEADER_DIM, .08, .22, 11)
     sep = "#000000" if DAY else "#ffffff"
-    bar = lambda pid, y, f: (f'<g id="{pid}"><rect x="0" y="{y}" width="{DECO_W}" height="{TITLE}" fill="{f}"/>'
+    bar = lambda pid, y, f: (f'<g id="{pid}"><rect x="0" y="{y}" width="{DECO_W}" height="{TITLE}" fill="{f}" fill-opacity="{TITLE_ALPHA}"/>'
                              f'<rect x="0" y="{y + TITLE - 1}" width="{DECO_W}" height="1" fill="{sep}" fill-opacity="0.08"/></g>')
     body += bar("decoration-maximized-center", 2 * step, HEADER)
+    if ACCENT_ON:
+        # The active maximized bar ends in a thin accent line.
+        body += (f'<rect x="0" y="{2 * step + TITLE - 2}" width="{DECO_W}" height="2" '
+                 f'fill="{css(ACC)}" fill-opacity="0.75"/>')
     body += bar("decoration-maximized-inactive-center", 2 * step + TITLE + 4, HEADER_DIM)
     body += '<rect id="decoration-hint-stretch-borders" width="1" height="1" fill="none"/>'
     body += '<rect id="decoration-inactive-hint-stretch-borders" width="1" height="1" fill="none"/>'
@@ -943,6 +994,10 @@ def aurorae_button(glyph):
     if DAY:
         hover = f'fill="{css(NEG)}"' if close else 'fill="#000000" fill-opacity="0.07"'
         press = 'fill="#b81d26"' if close else 'fill="#000000" fill-opacity="0.12"'
+    if ACCENT_ON and not close:
+        # With an accent chosen, the other buttons light up in it (close keeps its red).
+        hover = f'fill="{css(ACC)}" fill-opacity="{0.20 if not DAY else 0.16}"'
+        press = f'fill="{css(ACC)}" fill-opacity="{0.34 if not DAY else 0.28}"'
     states = {
         "active": (None, .7), "inactive": (None, .35),
         "hover": (hover, 1), "hover-inactive": (hover, .9),
@@ -1076,6 +1131,8 @@ if DAY:
     SPLASH = (SPLASH.replace('"#16161a"', f'"{WINDOW}"').replace('"#ffffff"', f'"{APP_INK}"')
               .replace("Qt.rgba(1, 1, 1, 0.15)", "Qt.rgba(0, 0, 0, 0.10)")
               .replace('"#0A84FF"', f'"{ACCENT_DAY}"'))
+else:
+    SPLASH = SPLASH.replace('"#0A84FF"', f'"{ACCENT_N}"')
 
 # Names and words that differ between the sets.
 if DAY:

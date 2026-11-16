@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
+  <kcfgfile name=""/>
+
+  <group name="General">
+    <entry name="Base" type="Color"><label>Base colour</label><default>#0b1020</default></entry>
+    <entry name="Flow1" type="Color"><label>Flow colour 1</label><default>#0A84FF</default></entry>
+    <entry name="Flow2" type="Color"><label>Flow colour 2</label><default>#5E5CE6</default></entry>
+    <entry name="Flow3" type="Color"><label>Flow colour 3</label><default>#64D2FF</default></entry>
+    <entry name="Animate" type="Bool"><label>Animate</label><default>true</default></entry>
+  </group>
+
+</kcfg>

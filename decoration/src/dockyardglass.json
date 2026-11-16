@@ -1,0 +1,22 @@
+{
+    "KPlugin": {
+        "Id": "org.dockyard.glass",
+        "Name": "Dockyard Glass",
+        "Description": "Translucent, blurred title bars in the Dockyard style. Colours follow the active colour scheme.",
+        "Authors": [
+            {
+                "Name": "Dockyard"
+            }
+        ],
+        "License": "GPL-2.0-or-later",
+        "Version": "1.0.0",
+        "EnabledByDefault": true
+    },
+    "org.kde.kdecoration3": {
+        "blur": true,
+        "recommendedBorderSize": "None",
+        "styles": [
+            "titled"
+        ]
+    }
+}

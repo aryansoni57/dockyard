@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dockyard Power Menu</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Dockyard: power menu mockup. Tokens follow docs/STYLE.md and dockyard-dashboard.html. */
+:root {
+  --sans: Inter, "Noto Sans", system-ui, sans-serif;
+  --enter: cubic-bezier(.16, 1, .3, 1);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+  --accent: #0a84ff;
+  --page: #0b0c10; --raise: #15161c; --ink: #f5f5f7; --ink-2: rgba(245,245,247,.64); --line: rgba(255,255,255,.1);
+  --g-ink: #fff; --g-ink-2: rgba(255,255,255,.62); --g-ink-3: rgba(255,255,255,.44);
+  --g-rim: rgba(255,255,255,.14); --g-top: rgba(255,255,255,.09);
+  --g-panel: rgba(20,21,30,.72); --g-foot: rgba(255,255,255,.035);
+  --g-tile: rgba(255,255,255,.055); --g-tile-h: rgba(255,255,255,.09); --g-tile-rim: rgba(255,255,255,.11);
+  --g-btn: rgba(255,255,255,.08); --g-btn-h: rgba(255,255,255,.14); --g-track: rgba(255,255,255,.14);
+  --g-shadow: 0 24px 64px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.25);
+  --bar-low: #ff453a;
+  --pm-bg: #1c1c1e; --pm-shadow: 0 12px 40px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.25);
+  --danger-bg: rgba(255,69,58,.16);
+  --dur: 1;
+}
+:root[data-theme="light"] {
+  --page: #eceef3; --raise: #fff; --ink: #1c1c1e; --ink-2: rgba(28,28,30,.62); --line: rgba(0,0,0,.1);
+  --g-ink: #1c1c1e; --g-ink-2: rgba(28,28,30,.62); --g-ink-3: rgba(28,28,30,.44);
+  --g-rim: rgba(0,0,0,.1); --g-top: rgba(255,255,255,.7);
+  --g-panel: rgba(250,250,253,.78); --g-foot: rgba(0,0,0,.03);
+  --g-tile: rgba(0,0,0,.043); --g-tile-h: rgba(0,0,0,.075); --g-tile-rim: rgba(0,0,0,.08);
+  --g-btn: rgba(0,0,0,.06); --g-btn-h: rgba(0,0,0,.1); --g-track: rgba(0,0,0,.12);
+  --g-shadow: 0 24px 64px rgba(30,30,60,.2), 0 2px 8px rgba(30,30,60,.1);
+  --bar-low: #e0352b;
+  --pm-bg: #fff; --pm-shadow: 0 12px 40px rgba(30,30,60,.18), 0 2px 8px rgba(30,30,60,.08);
+  --danger-bg: rgba(224,53,43,.12);
+}
+* { box-sizing: border-box; margin: 0 }
+body { font: 13px/1.4 var(--sans); background: var(--page); color: var(--ink); min-height: 100vh }
+.page { display: grid; grid-template-columns: 264px 1fr; min-height: 100vh }
+.controls { padding: 24px 20px; border-right: 1px solid var(--line); background: var(--raise); display: flex; flex-direction: column; gap: 14px }
+.controls h1 { font-size: 15px; font-weight: 600 }
+.controls p { color: var(--ink-2); font-size: 12px }
+.controls label { display: flex; gap: 8px; align-items: center; cursor: pointer }
+.controls button { font: inherit; color: var(--ink); background: var(--g-btn); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; cursor: pointer }
+.controls button:hover { background: var(--g-btn-h) }
+.stage { position: relative; display: flex; align-items: flex-end; justify-content: center; padding: 40px; overflow: hidden;
+  background: radial-gradient(1200px 600px at 20% 10%, #1b4fa8 0%, transparent 60%), radial-gradient(900px 600px at 90% 90%, #5e2a9e 0%, transparent 55%), #0d1428 }
+:root[data-theme="light"] .stage { background: radial-gradient(1200px 600px at 20% 10%, #9ec5ff 0%, transparent 60%), radial-gradient(900px 600px at 90% 90%, #e3c4ff 0%, transparent 55%), #dfe8fb }
+
+.panel { width: min(1040px, 100%); border-radius: 28px; background: var(--g-panel); border: 1px solid var(--g-rim);
+  backdrop-filter: blur(40px); box-shadow: var(--g-shadow), inset 0 1px 0 var(--g-top); color: var(--g-ink); overflow: visible }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 24px; height: 250px }
+.cards div { background: var(--g-tile); border: 1px solid var(--g-tile-rim); border-radius: 20px }
+.foot { height: 72px; padding: 0 24px; display: flex; align-items: center; gap: 12px; background: var(--g-foot); border-top: 1px solid var(--g-tile-rim); border-radius: 0 0 28px 28px }
+.av { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 600 }
+.who b { display: block; font-weight: 600 } .who span { color: var(--g-ink-3); font-size: 12px }
+.sp { flex: 1 }
+.fbtn { height: 40px; padding: 0 16px; display: flex; align-items: center; gap: 8px; border-radius: 12px; border: 1px solid var(--g-tile-rim); background: var(--g-btn); color: inherit; font: inherit; font-weight: 500; cursor: pointer; transition: background .12s ease-out, transform .08s }
+.fbtn:hover { background: var(--g-btn-h) } .fbtn:active { transform: scale(.97) }
+.fbtn.power { width: 40px; padding: 0; justify-content: center; position: relative }
+.fbtn.power:hover, .fbtn.power[aria-expanded="true"] { color: var(--bar-low); background: var(--g-btn-h) }
+.fbtn:focus-visible, .row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.meter { width: 240px; font-size: 12px } .meter i { display: block; height: 4px; border-radius: 2px; background: var(--g-track); margin-top: 6px } .meter i b { display: block; height: 100%; width: 54%; background: var(--accent); border-radius: 2px }
+svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none }
+
+.pwrap { position: relative; width: 40px; height: 40px; z-index: 5 }
+/* The pill grows to the right over the free space; the base stays 40 px wide in the layout. */
+.pill { position: absolute; left: 0; top: 0; height: 40px; width: 40px; display: flex; align-items: center; overflow: hidden; border-radius: 12px;
+  background: var(--g-btn); border: 1px solid var(--g-tile-rim);
+  transition: width calc(.32s * var(--dur)) var(--enter), background .12s ease-out, box-shadow calc(.32s * var(--dur)) var(--enter) }
+.pwrap.open .pill { width: var(--w); background: var(--pm-bg); box-shadow: var(--pm-shadow), inset 0 1px 0 var(--g-top) }
+.pbtn, .opt { flex: none; padding: 0; height: 38px; min-width: 38px; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 500; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border-radius: 10px; position: relative; white-space: nowrap;
+  transition: background calc(.12s * var(--dur)) ease-out, color .12s, min-width calc(.22s * var(--dur)) var(--enter), padding calc(.22s * var(--dur)) var(--enter) }
+.pbtn { width: auto }
+.pbtn:hover, .pwrap.open .pbtn { color: var(--bar-low) }
+.opt { opacity: 0; transform: translateX(-6px); transition: opacity calc(.2s * var(--dur)) ease-out, transform calc(.32s * var(--dur)) var(--enter), background .12s, min-width calc(.22s * var(--dur)) var(--enter), padding calc(.22s * var(--dur)) var(--enter) }
+.pwrap.open .opt { opacity: 1; transform: none }
+.pwrap.open .opt:nth-of-type(2) { transition-delay: 30ms, 30ms, 0s, 0s, 0s }
+.pwrap.open .opt:nth-of-type(3) { transition-delay: 60ms, 60ms, 0s, 0s, 0s }
+.pwrap.open .opt:nth-of-type(4) { transition-delay: 90ms, 90ms, 0s, 0s, 0s }
+.opt:hover, .opt:focus-visible { background: var(--g-tile-h) }
+.opt:active { transform: scale(.96) }
+.opt[aria-disabled="true"] { opacity: .35 !important; pointer-events: none }
+.opt.armed, .pbtn.armed { background: var(--danger-bg); color: var(--bar-low); padding: 0 12px; min-width: 96px }
+.opt .lbl, .pbtn .lbl { display: none; font-weight: 600 } .opt.armed .lbl, .pbtn.armed .lbl { display: inline }
+.opt .bar, .pbtn .bar { display: none; position: absolute; left: 10px; right: 10px; bottom: 3px; height: 2px; border-radius: 2px; background: var(--bar-low); transform-origin: left }
+.opt.armed .bar, .pbtn.armed .bar { display: block; animation: drain 4s linear forwards }
+.divider { flex: none; width: 1px; height: 18px; background: var(--g-tile-rim); margin: 0 2px; opacity: 0; transition: opacity .2s }
+.pwrap.open .divider { opacity: 1 }
+/* name of the hovered option, above it */
+.opt[data-tip]:hover::after, .opt[data-tip]:focus-visible::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); font-size: 12px; background: var(--pm-bg); border: 1px solid var(--g-rim); padding: 4px 8px; border-radius: 8px; color: var(--g-ink); pointer-events: none }
+.opt.armed::after { display: none !important }
+@keyframes drain { to { transform: scaleX(0) } }
+.toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); background: var(--pm-bg); color: var(--ink); border: 1px solid var(--line); padding: 10px 16px; border-radius: 12px; opacity: 0; transition: .25s var(--enter); box-shadow: var(--pm-shadow) }
+.toast.show { opacity: 1; transform: translate(-50%, 0) }
+@media (max-width: 800px) { .page { grid-template-columns: 1fr } .controls { border-right: 0 } .stage { padding: 16px } .meter { display: none } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></symbol>
+  <symbol id="i-hib" viewBox="0 0 24 24"><path d="M19 15A7 7 0 1 1 9 5a5.5 5.5 0 0 0 10 10Z"/><path d="M14 3h4l-4 4h4"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6M18.5 19a5.5 5.5 0 0 0-3-4.9"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H6.5A1.5 1.5 0 0 0 5 5.5v13A1.5 1.5 0 0 0 6.5 20H10"/><path d="M15 8l4 4-4 4M19 12H9"/></symbol>
+  <symbol id="i-restart" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v5h-5"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.2"/><circle cx="12" cy="6" r="1.2"/><circle cx="18" cy="6" r="1.2"/><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/><circle cx="6" cy="18" r="1.2"/><circle cx="12" cy="18" r="1.2"/><circle cx="18" cy="18" r="1.2"/></symbol>
+</svg>
+
+<div class="page">
+  <aside class="controls">
+    <h1>Power menu</h1>
+    <p>Hover the power button: it grows to the right. Shut down and Restart need a second click within 4 s. Right-click opens KDE's logout screen.</p>
+    <label><input type="checkbox" id="tTheme"> Light theme</label>
+    <label><input type="checkbox" id="tRestart"> Restart unavailable</label>
+    <label><input type="checkbox" id="tMotion"> Reduce motion</label>
+    <button id="bOpen">Open menu</button>
+    <button id="bArm">Arm Restart</button>
+  </aside>
+
+  <main class="stage">
+    <section class="panel">
+      <div class="cards"><div></div><div></div><div></div></div>
+      <footer class="foot">
+        <div class="av">A</div>
+        <div class="who"><b>Aryan</b><span>aryan</span></div>
+        <div class="sp"></div>
+        <button class="fbtn"><svg class="i"><use href="#i-gear"/></svg>Settings</button>
+        <button class="fbtn"><svg class="i"><use href="#i-grid"/></svg>All apps</button>
+        <div class="pwrap" id="pw">
+          <div class="pill" id="pill" role="menubar" aria-label="Power options">
+            <button class="pbtn" id="pbtn" aria-label="Shut down" data-act="Shut down" data-ask="Shut down?" data-danger><svg class="i"><use href="#i-power"/></svg><span class="lbl">Shut down?</span><i class="bar"></i></button>
+            <i class="divider"></i>
+            <button class="opt" role="menuitem" data-act="Lock" data-tip="Lock"><svg class="i"><use href="#i-lock"/></svg></button>
+            <button class="opt" role="menuitem" data-act="Sleep" data-tip="Sleep"><svg class="i"><use href="#i-moon"/></svg></button>
+            <button class="opt" role="menuitem" data-act="Restart" data-ask="Restart?" data-danger data-tip="Restart" id="rRestart"><svg class="i"><use href="#i-restart"/></svg><span class="lbl">Restart?</span><i class="bar"></i></button>
+          </div>
+        </div>
+        <div class="meter" style="margin-left:32px"><span>Storage</span> <span style="float:right;color:var(--g-ink-3)">510 GB used of 943 GB</span><i><b></b></i></div>
+      </footer>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s), root = document.documentElement;
+const pw = $("#pw"), pill = $("#pill"), toast = $("#toast");
+let armed = null, armTimer = 0, toastTimer = 0, inTimer = 0, outTimer = 0;
+
+const items = () => [...pill.querySelectorAll(".pbtn, .opt")].filter(r => r.style.display !== "none" && r.getAttribute("aria-disabled") !== "true");
+function say(t) { toast.textContent = t; toast.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove("show"), 1800) }
+function disarm() { if (armed) { armed.classList.remove("armed"); armed = null; clearTimeout(armTimer); fit() } }
+function arm(r) {
+  disarm(); armed = r; r.classList.add("armed");
+  const bar = r.querySelector(".bar"); bar.style.animation = "none"; bar.offsetWidth; bar.style.animation = "";
+  armTimer = setTimeout(disarm, 4000); fit();
+}
+// Width of the open pill: base button plus visible options (an armed one is wider).
+function fit() {
+  let w = 2 + 4;
+  for (const r of pill.querySelectorAll(".pbtn, .opt")) if (r.style.display !== "none") w += r.classList.contains("armed") ? 108 : 38;
+  pill.style.setProperty("--w", w + 8 + "px");
+}
+function openPill() { clearTimeout(outTimer); inTimer = setTimeout(() => { fit(); pw.classList.add("open") }, 120) }
+function closePill() { clearTimeout(inTimer); outTimer = setTimeout(() => { disarm(); pw.classList.remove("open") }, 280) }
+function activate(r) {
+  if (r.hasAttribute("data-danger") && armed !== r) return arm(r);
+  const t = { Lock: "lock the screen", Sleep: "suspend" }[r.dataset.act] || r.dataset.act.toLowerCase();
+  say("Would " + t); disarm(); pw.classList.remove("open");
+}
+
+pw.addEventListener("pointerenter", openPill);
+pw.addEventListener("pointerleave", () => { if (!pw.contains(document.activeElement) || !document.activeElement.matches(":focus-visible")) closePill() });
+pw.addEventListener("focusin", e => { if (e.target.matches(":focus-visible")) { clearTimeout(outTimer); fit(); pw.classList.add("open") } });
+pw.addEventListener("focusout", e => { if (!pw.contains(e.relatedTarget)) closePill() });
+pill.querySelectorAll(".pbtn, .opt").forEach(r => {
+  // The base button only acts once the pill is open, so a stray hover-click cannot shut down.
+  r.addEventListener("click", () => { if (r.id === "pbtn" && !pw.classList.contains("open")) { fit(); pw.classList.add("open"); return } activate(r) });
+  r.addEventListener("focus", () => { if (armed && armed !== r) disarm() });
+});
+pbtn.addEventListener("contextmenu", e => { e.preventDefault(); say("KDE's logout screen would open") });
+pill.addEventListener("keydown", e => {
+  const list = items(), i = list.indexOf(document.activeElement);
+  if (e.key === "ArrowRight") { e.preventDefault(); list[(i + 1) % list.length].focus() }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); list[(i - 1 + list.length) % list.length].focus() }
+  else if (e.key === "Home") { e.preventDefault(); list[0].focus() }
+  else if (e.key === "End") { e.preventDefault(); list[list.length - 1].focus() }
+  else if (e.key === "Escape") { e.preventDefault(); if (armed) disarm(); else { pw.classList.remove("open"); pbtn.focus() } }
+});
+$("#tTheme").onchange = e => root.dataset.theme = e.target.checked ? "light" : "dark";
+$("#tRestart").onchange = e => $("#rRestart").setAttribute("aria-disabled", e.target.checked);
+$("#tMotion").onchange = e => root.style.setProperty("--dur", e.target.checked ? 0 : 1);
+$("#bOpen").onclick = () => { fit(); pw.classList.toggle("open") };
+$("#bArm").onclick = () => { fit(); pw.classList.add("open"); arm($("#rRestart")) };
+if (matchMedia("(prefers-reduced-motion: reduce)").matches) { $("#tMotion").checked = true; root.style.setProperty("--dur", 0) }
+fit(); pw.classList.add("open");
+</script>
+</body>
+</html>
