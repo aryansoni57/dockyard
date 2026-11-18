@@ -88,6 +88,7 @@ PlasmoidItem {
         id: notificationService
         popupsEnabled: root.cfg.notificationPopups && root.dockOwner
         accent: root.accent
+        appActivator: entry => root.activateApp(entry)
     }
 
     Sensors.Sensor {
@@ -318,6 +319,19 @@ PlasmoidItem {
                 filterByScreen: false
                 filterByActivity: false
                 sortMode: TaskManager.TasksModel.SortManual
+            }
+        }
+    }
+    // Windows only, for raising apps from notifications and jobs when the app icons are off.
+    Loader {
+        id: windowsLoader
+        active: !root.cfg.showApps
+        sourceComponent: Component {
+            TaskManager.TasksModel {
+                groupMode: TaskManager.TasksModel.GroupDisabled
+                filterByVirtualDesktop: false
+                filterByScreen: false
+                filterByActivity: false
             }
         }
     }
@@ -602,28 +616,77 @@ PlasmoidItem {
         activateApp(entry);
     }
 
+    // Whether a task row belongs to the app with this id (desktop entry, with or without
+    // the ".desktop" suffix or the reverse-DNS prefix).
+    function taskIsApp(tasks, idx, id) {
+        const R = TaskManager.AbstractTasksModel;
+        const want = id.toLowerCase();
+        const appId = String(tasks.data(idx, R.AppId) || "").replace(/\.desktop$/, "").toLowerCase();
+        const url = String(tasks.data(idx, R.LauncherUrlWithoutIcon) || "").toLowerCase();
+        if (appId === want || url.endsWith(":" + want + ".desktop") || url.endsWith("/" + want + ".desktop"))
+            return true;
+        const dot = want.lastIndexOf(".");
+        return dot > 0 && appId === want.substring(dot + 1);
+    }
+    // Raises the most recently used window of the app. False when no window of it is open.
+    function raiseApp(id) {
+        const tasks = tasksLoader.item || windowsLoader.item;
+        if (!tasks)
+            return false;
+        const R = TaskManager.AbstractTasksModel;
+        for (let i = 0; i < tasks.count; ++i) {
+            const idx = tasks.makeModelIndex(i);
+            if (tasks.data(idx, R.IsLauncher) || tasks.data(idx, R.IsStartup) || !root.taskIsApp(tasks, idx, id))
+                continue;
+            let pick = idx;
+            const kids = tasks.data(idx, R.IsGroupParent) ? tasks.rowCount(idx) : 0;
+            let best = -1;
+            for (let c = 0; c < kids; ++c) {
+                const k = tasks.makeModelIndex(i, c);
+                const t = tasks.data(k, R.LastActivated);
+                const ms = t instanceof Date ? t.getTime() : 0;
+                if (ms > best) {
+                    best = ms;
+                    pick = k;
+                }
+            }
+            tasks.requestActivate(pick);
+            return true;
+        }
+        return false;
+    }
+    // An app that was started but has no window yet: raised as soon as its window appears.
+    property string raisePending: ""
     // Raises the window of the app with this desktop entry (with or without ".desktop"),
     // or starts the app when it has none. False when there is nothing to open.
     function activateApp(entry) {
         const id = String(entry || "").replace(/\.desktop$/, "");
-        if (id === "")
+        if (!/^[A-Za-z0-9._-]+$/.test(id))
             return false;
-        const tasks = tasksLoader.item;
-        if (tasks) {
-            const R = TaskManager.AbstractTasksModel;
-            for (let i = 0; i < tasks.count; ++i) {
-                const idx = tasks.makeModelIndex(i);
-                if (tasks.data(idx, R.IsLauncher))
-                    continue;
-                if (String(tasks.data(idx, R.AppId) || "").replace(/\.desktop$/, "") !== id)
-                    continue;
-                const grouped = tasks.data(idx, R.IsGroupParent) && tasks.rowCount(idx) > 0;
-                tasks.requestActivate(grouped ? tasks.makeModelIndex(i, 0) : idx);
-                return true;
-            }
-        }
-        launch("gtk-launch '" + id.replace(/'/g, "") + "'");
+        if (raiseApp(id))
+            return true;
+        raisePending = id;
+        raiseTimeout.restart();
+        launch("gtk-launch '" + id + "'");
         return true;
+    }
+    Timer {
+        id: raiseTimeout
+        interval: 8000
+        onTriggered: root.raisePending = ""
+    }
+    Connections {
+        target: tasksLoader.item || windowsLoader.item
+        enabled: root.raisePending !== ""
+        ignoreUnknownSignals: true
+        function onRowsInserted() { Qt.callLater(root.retryRaise); }
+        function onDataChanged() { Qt.callLater(root.retryRaise); }
+    }
+    function retryRaise() {
+        if (raisePending !== "" && raiseApp(raisePending)) {
+            raisePending = "";
+            raiseTimeout.stop();
+        }
     }
 
     // Dock context menu (demo video 0:57): Plasma adds Configure and Remove itself.

@@ -113,6 +113,8 @@ ColumnLayout {
                 row: index
                 accent: panel.applet.accent
                 unreadSince: panel.seenBefore
+                openApp: entry => panel.service.openApp(entry)
+                onActivated: panel.applet.dockItem.hide()
 
                 // The first rows rise one after another when the popup opens.
                 readonly property bool staggered: panel.intro && index < Motion.staggerRows

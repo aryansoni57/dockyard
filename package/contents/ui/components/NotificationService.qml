@@ -22,6 +22,9 @@ Item {
     property bool popupsEnabled: true
     // Accent for the unread dot and buttons.
     property color accent: DockAccent.color
+    // Raises the window of a desktop entry, or starts the app (set by the dock).
+    property var appActivator: null
+    function openApp(entry) { return service.appActivator ? service.appActivator(entry) : false; }
 
     readonly property alias settings: notifSettings
     readonly property alias history: historyModel
@@ -317,6 +320,18 @@ Item {
         }
     }
 
+    // The model's count does not always notify, so a binding on it can miss a toast;
+    // follow the row signals as well.
+    property int popupCount: 0
+    function syncPopupCount() { service.popupCount = popupModel.rowCount(); }
+    Connections {
+        target: popupModel
+        function onCountChanged() { service.syncPopupCount(); }
+        function onRowsInserted() { service.syncPopupCount(); }
+        function onRowsRemoved() { service.syncPopupCount(); }
+        function onModelReset() { service.syncPopupCount(); }
+        function onLayoutChanged() { service.syncPopupCount(); }
+    }
     // Toasts stack in one window at the screen corner on the dock's side.
     PlasmaCore.Dialog {
         id: toastWindow
@@ -331,7 +346,7 @@ Item {
         location: PlasmaCore.Types.Floating
         hideOnWindowDeactivate: false
         backgroundHints: PlasmaCore.Dialog.StandardBackground
-        visible: service.popupsEnabled && popupModel.count > 0
+        visible: service.popupsEnabled && service.popupCount > 0
 
         x: screen.x + avail.x + avail.width - width - gap
         y: dockOnTop ? screen.y + avail.y + gap
@@ -369,7 +384,9 @@ Item {
                             notifications: popupModel
                             row: toastRow.index
                             popup: true
+                            topInset: toastRow.index === 0 ? toastWindow.margins.top : 0
                             accent: service.accent
+                            openApp: entry => service.openApp(entry)
                             defaultTimeout: notifSettings.popupTimeout
                         }
                     }

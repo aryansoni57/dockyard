@@ -46,13 +46,25 @@ Item {
             return i18n("%1 h", Math.floor(secs / 3600));
         return Qt.formatDate(when, "d MMM");
     }
+    // Raises or starts the sending app (set by the owner; false when it cannot).
+    property var openApp: null
+    signal activated()
+    // The default action wins when the app has one. Otherwise the sending app is raised,
+    // or started when it has no window, as the dock's app icons do.
     function activate() {
         if (!notifications)
             return;
-        if (m?.hasDefaultAction)
-            notifications.invokeDefaultAction(notifications.index(row, 0), NotificationManager.Notifications.Close);
-        else if (popup)
-            notifications.expire(notifications.index(row, 0));
+        const idx = notifications.index(row, 0);
+        if (m?.hasDefaultAction && (popup || !m?.expired)) {
+            notifications.invokeDefaultAction(idx, NotificationManager.Notifications.Close);
+        } else {
+            const entry = String(m?.desktopEntry ?? "");
+            if (entry !== "" && card.openApp)
+                card.openApp(entry);
+            if (popup)
+                notifications.expire(idx);
+        }
+        card.activated();
     }
 
     // The popup window already pads its edges, so toasts sit tighter than history rows.
@@ -155,16 +167,49 @@ Item {
     // The deadline counts from when the server created the notification, so a
     // replaced or re-sorted toast cannot extend its own life by restarting this timer.
     readonly property int dismissAfter: card?.m?.timeout > 0 ? card?.m?.timeout : card.defaultTimeout
+    // Time spent hovered or in the menu; it is added to the deadline so the countdown
+    // pauses and resumes from where it stopped.
+    property real heldMs: 0
+    property real lastTick: Date.now()
     function dismissIn() {
         const c = card?.m?.created;
-        if (c instanceof Date && !isNaN(c))
-            return Math.max(0, card.dismissAfter - (Date.now() - c.getTime()));
-        return card.dismissAfter;
+        const age = c instanceof Date && !isNaN(c) ? Date.now() - c.getTime() : 0;
+        return Math.max(0, card.dismissAfter + card.heldMs - age);
     }
+    readonly property bool counting: card.popup && !hover.hovered && menu.status === PlasmaExtras.Menu.Closed && !card.critical
+    // Share of the popup's time still left, for the countdown line.
+    property real timeLeft: 1
+    // Space the toast window leaves above the first card; the line runs through it to the window edge.
+    property real topInset: 0
     Timer {
-        running: card.popup && !hover.hovered && menu.status === PlasmaExtras.Menu.Closed && !card.critical
-        interval: card.dismissIn()
-        onTriggered: card.notifications.expire(card.notifications.index(card.row, 0))
+        interval: 33
+        repeat: true
+        running: card.popup && !card.critical
+        onTriggered: {
+            const now = Date.now();
+            if (!card.counting)
+                card.heldMs += now - card.lastTick;
+            card.lastTick = now;
+            const left = card.dismissIn();
+            card.timeLeft = Math.max(0, Math.min(1, left / card.dismissAfter));
+            if (left <= 0)
+                card.notifications.expire(card.notifications.index(card.row, 0));
+        }
+        onRunningChanged: if (running) card.lastTick = Date.now()
+    }
+
+    // Countdown line along the top of a toast; shrinks to the left as it closes.
+    Rectangle {
+        visible: card.popup && !card.critical
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.topMargin: -card.topInset
+        anchors.leftMargin: card.topInset > 0 ? Kirigami.Units.cornerRadius : 0
+        height: 3
+        radius: 1.5
+        width: (parent.width - anchors.leftMargin * 2) * card.timeLeft
+        color: card.accent
+        opacity: 0.85
     }
 
     ColumnLayout {
