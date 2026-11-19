@@ -12,14 +12,16 @@ Tile {
 
     // WeatherSource from main.qml (null when not wired).
     property var weatherSource: null
+    // default, details, forecast, status, hourly or sun (see WeatherFaces).
+    property string style: "default"
 
     readonly property bool hasLocation: weatherSource ? weatherSource.hasLocation : false
     readonly property var current: weatherSource ? weatherSource.current : null
     readonly property real inner: height - padding * 2
 
-    implicitWidth: Math.min(Kirigami.Units.gridUnit * 9,
-                            hasLocation ? content.implicitWidth : setLabel.implicitWidth)
-                   + padding * 2
+    implicitWidth: style !== "default" ? faces.implicitWidth
+        : Math.min(Kirigami.Units.gridUnit * 9,
+                   hasLocation ? content.implicitWidth : setLabel.implicitWidth) + padding * 2
 
     function iconFor(code) {
         return weatherSource ? weatherSource.iconFor(code) : "";
@@ -30,7 +32,7 @@ Tile {
         anchors.fill: parent
         anchors.margins: weather.padding
         spacing: weather.padding
-        visible: weather.hasLocation
+        visible: weather.hasLocation && weather.style === "default"
 
         Kirigami.Icon {
             Layout.preferredWidth: weather.inner
@@ -69,11 +71,20 @@ Tile {
         id: setLabel
         anchors.fill: parent
         anchors.margins: weather.padding
-        visible: !weather.hasLocation
+        visible: !weather.hasLocation && weather.style === "default"
         text: "Set location"
         font.pixelSize: Math.max(Kirigami.Theme.smallFont.pixelSize, weather.inner * 0.2)
         opacity: 0.78
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
+    }
+
+    WeatherFaces {
+        id: faces
+        anchors.fill: parent
+        visible: weather.style !== "default"
+        variant: weather.style
+        weatherSource: weather.weatherSource
+        padding: weather.padding
     }
 }

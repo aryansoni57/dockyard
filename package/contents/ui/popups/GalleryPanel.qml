@@ -37,6 +37,7 @@ ColumnLayout {
         { key: "showTemperature", name: i18n("Temperature"), icon: "temperature-normal-symbolic", desc: i18n("CPU heat and load"), cat: "system", keywords: "cpu" },
         { key: "showNetwork", name: i18n("Network speed"), icon: "network-wireless-symbolic", desc: i18n("Download and upload speed"), cat: "system", keywords: "download upload" },
         { key: "showStorage", name: i18n("Disk usage"), icon: "drive-harddisk-symbolic", desc: i18n("Used space on your disk"), cat: "system", keywords: "storage" },
+        { key: "showClaudeUsage", name: i18n("Claude usage"), icon: "preferences-system-time-symbolic", desc: i18n("5-hour and weekly plan limits"), cat: "system", keywords: "anthropic ai quota limit tokens" },
         { key: "showBattery", name: i18n("Battery"), icon: "battery-good-symbolic", desc: i18n("Charge level and charging"), cat: "system", keywords: "power" },
         { key: "showVolume", name: i18n("Volume"), icon: "audio-volume-high-symbolic", desc: i18n("Output level slider"), cat: "system", keywords: "sound audio" },
         { key: "showToggles", name: i18n("Quick toggles"), icon: "network-wireless-connected-symbolic", desc: i18n("Wi-Fi, Bluetooth, Do Not Disturb"), cat: "system", keywords: "wifi bluetooth dnd night" },
@@ -50,6 +51,13 @@ ColumnLayout {
         { key: "showMedia", name: i18n("Now playing"), icon: "media-playback-start-symbolic", desc: i18n("Player controls, or a Spotify launcher"), cat: "apps", keywords: "music spotify mpris" },
         { key: "showWeather", name: i18n("Weather"), icon: "weather-few-clouds-symbolic", desc: i18n("Current conditions"), cat: "apps", keywords: "" },
         { key: "showRecycleBin", name: i18n("Recycle bin"), icon: "user-trash-symbolic", desc: i18n("Trash at a glance"), cat: "apps", keywords: "trash" },
+        { key: "showTopProcs", name: i18n("Top processes"), icon: "cpu-symbolic", desc: i18n("Hungriest processes, by CPU or memory"), cat: "system", keywords: "cpu ram memory process" },
+        { key: "showBrightness", name: i18n("Brightness"), icon: "video-display-brightness-symbolic", desc: i18n("Screen brightness slider"), cat: "system", keywords: "display screen backlight" },
+        { key: "showRecentOpened", name: i18n("Recently opened"), icon: "document-open-recent-symbolic", desc: i18n("Last files and folders you opened"), cat: "apps", keywords: "history files" },
+        { key: "showMicrophone", name: i18n("Microphone"), icon: "microphone-sensitivity-high-symbolic", desc: i18n("Mute mic and speakers"), cat: "system", keywords: "mic mute audio" },
+        { key: "showLanguage", name: i18n("Language"), icon: "input-keyboard-symbolic", desc: i18n("Keyboard layout, click to switch"), cat: "system", keywords: "keyboard layout" },
+        { key: "showShowDesktop", name: i18n("Show desktop"), icon: "user-desktop-symbolic", desc: i18n("Hide and restore all windows"), cat: "apps", keywords: "minimize windows" },
+        { key: "showDnd", name: i18n("Do Not Disturb"), icon: "notifications-disabled-symbolic", desc: i18n("One-click silence"), cat: "system", keywords: "dnd silence focus" },
         { key: "showScreenshot", name: i18n("Screenshot"), icon: "spectacle-symbolic", desc: i18n("Capture the screen or a region"), cat: "apps", keywords: "capture" }
     ]
     readonly property var accents: ({ time: "#FF9F0A", productivity: "#FF453A", system: "#0A84FF", apps: "#30D158" })

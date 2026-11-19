@@ -16,6 +16,8 @@ Tile {
 
     // Show other devices' batteries in the flyout.
     property bool showDevices: true
+    // default (ring), core, dots or gauge (see BatteryFaces).
+    property string style: "default"
 
     signal settingsRequested()
 
@@ -25,7 +27,8 @@ Tile {
         ? Kirigami.Theme.positiveTextColor
         : (percent < 20 ? Kirigami.Theme.negativeTextColor : DockAccent.color)
 
-    implicitWidth: ring.width + padding * 2 + (charging ? Kirigami.Units.smallSpacing + boltSize : 0)
+    implicitWidth: style !== "default" ? faces.implicitWidth
+        : ring.width + padding * 2 + (charging ? Kirigami.Units.smallSpacing + boltSize : 0)
 
     // Tapping the tile toggles the Power & Battery flyout.
     onClicked: flyout.visible = !flyout.visible
@@ -43,6 +46,7 @@ Tile {
 
     RingGauge {
         id: ring
+        visible: root.style === "default"
         x: root.padding
         y: root.padding
         height: root.contentHeight
@@ -54,7 +58,7 @@ Tile {
 
     Kirigami.Icon {
         id: bolt
-        visible: root.charging
+        visible: root.charging && root.style === "default"
         source: "battery-charging"
         color: Kirigami.Theme.positiveTextColor
         anchors.left: ring.right
@@ -62,5 +66,16 @@ Tile {
         anchors.verticalCenter: parent.verticalCenter
         width: root.boltSize
         height: root.boltSize
+    }
+
+    BatteryFaces {
+        id: faces
+        anchors.fill: parent
+        visible: root.style !== "default"
+        variant: root.style
+        percent: root.percent
+        charging: root.charging
+        padding: root.padding
+        radius: root.radius
     }
 }

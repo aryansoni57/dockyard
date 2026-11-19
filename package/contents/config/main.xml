@@ -62,6 +62,9 @@
         <entry name="showNetwork" type="Bool">
             <default>false</default>
         </entry>
+        <entry name="showClaudeUsage" type="Bool">
+            <default>false</default>
+        </entry>
         <entry name="showStorage" type="Bool">
             <default>false</default>
         </entry>
@@ -207,6 +210,42 @@
         </entry>
         <entry name="showRecycleBin" type="Bool">
             <default>false</default>
+        </entry>
+        <entry name="showMicrophone" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showLanguage" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showShowDesktop" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showDnd" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showBrightness" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showRecentOpened" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="showTopProcs" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="topMode" type="String">
+            <default>cpu</default>
+        </entry>
+        <entry name="weatherStyle" type="String">
+            <default>default</default>
+        </entry>
+        <entry name="mediaStyle" type="String">
+            <default>default</default>
+        </entry>
+        <entry name="batteryStyle" type="String">
+            <default>default</default>
+        </entry>
+        <entry name="mediaProgress" type="Bool">
+            <default>true</default>
         </entry>
         <entry name="showScreenshot" type="Bool">
             <default>false</default>

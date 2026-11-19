@@ -16,6 +16,7 @@ KCM.SimpleKCM {
     property alias cfg_showTemperature: showTemperature.checked
     property alias cfg_showNetwork: showNetwork.checked
     property alias cfg_showStorage: showStorage.checked
+    property alias cfg_showClaudeUsage: showClaudeUsage.checked
     property alias cfg_showScript: showScript.checked
     property alias cfg_showBattery: showBattery.checked
     property alias cfg_showWeather: showWeather.checked
@@ -36,6 +37,13 @@ KCM.SimpleKCM {
     property alias cfg_showVolume: showVolume.checked
     property alias cfg_showRecycleBin: showRecycleBin.checked
     property alias cfg_showScreenshot: showScreenshot.checked
+    property alias cfg_showTopProcs: showTopProcs.checked
+    property alias cfg_showBrightness: showBrightness.checked
+    property alias cfg_showRecentOpened: showRecentOpened.checked
+    property alias cfg_showMicrophone: showMicrophone.checked
+    property alias cfg_showLanguage: showLanguage.checked
+    property alias cfg_showShowDesktop: showShowDesktop.checked
+    property alias cfg_showDnd: showDnd.checked
     property alias cfg_showTray: showTray.checked
     property alias cfg_showNotifications: showNotifications.checked
     property alias cfg_showJobs: showJobs.checked
@@ -45,9 +53,9 @@ KCM.SimpleKCM {
 
     // Every widget switch, for the counter and the presets.
     readonly property var switches: [showStart, showClock, showStats, showMedia, showTemperature, showNetwork,
-        showStorage, showScript, showBattery, showWeather, showPomodoro, showTimer, showStopwatch, showWorldClocks,
+        showStorage, showClaudeUsage, showScript, showBattery, showWeather, showPomodoro, showTimer, showStopwatch, showWorldClocks,
         showTodos, showApps, showToggles, showMonthProgress, showDayProgress, showYearProgress,
-        showDate, showDayNumber, showClockStyle, showNotes, showVolume, showRecycleBin, showScreenshot, showTray, showNotifications, showJobs, showClipboard, showCalendar]
+        showDate, showDayNumber, showClockStyle, showNotes, showVolume, showRecycleBin, showScreenshot, showTray, showNotifications, showJobs, showClipboard, showCalendar, showBrightness, showTopProcs, showRecentOpened, showMicrophone, showLanguage, showShowDesktop, showDnd]
     readonly property int enabledCount: switches.filter(c => c.checked).length
     readonly property int matchCount: switches.filter(c => c.visible).length
     readonly property string query: search.text.trim().toLowerCase()
@@ -245,6 +253,7 @@ KCM.SimpleKCM {
             WidgetCheck { id: showTemperature; iconName: "temperature-normal-symbolic"; accent: page.systemAccent; description: i18n("CPU heat and load"); text: i18n("CPU temperature"); optionsPage: i18n("Widget options") }
             WidgetCheck { id: showNetwork; iconName: "network-wireless-symbolic"; accent: page.systemAccent; description: i18n("Download and upload speed"); text: i18n("Network speed"); keywords: "download upload"; optionsPage: i18n("Widget options") }
             WidgetCheck { id: showStorage; iconName: "drive-harddisk-symbolic"; accent: page.systemAccent; description: i18n("Used space on your disk"); text: i18n("Disk usage"); keywords: "storage" }
+            WidgetCheck { id: showClaudeUsage; iconName: "preferences-system-time-symbolic"; accent: page.systemAccent; description: i18n("5-hour and weekly plan limits"); text: i18n("Claude usage"); keywords: "anthropic ai quota limit tokens" }
             WidgetCheck { id: showScript; iconName: "utilities-terminal-symbolic"; accent: page.systemAccent; description: i18n("Your own command, on a timer"); text: i18n("Script output"); keywords: "custom command shell"; optionsPage: i18n("Widget options") }
             WidgetCheck { id: showBattery; iconName: "battery-good-symbolic"; accent: page.systemAccent; description: i18n("Charge level and charging"); text: i18n("Battery"); keywords: "power"; optionsPage: i18n("Widget options") }
             WidgetCheck { id: showVolume; iconName: "audio-volume-high-symbolic"; accent: page.systemAccent; description: i18n("Output level slider"); text: i18n("Volume slider"); keywords: "sound audio" }
@@ -262,9 +271,16 @@ KCM.SimpleKCM {
             rowSpacing: 0
             WidgetCheck { id: showStart; iconName: "start-here-kde-symbolic"; accent: page.appsAccent; description: i18n("Start menu with search"); text: i18n("Application launcher"); keywords: "start menu"; optionsPage: i18n("Apps") }
             WidgetCheck { id: showApps; iconName: "view-app-grid-symbolic"; accent: page.appsAccent; description: i18n("Your apps, with running dots"); text: i18n("Pinned apps"); keywords: "dock taskbar"; optionsPage: i18n("Apps") }
-            WidgetCheck { id: showMedia; iconName: "media-playback-start-symbolic"; accent: page.appsAccent; description: i18n("Player controls, or a Spotify launcher"); text: i18n("Now playing"); keywords: "music spotify mpris" }
+            WidgetCheck { id: showMedia; iconName: "media-playback-start-symbolic"; accent: page.appsAccent; description: i18n("Player controls, or a Spotify launcher"); text: i18n("Now playing"); keywords: "music spotify mpris"; optionsPage: i18n("Widget options") }
             WidgetCheck { id: showWeather; iconName: "weather-few-clouds-symbolic"; accent: page.appsAccent; description: i18n("Current conditions"); text: i18n("Weather"); optionsPage: i18n("Weather") }
             WidgetCheck { id: showRecycleBin; iconName: "user-trash-symbolic"; accent: page.appsAccent; description: i18n("Trash at a glance"); text: i18n("Recycle bin"); keywords: "trash" }
+            WidgetCheck { id: showTopProcs; iconName: "cpu-symbolic"; accent: page.systemAccent; description: i18n("Hungriest processes, by CPU or memory"); text: i18n("Top processes"); keywords: "cpu ram memory process usage"; optionsPage: i18n("Widget options") }
+            WidgetCheck { id: showBrightness; iconName: "video-display-brightness-symbolic"; accent: page.systemAccent; description: i18n("Screen brightness slider"); text: i18n("Brightness"); keywords: "display screen backlight" }
+            WidgetCheck { id: showRecentOpened; iconName: "document-open-recent-symbolic"; accent: page.appsAccent; description: i18n("Last files and folders you opened"); text: i18n("Recently opened"); keywords: "history files" }
+            WidgetCheck { id: showMicrophone; iconName: "microphone-sensitivity-high-symbolic"; accent: page.systemAccent; description: i18n("Mute mic and speakers"); text: i18n("Microphone"); keywords: "mic mute audio" }
+            WidgetCheck { id: showLanguage; iconName: "input-keyboard-symbolic"; accent: page.systemAccent; description: i18n("Keyboard layout, click to switch"); text: i18n("Language"); keywords: "keyboard layout" }
+            WidgetCheck { id: showShowDesktop; iconName: "user-desktop-symbolic"; accent: page.appsAccent; description: i18n("Hide and restore all windows"); text: i18n("Show desktop"); keywords: "minimize windows" }
+            WidgetCheck { id: showDnd; iconName: "notifications-disabled-symbolic"; accent: page.systemAccent; description: i18n("One-click silence"); text: i18n("Do Not Disturb"); keywords: "dnd silence focus" }
             WidgetCheck { id: showScreenshot; iconName: "spectacle-symbolic"; accent: page.appsAccent; description: i18n("Capture the screen or a region"); text: i18n("Screenshot capture") }
         }
     }

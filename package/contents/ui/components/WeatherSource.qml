@@ -135,7 +135,7 @@ Item {
         var url = "https://api.open-meteo.com/v1/forecast"
                 + "?latitude=" + latitude.toFixed(4)
                 + "&longitude=" + longitude.toFixed(4)
-                + "&current=temperature_2m,weather_code"
+                + "&current=temperature_2m,weather_code,wind_speed_10m"
                 + "&hourly=temperature_2m,weather_code,precipitation_probability"
                 + "&daily=temperature_2m_max,temperature_2m_min,weather_code,uv_index_max,precipitation_probability_max,sunrise,sunset"
                 + "&forecast_days=5"
@@ -161,7 +161,8 @@ Item {
                     max: Math.round(d.daily.temperature_2m_max[0]),
                     min: Math.round(d.daily.temperature_2m_min[0]),
                     uv: Math.round(d.daily.uv_index_max?.[0] ?? 0),
-                    rain: d.daily.precipitation_probability_max?.[0] ?? 0
+                    rain: d.daily.precipitation_probability_max?.[0] ?? 0,
+                    wind: Math.round(d.current.wind_speed_10m ?? 0)
                 };
                 src.parseForecast(d);
                 src.lastFetch = Date.now();

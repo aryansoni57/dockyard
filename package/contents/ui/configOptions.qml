@@ -23,6 +23,34 @@ KCM.SimpleKCM {
     property alias cfg_notificationPopups: notificationPopups.checked
     property alias cfg_statsConcentric: statsConcentric.checked
     property alias cfg_showDevices: showDevices.checked
+    property string cfg_weatherStyle
+    property string cfg_mediaStyle
+    property alias cfg_mediaProgress: mediaProgress.checked
+    property string cfg_batteryStyle
+    property string cfg_topMode
+
+    // One look switcher per widget family: [config key, label, options].
+    readonly property var lookOptions: ({
+        weather: [{ value: "default", text: i18n("Temperature and high/low") }, { value: "details", text: i18n("Details (wind, rain, UV)") },
+                  { value: "forecast", text: i18n("Today and next 3 days") }, { value: "status", text: i18n("Conditions in words") },
+                  { value: "hourly", text: i18n("Next 6 hours") }, { value: "sun", text: i18n("Sunrise and sunset") }],
+        media: [{ value: "default", text: i18n("Full (art, title, controls)") }, { value: "compact", text: i18n("Compact") },
+                { value: "mini", text: i18n("Mini (art and play)") }, { value: "bar", text: i18n("Bar (title and controls)") }],
+        battery: [{ value: "default", text: i18n("Ring") }, { value: "core", text: i18n("Core (fill level)") },
+                  { value: "dots", text: i18n("Dots") }, { value: "gauge", text: i18n("Gauge") }],
+        top: [{ value: "cpu", text: i18n("By CPU") }, { value: "ram", text: i18n("By memory") }]
+    })
+
+    component LookBox: QQC2.ComboBox {
+        id: look
+        property var options
+        property string current
+        signal picked(string value)
+        Layout.fillWidth: true
+        model: options.map(o => o.text)
+        currentIndex: Math.max(0, options.findIndex(o => o.value === current))
+        onActivated: index => picked(options[index].value)
+    }
 
     readonly property var intervals: [
         { ms: 1000, text: i18n("Every second") },
@@ -90,6 +118,35 @@ KCM.SimpleKCM {
 
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing * 1.5
+
+        Card {
+            title: i18n("Widget looks")
+            subtitle: i18n("Pick how a widget is drawn. Each one is still a single widget you turn on in Widgets.")
+
+            FormRow {
+                label: i18n("Weather:")
+                LookBox { options: page.lookOptions.weather; current: page.cfg_weatherStyle; onPicked: v => page.cfg_weatherStyle = v }
+            }
+            FormRow {
+                label: i18n("Now playing:")
+                LookBox { options: page.lookOptions.media; current: page.cfg_mediaStyle; onPicked: v => page.cfg_mediaStyle = v }
+            }
+            FormRow {
+                label: ""
+                QQC2.CheckBox {
+                    id: mediaProgress
+                    text: i18n("Show a progress line for the playing track")
+                }
+            }
+            FormRow {
+                label: i18n("Battery:")
+                LookBox { options: page.lookOptions.battery; current: page.cfg_batteryStyle; onPicked: v => page.cfg_batteryStyle = v }
+            }
+            FormRow {
+                label: i18n("Top processes:")
+                LookBox { options: page.lookOptions.top; current: page.cfg_topMode; onPicked: v => page.cfg_topMode = v }
+            }
+        }
 
         Card {
             title: i18n("Notifications")

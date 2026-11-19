@@ -348,9 +348,13 @@ Item {
         backgroundHints: PlasmaCore.Dialog.StandardBackground
         visible: service.popupsEnabled && service.popupCount > 0
 
-        x: screen.x + avail.x + avail.width - width - gap
+        // Placed from the content size, not the window's own width/height: those follow the
+        // position back through the compositor and can ping-pong.
+        readonly property real fullWidth: mainItem.width + margins.left + margins.right
+        readonly property real fullHeight: mainItem.height + margins.top + margins.bottom
+        x: screen.x + avail.x + avail.width - fullWidth - gap
         y: dockOnTop ? screen.y + avail.y + gap
-            : screen.y + avail.y + avail.height - height - gap
+            : screen.y + avail.y + avail.height - fullHeight - gap
 
         mainItem: Item {
             width: Kirigami.Units.gridUnit * 20

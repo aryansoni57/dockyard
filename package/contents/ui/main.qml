@@ -40,17 +40,76 @@ PlasmoidItem {
     // The media tile follows a playing player (the current one when it plays), else a paused one
     // (a paused video keeps its controls), else Spotify, else nothing: then the tile is a
     // Spotify launcher. Plasma's own current player is not trusted: it can sit on a stopped one.
+    // A player the user chose from the tile's right-click menu; null follows automatically.
+    // It is dropped when that player quits.
+    property var mediaPinned: null
+    // The player the tile followed last, kept while it still plays so two playing players do not
+    // take turns on the tile.
+    property var lastMedia: null
     function pickPlayer() {
         const S = Mpris.PlaybackStatus;
+        if (mediaPinned !== null && mprisPlayers.indexOf(mediaPinned) >= 0)
+            return mediaPinned;
         const has = st => mprisPlayers.filter(p => p.playbackStatus === st);
         const cur = mprisPlayers.indexOf(player) >= 0 ? player : null;
         const playingNow = has(S.Playing);
-        if (playingNow.length > 0)
+        if (playingNow.length > 0) {
+            if (playingNow.indexOf(lastMedia) >= 0)
+                return lastMedia;
             return playingNow.indexOf(cur) >= 0 ? cur : playingNow[0];
+        }
         const paused = has(S.Paused);
-        if (paused.length > 0)
+        if (paused.length > 0) {
+            if (paused.indexOf(lastMedia) >= 0)
+                return lastMedia;
             return paused.indexOf(cur) >= 0 ? cur : paused[0];
+        }
         return spotifyPlayer;
+    }
+    onMediaPlayerChanged: lastMedia = mediaPlayer
+    // Players with something loaded: playing, or paused on a track. The media popup lists these.
+    readonly property var mediaListPlayers: mprisPlayers.filter(p =>
+        p.playbackStatus === Mpris.PlaybackStatus.Playing
+        || (p.playbackStatus === Mpris.PlaybackStatus.Paused && p.track !== ""))
+
+    // Brings a player's window forward: through MPRIS when it can, else by its app id. False when
+    // neither works.
+    function raisePlayer(p) {
+        if (!p)
+            return false;
+        if (p.canRaise && typeof p.Raise === "function") {
+            p.Raise();
+            return true;
+        }
+        return raiseApp(p.desktopEntry);
+    }
+    // Click on the Now playing tile:
+    //   no player              launch Spotify
+    //   player with no track   raise it, else launch Spotify
+    //   2+ playing, or 2+ paused and none playing   open the players list
+    //   otherwise              raise the one it follows, else open the list
+    function mediaClick(src) {
+        const S = Mpris.PlaybackStatus;
+        if (!mediaPlayer) {
+            launch("spotify-launcher");
+            return;
+        }
+        if (mediaPlayer.playbackStatus === S.Stopped && mediaPlayer.track === "") {
+            if (!raisePlayer(mediaPlayer))
+                launch("spotify-launcher");
+            return;
+        }
+        const playingN = mprisPlayers.filter(p => p.playbackStatus === S.Playing).length;
+        const pausedN = mprisPlayers.filter(p => p.playbackStatus === S.Paused && p.track !== "").length;
+        if (playingN >= 2 || (playingN === 0 && pausedN >= 2))
+            togglePopup("media", src);
+        else if (!raisePlayer(mediaPlayer))
+            togglePopup("media", src);
+    }
+    function pauseAllMedia() {
+        for (const p of mprisPlayers)
+            if (p.playbackStatus === Mpris.PlaybackStatus.Playing && typeof p.Pause === "function")
+                p.Pause();
     }
     readonly property var mediaPlayer: pickPlayer()
     readonly property bool mediaPlaying: mediaPlayer !== null
@@ -271,7 +330,11 @@ PlasmoidItem {
                 if (!isMultiplexer)
                     root.mprisPlayers = root.mprisPlayers.concat([entry]);
             }
-            Component.onDestruction: root.mprisPlayers = root.mprisPlayers.filter(p => p !== entry)
+            Component.onDestruction: {
+                root.mprisPlayers = root.mprisPlayers.filter(p => p !== entry);
+                if (root.mediaPinned === entry)
+                    root.mediaPinned = null;
+            }
         }
     }
 
@@ -717,9 +780,11 @@ PlasmoidItem {
     // GridLayout row and each takes its column from its place in this list;
     // keys missing from the list keep their natural order after the listed ones.
     readonly property var tileKeys: ["start", "stats", "media", "apps", "weather", "pomodoro", "timer",
-        "stopwatch", "worldclocks", "todos", "temperature", "network", "storage", "script", "quicktoggles",
+        "stopwatch", "worldclocks", "todos", "temperature", "network", "storage", "claudeusage", "script", "quicktoggles",
         "volume", "clipboard", "jobs", "notifications", "recyclebin", "screenshot", "notes", "monthprogress", "dayprogress",
-        "yearprogress", "date", "daynumber", "battery", "tray", "calendar", "clockstyle", "clock"]
+        "yearprogress", "date", "daynumber", "battery", "tray", "calendar", "clockstyle", "clock",
+        "topprocs", "microphone", "language", "showdesktop", "dnd",
+        "brightness", "recentopened"]
     property var dragOrder: null // full order while a tile is being dragged
     readonly property var order: dragOrder !== null
         ? dragOrder : cfg.tileOrder.split(",").map(k => k.trim()).filter(k => k !== "")
@@ -1109,7 +1174,8 @@ PlasmoidItem {
             anchors.bottomMargin: root.islands ? 0 : dock.inset
             clip: contentWidth > width
             interactive: false // dragging a tile reorders; the wheel scrolls
-            contentWidth: row.implicitWidth
+            // In islands a too-wide dock shrinks to fit (row.fit) before it resorts to scrolling.
+            contentWidth: row.implicitWidth * row.fit
             contentHeight: height
             flickableDirection: Flickable.HorizontalFlick
             boundsBehavior: Flickable.StopAtBounds
@@ -1127,13 +1193,16 @@ PlasmoidItem {
             // Island pills, behind the tiles. Positions come from updateIslands().
             Item {
                 z: -1
+                height: scroller.height / row.fit
+                scale: row.fit
+                transformOrigin: Item.TopLeft
                 Repeater {
                     model: root.islandRects
                     delegate: Rectangle {
                         required property var modelData
                         x: modelData.x
                         width: modelData.w
-                        height: scroller.height
+                        height: parent.height
                         radius: height * 0.34
                         color: root.glassFill
                         border.width: 1
@@ -1176,10 +1245,14 @@ PlasmoidItem {
                 rows: 1
                 columnSpacing: root.islands ? Kirigami.Units.smallSpacing * 1.5 : Kirigami.Units.smallSpacing
                 rowSpacing: 0
-                width: Math.max(implicitWidth, scroller.width)
+                readonly property real fit: root.islands && implicitWidth > 0 && scroller.width > 0
+                    ? Math.max(0.7, Math.min(1, scroller.width / implicitWidth)) : 1
+                scale: fit
+                transformOrigin: Item.TopLeft
+                width: Math.max(implicitWidth, scroller.width / fit)
                 // In islands the tiles sit 8px inside each pill, top and bottom; the pills stay full height.
-                y: root.islands ? 8 : 0
-                height: root.islands ? scroller.height - 16 : scroller.height
+                y: root.islands ? 8 * fit : 0
+                height: root.islands ? scroller.height / fit - 16 : scroller.height
 
                 // Separators: pill gaps in islands, thin dividers in the bar. Drag to move,
                 // right-click to remove.
@@ -1253,16 +1326,15 @@ PlasmoidItem {
                     idleText: i18n("Spotify")
                     idleIcon: "spotify-launcher"
                     launchable: true
+                    style: root.cfg.mediaStyle
+                    showProgress: root.cfg.mediaProgress
                     onLaunchRequested: root.launch("spotify-launcher")
-                    onClicked: src => {
-                        if (!root.mediaPlayer)
-                            root.launch("spotify-launcher");
-                        // Raise the player app when it can be raised, else show the media view.
-                        else if (root.mediaPlayer.canRaise && typeof root.mediaPlayer.Raise === "function")
-                            root.mediaPlayer.Raise();
-                        else
-                            root.togglePopup("media", src);
-                    }
+                    menuEnabled: true
+                    players: root.mediaListPlayers
+                    pinned: root.mediaPinned
+                    onPinRequested: p => root.mediaPinned = p
+                    onPauseAllRequested: root.pauseAllMedia()
+                    onClicked: src => root.mediaClick(src)
                 }
                 Modules.AppsModule {
                     objectName: "apps"
@@ -1304,6 +1376,7 @@ PlasmoidItem {
                     Layout.fillHeight: true
                     visible: root.cfg.showWeather
                     weatherSource: sharedWeather
+                    style: root.cfg.weatherStyle
                     onClicked: src => {
                         const lat = Number(root.cfg.latitude), lon = Number(root.cfg.longitude);
                         if (lat === 0 && lon === 0)
@@ -1311,6 +1384,22 @@ PlasmoidItem {
                         else
                             root.togglePopup("weather", src);
                     }
+                }
+                Modules.BrightnessModule {
+                    objectName: "brightness"
+                    hoverName: i18n("Brightness")
+                    Layout.column: root.colOf("brightness")
+                    Layout.fillHeight: true
+                    visible: root.cfg.showBrightness
+                    active: root.cfg.showBrightness
+                }
+                Modules.RecentOpenedModule {
+                    objectName: "recentopened"
+                    hoverName: i18n("Recently opened")
+                    Layout.column: root.colOf("recentopened")
+                    Layout.fillHeight: true
+                    visible: root.cfg.showRecentOpened
+                    active: root.cfg.showRecentOpened
                 }
                 Modules.PomodoroModule {
                     objectName: "pomodoro"
@@ -1383,6 +1472,14 @@ PlasmoidItem {
                     used: diskUsedSensor.value ?? 0
                     total: diskTotalSensor.value ?? 0
                     onClicked: root.launch("filelight / || xdg-open /")
+                }
+                Modules.ClaudeUsageModule {
+                    objectName: "claudeusage"
+                    Layout.column: root.colOf("claudeusage")
+                    Layout.fillHeight: true
+                    visible: root.cfg.showClaudeUsage
+                    active: root.cfg.showClaudeUsage
+                    onClicked: refresh(true)
                 }
                 Modules.ScriptModule {
                     id: scriptTile
@@ -1486,6 +1583,48 @@ PlasmoidItem {
                     visible: root.cfg.showRecycleBin
                     active: root.cfg.showRecycleBin
                 }
+                Modules.TopProcessModule {
+                    objectName: "topprocs"
+                    hoverName: i18n("Top processes")
+                    Layout.column: root.colOf("topprocs")
+                    Layout.fillHeight: true
+                    visible: root.cfg.showTopProcs
+                    active: root.cfg.showTopProcs
+                    mode: root.cfg.topMode
+                    onClicked: root.launch("plasma-systemmonitor")
+                }
+                Modules.MicrophoneModule {
+                    objectName: "microphone"
+                    hoverName: i18n("Microphone")
+                    Layout.column: root.colOf("microphone")
+                    Layout.fillHeight: true
+                    visible: root.cfg.showMicrophone
+                    active: root.cfg.showMicrophone
+                }
+                Modules.LanguageModule {
+                    objectName: "language"
+                    hoverName: i18n("Keyboard layout")
+                    Layout.column: root.colOf("language")
+                    Layout.fillHeight: true
+                    visible: root.cfg.showLanguage
+                    active: root.cfg.showLanguage
+                }
+                Modules.ShowDesktopModule {
+                    objectName: "showdesktop"
+                    hoverName: i18n("Show Desktop")
+                    Layout.column: root.colOf("showdesktop")
+                    Layout.fillHeight: true
+                    visible: root.cfg.showShowDesktop
+                }
+                Modules.DndModule {
+                    objectName: "dnd"
+                    hoverName: i18n("Do Not Disturb")
+                    Layout.column: root.colOf("dnd")
+                    Layout.fillHeight: true
+                    visible: root.cfg.showDnd
+                    doNotDisturb: notificationService.inhibited
+                    service: notificationService
+                }
                 Modules.ScreenshotModule {
                     objectName: "screenshot"
                     hoverName: i18n("Screenshot Capture")
@@ -1583,6 +1722,7 @@ PlasmoidItem {
                     charging: (batteryRateSensor.value ?? 0) > 0
                     edge: Plasmoid.location
                     showDevices: root.cfg.showDevices
+                    style: root.cfg.batteryStyle
                     onSettingsRequested: root.openSettings("kcm_powerdevilprofilesconfig")
                 }
                 Modules.ClockStylesModule {
@@ -1778,9 +1918,10 @@ PlasmoidItem {
                     readonly property bool weatherView: root.popupMode === "weather"
                     readonly property bool statsView: root.popupMode === "stats"
                     readonly property bool clipboardView: root.popupMode === "clipboard"
+                    readonly property bool calendarView: root.popupMode === "calendar" || root.popupMode === "clock"
                     implicitWidth: dashboard ? Kirigami.Units.gridUnit * 1040 / 18
                         : launcher ? root.launcherWidth
-                        : Kirigami.Units.gridUnit * (gallery ? 30 : notes ? 30 : notifs ? 22 : jobs ? 20 : weatherView ? 21 : statsView ? 18 : clipboardView ? 20 : todos ? 20 : 17)
+                        : Kirigami.Units.gridUnit * (calendarView ? 34 : gallery ? 30 : notes ? 30 : notifs ? 22 : jobs ? 20 : weatherView ? 21 : statsView ? 18 : clipboardView ? 20 : todos ? 20 : 17)
                     implicitHeight: launcher ? Kirigami.Units.gridUnit * 24
                         : gallery ? Kirigami.Units.gridUnit * 26
                         : notes ? Kirigami.Units.gridUnit * 18
@@ -1826,7 +1967,8 @@ PlasmoidItem {
                             : parent.jobs ? jobsComp
                             : parent.weatherView ? weatherComp
                             : parent.statsView ? statsComp
-                            : parent.clipboardView ? clipboardComp : infoComp
+                            : parent.clipboardView ? clipboardComp
+                            : parent.calendarView ? calendarComp : infoComp
                     }
                 }
             }
@@ -1917,6 +2059,12 @@ PlasmoidItem {
     Component {
         id: jobsComp
         Popups.JobsPanel {
+            applet: root
+        }
+    }
+    Component {
+        id: calendarComp
+        Popups.CalendarPanel {
             applet: root
         }
     }
@@ -2039,13 +2187,35 @@ PlasmoidItem {
             visible: root.inMode("media") && root.showMedia
             text: i18n("Now playing")
         }
-        Modules.MediaModule {
-            visible: root.inMode("media") && root.showMedia
-            Layout.fillWidth: true
-            Layout.margins: Kirigami.Units.largeSpacing
-            Layout.preferredHeight: Kirigami.Units.gridUnit * 3
-            player: root.player
-            playing: root.playing
+        Repeater {
+            model: root.inMode("media") ? (root.mediaListPlayers.length > 0 ? root.mediaListPlayers
+                : (root.mediaPlayer ? [root.mediaPlayer] : [])) : []
+            delegate: ColumnLayout {
+                id: playerRow
+                required property var modelData
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.largeSpacing
+                Layout.rightMargin: Kirigami.Units.largeSpacing
+                spacing: 0
+
+                PlasmaComponents.Label {
+                    Layout.topMargin: Kirigami.Units.smallSpacing
+                    text: playerRow.modelData.identity
+                    font.pointSize: Kirigami.Theme.smallFont.pointSize
+                    opacity: 0.6
+                }
+                Modules.MediaModule {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Kirigami.Units.gridUnit * 3
+                    player: playerRow.modelData
+                    playing: playerRow.modelData.playbackStatus === Mpris.PlaybackStatus.Playing
+                    onClicked: {
+                        root.raisePlayer(playerRow.modelData);
+                        if (root.dockItem)
+                            root.dockItem.hide();
+                    }
+                }
+            }
         }
     }
     }

@@ -44,8 +44,14 @@ root, family = sys.argv[1], sys.argv[2]
 # Keep the 9-slice ids and margin hints, but draw nothing and ask for no blur.
 for path in glob.glob(os.path.join(root, "**", "panel-background.svg"), recursive=True):
     s = open(path, encoding="utf-8").read()
-    s = re.sub(r'<g id="mask-[^"]*">.*?</g>', "", s, flags=re.S)
     s = re.sub(r'fill-opacity="[^"]*"', 'fill-opacity="0"', s)
+    # Blur only four 1px corners. A missing or empty mask makes the panel blur its whole window (a
+    # saturated slab around the pills); a stretched centre or edge would blur a band. Done after the
+    # fill-opacity pass above, which would otherwise zero these too.
+    corners = ("mask-topleft", "mask-topright", "mask-bottomleft", "mask-bottomright")
+    s = re.sub(r'<g id="(mask-[^"]*)">.*?</g>',
+               lambda m: '<g id="%s"><rect x="0" y="0" width="1" height="1" fill="#000" fill-opacity="%s"/></g>'
+                         % (m.group(1), "1" if m.group(1) in corners else "0"), s, flags=re.S)
     # No background also means no panel margins: pills sit flush with the panel edges.
     s = re.sub(r'(<rect id="hint-(?:left|right)-margin"[^>]*?width=")[^"]*"', r'\g<1>0"', s)
     s = re.sub(r'(<rect id="hint-(?:top|bottom)-margin"[^>]*?height=")[^"]*"', r'\g<1>0"', s)
@@ -56,6 +62,9 @@ for path in glob.glob(os.path.join(root, "**", "widgets", "background.svg"), rec
     s = open(path, encoding="utf-8").read()
     s = re.sub(r'(<rect id="hint-(?:top|bottom)-margin"[^>]*?height=")[^"]*"', r'\g<1>0"', s)
     open(path, "w", encoding="utf-8").write(s)
+# No blur behind the panel window: the pills are drawn in QML, so a blurred panel rect would
+# show as a slab around them.
+open(os.path.join(root, "plasmarc"), "a", encoding="utf-8").write("\n[BlurBehind]\nenabled=false\n\n[ContrastEffect]\nenabled=false\n")
 meta = os.path.join(root, "metadata.json")
 d = json.load(open(meta, encoding="utf-8"))
 day = family == "glass-day"

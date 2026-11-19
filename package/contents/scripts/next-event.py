@@ -208,6 +208,17 @@ def main():
 
     now = datetime.now(timezone.utc)
     hi = now + timedelta(days=60)
+    # Range mode (calendar popup): every item between "from" and "to" (YYYY-MM-DD, local days),
+    # past ones included.
+    rng = None
+    if cfg.get("from") and cfg.get("to"):
+        try:
+            lo_d = datetime.strptime(cfg["from"], "%Y-%m-%d").replace(tzinfo=LOCAL)
+            hi_d = datetime.strptime(cfg["to"], "%Y-%m-%d").replace(tzinfo=LOCAL) + timedelta(days=1)
+            rng = (lo_d, hi_d)
+            now, hi = lo_d, hi_d
+        except ValueError:
+            pass
     cands = []  # (start, end, title, kind, allday, project)
     errors = {}
 
@@ -226,7 +237,7 @@ def main():
                     if "recid" not in ev and (ev.get("uid"), s) in moved:
                         continue
                     e = s + length
-                    if e < now or (ev.get("allday") and e <= now):
+                    if s >= hi or e < now or (ev.get("allday") and e <= now):
                         continue
                     cands.append((s, e, ev.get("title", "(no title)"), "event", bool(ev.get("allday")), ev.get("location", "")))
         except Exception:
@@ -235,12 +246,21 @@ def main():
     if use_plane:
         try:
             for s, e, title, project in plane_items(plane):
-                if e > now and s <= hi:
+                if e > now and s < hi:
                     cands.append((s, e, title, "plane", True, project))
         except urllib.error.HTTPError as ex:
             errors["plane"] = "auth" if ex.code in (401, 403) else "http%d" % ex.code
         except Exception:
             errors["plane"] = "fetch"
+
+    if rng:
+        if not cands and errors and len(errors) == (1 if ical else 0) + (1 if use_plane else 0):
+            out(ok=False, error="fetch", errors=errors)
+        cands.sort(key=lambda c: (c[0].astimezone(timezone.utc), not c[4]))
+        out(ok=True, errors=errors, items=[
+            dict(title=c[2], kind=c[3], allDay=c[4], extra=c[5],
+                 start=c[0].astimezone(timezone.utc).isoformat(), end=c[1].astimezone(timezone.utc).isoformat())
+            for c in cands][:500])
 
     if not cands:
         if errors and len(errors) == (1 if ical else 0) + (1 if use_plane else 0):
